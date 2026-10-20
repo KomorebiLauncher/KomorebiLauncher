@@ -1,0 +1,112 @@
+name: Build Application and Make Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions: {}
+
+jobs:
+  build_release:
+    name: Build Release
+    uses: ./.github/workflows/build.yml
+    permissions:
+      contents: read
+      # Required for Azure Trusted Signing
+      id-token: write
+      # Required for vcpkg binary cache
+      packages: write
+    with:
+      build-type: Release
+      environment: Release
+    secrets: inherit
+
+  create_release:
+    needs: build_release
+    permissions:
+      contents: write
+    runs-on: ubuntu-slim
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: "true"
+          path: "WTFLauncher-source"
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+      - name: Grab and store version
+        run: |
+          tag_name=$(echo ${{ github.ref }} | grep -oE "[^/]+$")
+          echo "VERSION=$tag_name" >> $GITHUB_ENV
+      - name: Package artifacts properly
+        run: |
+          mv ${{ github.workspace }}/WTFLauncher-source WTFLauncher-${{ env.VERSION }}
+          mv WTFLauncher-Linux-Qt6-Portable*/WTFLauncher-portable.tar.gz WTFLauncher-Linux-Qt6-Portable-${{ env.VERSION }}.tar.gz
+          mv WTFLauncher-Linux-aarch64-Qt6-Portable*/WTFLauncher-portable.tar.gz WTFLauncher-Linux-aarch64-Qt6-Portable-${{ env.VERSION }}.tar.gz
+          mv WTFLauncher-*.AppImage/WTFLauncher-*-x86_64.AppImage WTFLauncher-Linux-x86_64.AppImage
+          mv WTFLauncher-*.AppImage.zsync/WTFLauncher-*-x86_64.AppImage.zsync WTFLauncher-Linux-x86_64.AppImage.zsync
+          mv WTFLauncher-*.AppImage/WTFLauncher-*-aarch64.AppImage WTFLauncher-Linux-aarch64.AppImage
+          mv WTFLauncher-*.AppImage.zsync/WTFLauncher-*-aarch64.AppImage.zsync WTFLauncher-Linux-aarch64.AppImage.zsync
+          mv WTFLauncher-macOS*/WTFLauncher.zip WTFLauncher-macOS-${{ env.VERSION }}.zip
+          mv WTFLauncher-macOS*/WTFLauncher.dmg WTFLauncher-macOS-${{ env.VERSION }}.dmg
+
+          tar --exclude='.git' -czf WTFLauncher-${{ env.VERSION }}.tar.gz WTFLauncher-${{ env.VERSION }}
+
+          for d in WTFLauncher-Windows-MSVC*; do
+            cd "${d}" || continue
+            LEGACY="$(echo -n ${d} | grep -o Legacy || true)"
+            ARM64="$(echo -n ${d} | grep -o arm64 || true)"
+            INST="$(echo -n ${d} | grep -o Setup || true)"
+            PORT="$(echo -n ${d} | grep -o Portable || true)"
+            NAME="WTFLauncher-Windows-MSVC"
+            test -z "${LEGACY}" || NAME="${NAME}-Legacy"
+            test -z "${ARM64}" || NAME="${NAME}-arm64"
+            test -z "${PORT}" || NAME="${NAME}-Portable"
+            test -z "${INST}" || mv WTFLauncher-*.exe ../${NAME}-Setup-${{ env.VERSION }}.exe
+            test -n "${INST}" || zip -r -9 "../${NAME}-${{ env.VERSION }}.zip" *
+            cd ..
+          done
+
+          for d in WTFLauncher-Windows-MinGW-w64*; do
+            cd "${d}" || continue
+            INST="$(echo -n ${d} | grep -o Setup || true)"
+            PORT="$(echo -n ${d} | grep -o Portable || true)"
+            NAME="WTFLauncher-Windows-MinGW-w64"
+            test -z "${PORT}" || NAME="${NAME}-Portable"
+            test -z "${INST}" || mv WTFLauncher-*.exe ../${NAME}-Setup-${{ env.VERSION }}.exe
+            test -n "${INST}" || zip -r -9 "../${NAME}-${{ env.VERSION }}.zip" *
+            cd ..
+          done
+
+      - name: Create release
+        id: create_release
+        uses: softprops/action-gh-release@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ github.ref }}
+          name: WTF Launcher ${{ env.VERSION }}
+          draft: true
+          prerelease: false
+          fail_on_unmatched_files: true
+          files: |
+            WTFLauncher-Linux-x86_64.AppImage
+            WTFLauncher-Linux-x86_64.AppImage.zsync
+            WTFLauncher-Linux-aarch64.AppImage
+            WTFLauncher-Linux-aarch64.AppImage.zsync
+            WTFLauncher-Linux-Qt6-Portable-${{ env.VERSION }}.tar.gz
+            WTFLauncher-Linux-aarch64-Qt6-Portable-${{ env.VERSION }}.tar.gz
+            WTFLauncher-Windows-MinGW-w64-${{ env.VERSION }}.zip
+            WTFLauncher-Windows-MinGW-w64-Portable-${{ env.VERSION }}.zip
+            WTFLauncher-Windows-MinGW-w64-Setup-${{ env.VERSION }}.exe
+            WTFLauncher-Windows-MSVC-arm64-${{ env.VERSION }}.zip
+            WTFLauncher-Windows-MSVC-arm64-Portable-${{ env.VERSION }}.zip
+            WTFLauncher-Windows-MSVC-arm64-Setup-${{ env.VERSION }}.exe
+            WTFLauncher-Windows-MSVC-${{ env.VERSION }}.zip
+            WTFLauncher-Windows-MSVC-Portable-${{ env.VERSION }}.zip
+            WTFLauncher-Windows-MSVC-Setup-${{ env.VERSION }}.exe
+            WTFLauncher-macOS-${{ env.VERSION }}.zip
+            WTFLauncher-macOS-${{ env.VERSION }}.dmg
+            WTFLauncher-${{ env.VERSION }}.tar.gz
