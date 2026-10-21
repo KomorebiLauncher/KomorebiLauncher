@@ -1,0 +1,23 @@
+{
+  "id": "1.13.2-OptiFine_HD_U_E7",
+  "inheritsFrom": "1.13.2",
+  "time": "2026-10-21T13:50:11+08:00",
+  "releaseTime": "2026-10-21T13:50:11+08:00",
+  "type": "release",
+  "libraries": [
+    {
+      "name": "optifine:OptiFine:1.13.2_HD_U_E7"
+    },
+    {
+      "name": "net.minecraft:launchwrapper:1.12"
+    }
+  ],
+  "mainClass": "net.minecraft.launchwrapper.Launch",
+  "minimumLauncherVersion": "21",
+  "arguments": {
+    "game": [
+      "--tweakClass",
+      "optifine.OptiFineTweaker"
+    ]
+  }
+}

@@ -8,6 +8,9 @@
  *  the Free Software Foundation, version 3.
  */
 
+#include <QFile>
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QTest>
 
 #include "modplatform/optifine/OptiFineList.h"
@@ -67,6 +70,59 @@ class OptiFineListTest : public QObject {
 
         QCOMPARE(OptiFine::downloadUrl(QStringLiteral("https://mirror.example"), build).toString(), expected);
         QCOMPARE(OptiFine::downloadUrl(QStringLiteral("https://mirror.example///"), build).toString(), expected);
+    }
+
+    void test_BuildsComponentFromRealInstallerOutput()
+    {
+        // Fixture captured from OptiFine's own installer run headlessly via OptiFineRunner.jar.
+        auto path = QFINDTESTDATA("testdata/optifine-installer-output-1.13.2.json");
+        QVERIFY2(!path.isEmpty(), "installer output fixture not found");
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        auto produced = QJsonDocument::fromJson(file.readAll()).object();
+        QVERIFY(!produced.isEmpty());
+
+        OptiFine::Build build{ QStringLiteral("1.13.2"), QStringLiteral("HD_U"), QStringLiteral("E7"),
+                     QStringLiteral("OptiFine_1.13.2_HD_U_E7.jar"), QStringLiteral("Forge N/A"), true };
+        auto component = OptiFine::buildComponent(produced, build, QStringLiteral("file:///C:/inst/libraries/OptiFine-1.13.2_HD_U_E7.jar"),
+                                                  QStringLiteral("0123456789abcdef0123456789abcdef01234567"), 2709891);
+
+        QCOMPARE(component.value("uid").toString(), QStringLiteral("wtf.optifine"));
+        QCOMPARE(component.value("name").toString(), QStringLiteral("OptiFine HD_U_E7"));
+        QCOMPARE(component.value("version").toString(), QStringLiteral("E7"));
+        // What the launcher needs in order to load the profile alongside the right Minecraft.
+        auto requirement = component.value("requires").toArray().at(0).toObject();
+        QCOMPARE(requirement.value("uid").toString(), QStringLiteral("net.minecraft"));
+        QCOMPARE(requirement.value("equals").toString(), QStringLiteral("1.13.2"));
+        // The patched launch command must survive untouched.
+        QCOMPARE(component.value("mainClass").toString(), QStringLiteral("net.minecraft.launchwrapper.Launch"));
+        QCOMPARE(component.value("inheritsFrom").toString(), QStringLiteral("1.13.2"));
+        QCOMPARE(component.value("arguments").toObject().value("game").toArray().at(1).toString(),
+                 QStringLiteral("optifine.OptiFineTweaker"));
+
+        auto libraries = component.value("libraries").toArray();
+        QCOMPARE(libraries.size(), 2);
+        auto optifine = libraries.at(0).toObject();
+        QCOMPARE(optifine.value("name").toString(), QStringLiteral("optifine:OptiFine:1.13.2_HD_U_E7"));
+        auto artifact = optifine.value("downloads").toObject().value("artifact").toObject();
+        QCOMPARE(artifact.value("url").toString(), QStringLiteral("file:///C:/inst/libraries/OptiFine-1.13.2_HD_U_E7.jar"));
+        QCOMPARE(artifact.value("sha1").toString(), QStringLiteral("0123456789abcdef0123456789abcdef01234567"));
+        QCOMPARE(artifact.value("size").toVariant().toLongLong(), 2709891LL);
+
+        // A library that does have a maven home must be left exactly as the installer wrote it.
+        QCOMPARE(libraries.at(1).toObject(), produced.value("libraries").toArray().at(1).toObject());
+    }
+
+    void test_BuildsComponentWhenInstallerEmittedNoOptiFineLibrary()
+    {
+        OptiFine::Build build{ QStringLiteral("1.13.2"), QStringLiteral("HD_U"), QStringLiteral("E7"), QString(), QString(), false };
+        QJsonObject produced;
+        produced.insert(QStringLiteral("libraries"), QJsonArray{ QJsonObject{ { "name", QStringLiteral("net.minecraft:launchwrapper:1.12") } } });
+
+        auto component = OptiFine::buildComponent(produced, build, QStringLiteral("file:///x"), QStringLiteral("aa"), 1);
+        // Nothing to point at the local copy, but the component itself must still be well formed.
+        QCOMPARE(component.value("uid").toString(), QStringLiteral("wtf.optifine"));
+        QCOMPARE(component.value("libraries").toArray().size(), 1);
     }
 
     void test_BuildsForFiltersByVersion()

@@ -73,4 +73,33 @@ auto downloadUrl(const QString& mirrorBase, const Build& build) -> QUrl
     return QUrl(base + QStringLiteral("/optifine/%1/%2/%3").arg(build.mcVersion, build.type, build.patch));
 }
 
+auto buildComponent(const QJsonObject& produced, const Build& build, const QString& jarUrl, const QString& jarSha1, qint64 jarSize)
+    -> QJsonObject
+{
+    auto profile = produced;
+
+    QJsonArray libraries;
+    for (const auto& value : profile.value("libraries").toArray()) {
+        auto lib = value.toObject();
+        if (!lib.value("name").toString().startsWith(QStringLiteral("optifine:OptiFine:"))) {
+            libraries.append(lib);
+            continue;
+        }
+        lib["downloads"] = QJsonObject{ { "artifact",
+                                         QJsonObject{ { "url", jarUrl },
+                                                      { "sha1", jarSha1 },
+                                                      { "size", static_cast<double>(jarSize) } } } };
+        libraries.append(lib);
+    }
+    profile["libraries"] = libraries;
+
+    profile["uid"] = componentUid;
+    profile["name"] = QStringLiteral("OptiFine %1_%2").arg(build.type, build.patch);
+    profile["version"] = build.patch;
+    profile["requires"] = QJsonArray{ QJsonObject{ { "uid", QStringLiteral("net.minecraft") },
+                                                   { "equals", build.mcVersion },
+                                                   { "suggests", build.mcVersion } } };
+    return profile;
+}
+
 }  // namespace OptiFine

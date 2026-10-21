@@ -16,6 +16,9 @@
 
 namespace OptiFine {
 
+/// The component id an installed OptiFine profile uses.
+inline const QString componentUid = QStringLiteral("wtf.optifine");
+
 /**
  * One OptiFine build as published by the mirror's version list.
  *
@@ -47,5 +50,15 @@ auto mavenVersion(const Build& build) -> QString;
 
 /** The mirror's download endpoint for this build. */
 auto downloadUrl(const QString& mirrorBase, const Build& build) -> QUrl;
+
+/**
+ * Turns the json OptiFine's installer wrote into an instance component.
+ *
+ * The produced json is plain Mojang format, so it needs the fields the component system keys on,
+ * and the OptiFine artifact has to be pointed at a copy inside the instance because it has no
+ * public maven home. Kept free of file and instance access so it can be tested directly.
+ */
+auto buildComponent(const QJsonObject& produced, const Build& build, const QString& jarUrl, const QString& jarSha1, qint64 jarSize)
+    -> QJsonObject;
 
 }  // namespace OptiFine

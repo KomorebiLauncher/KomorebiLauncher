@@ -560,6 +560,8 @@ set(MODRINTH_SOURCES
 set(OPTIFINE_SOURCES
     modplatform/optifine/OptiFineList.cpp
     modplatform/optifine/OptiFineList.h
+    modplatform/optifine/OptiFineInstallTask.cpp
+    modplatform/optifine/OptiFineInstallTask.h
 )
 
 set(PACKWIZ_SOURCES
