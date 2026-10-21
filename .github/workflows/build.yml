@@ -8,6 +8,11 @@ on:
   merge_group:
     types: [checks_requested]
   pull_request:
+  # Upstream only validates pull requests; this fork pushes to main directly, so main needs its own
+  # verification rather than being merged unverified.
+  push:
+    branches:
+      - main
   workflow_call:
     inputs:
       build-type:
