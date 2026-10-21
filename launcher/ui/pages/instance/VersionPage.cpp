@@ -451,6 +451,7 @@ void VersionPage::on_actionInstall_OptiFine_triggered()
 
     auto listTask = makeShared<OptiFine::ListTask>(mirrorBase, minecraftVersion);
     ProgressDialog listDialog(this);
+    connect(listTask.get(), &Task::failed, this, &VersionPage::onOptiFineError);
     if (listDialog.execWithTask(listTask.get()) != QDialog::Accepted)
         return;
 
@@ -460,10 +461,17 @@ void VersionPage::on_actionInstall_OptiFine_triggered()
 
     auto installTask = makeShared<OptiFine::InstallTask>(m_inst, dialog.selectedBuild(), mirrorBase);
     ProgressDialog installDialog(this);
+    connect(installTask.get(), &Task::failed, this, &VersionPage::onOptiFineError);
     if (installDialog.execWithTask(installTask.get()) != QDialog::Accepted)
         return;
 
     m_container->refreshContainer();
+}
+
+// The progress dialog closes itself on failure and never shows the reason, so it has to be surfaced here.
+void VersionPage::onOptiFineError(QString error)
+{
+    CustomMessageBox::selectable(this, tr("Install OptiFine"), error, QMessageBox::Warning)->show();
 }
 
 void VersionPage::on_actionAdd_Empty_triggered()
