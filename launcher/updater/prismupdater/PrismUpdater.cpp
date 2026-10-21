@@ -1260,7 +1260,12 @@ Result<int> PrismUpdaterApp::parseReleasePage(const QByteArray* response)
         TRY_INTO(release.draft, Json::requireBoolean(obj, "draft"))
         TRY_INTO(release.prerelease, Json::requireBoolean(obj, "prerelease"))
         release.body = obj["body"].toString();
-        release.version = Version(release.tag_name);
+        // A leading 'v' is a tag naming choice, not part of the version: parsed as text it sorts
+        // above the number it precedes, which makes every release look newer than the one running.
+        auto tag = release.tag_name;
+        if (tag.startsWith(QLatin1Char('v')))
+            tag = tag.mid(1);
+        release.version = Version(tag);
 
         TRY_INTO(const auto& releaseAssetsObj, Json::requireArray(obj, "assets"))
         for (auto assetJson : releaseAssetsObj) {
