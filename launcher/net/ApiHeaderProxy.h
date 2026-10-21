@@ -69,7 +69,11 @@ class ApiHeaderProxy : public HeaderProxy {
 
         if (APPLICATION->capabilities() & Application::SupportsFlame &&
             (host == QUrl(BuildConfig.FLAME_BASE_URL).host() || host == BuildConfig.FLAME_DOWNLOAD_HOST)) {
-            hdrs.append({ .headerName = "x-api-key", .headerValue = APPLICATION->getFlameAPIKey().toUtf8() });
+            // Unauthenticated downloads still work, so an empty key has to be left out rather than sent.
+            QString key = APPLICATION->getFlameAPIKey();
+            if (!key.isEmpty()) {
+                hdrs.append({ .headerName = "x-api-key", .headerValue = key.toUtf8() });
+            }
         } else if (host == QUrl(BuildConfig.MODRINTH_PROD_URL).host() || host == QUrl(BuildConfig.MODRINTH_STAGING_URL).host()) {
             QString token = APPLICATION->getModrinthAPIToken();
             if (!token.isNull()) {
