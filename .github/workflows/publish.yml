@@ -10,6 +10,9 @@ jobs:
   winget:
     name: Winget
 
+    # Needs a PAT with winget-pkgs write access, and the package manifest has to be submitted first.
+    if: ${{ vars.WINGET_PUBLISH == 'true' }}
+
     permissions:
       contents: read
 

@@ -75,6 +75,10 @@ jobs:
   build:
     name: Build (${{ matrix.system }})
 
+    # Setup Cachix authenticates against upstream's cache with a secret this fork does not have, so
+    # every run dies in the first step. Opt in once we have our own cache.
+    if: ${{ vars.NIX_CI == 'true' }}
+
     permissions:
       contents: read
 
