@@ -124,6 +124,8 @@ set(NET_SOURCES
     net/HttpMetaCache.h
     net/MetaCacheSink.cpp
     net/MetaCacheSink.h
+    net/MirrorPolicy.cpp
+    net/MirrorPolicy.h
     net/Logging.h
     net/Logging.cpp
     net/NetJob.cpp
@@ -633,6 +635,8 @@ set(PRISMUPDATER_SOURCES
     net/FileSink.h
     net/HttpMetaCache.cpp
     net/HttpMetaCache.h
+    net/MirrorPolicy.cpp
+    net/MirrorPolicy.h
     net/Logging.h
     net/Logging.cpp
     net/Request.cpp

@@ -49,6 +49,7 @@
 
 #include "Application.h"
 #include "BuildConfig.h"
+#include "net/MirrorPolicy.h"
 #include "net/PasteUpload.h"
 #include "settings/SettingsObject.h"
 #include "tools/BaseProfiler.h"
@@ -79,6 +80,14 @@ APIPage::APIPage(QWidget* parent) : QWidget(parent), ui(new Ui::APIPage)
     ui->baseURLEntry->setValidator(new QRegularExpressionValidator(s_validUrlRegExp, ui->baseURLEntry));
     ui->legacyFMLLibsURL->setValidator(new QRegularExpressionValidator(s_validUrlRegExp, ui->legacyFMLLibsURL));
     ui->msaClientID->setValidator(new QRegularExpressionValidator(s_validMSAClientID, ui->msaClientID));
+
+    ui->mirrorPolicyComboBox->addItem(tr("Official only, no mirror"), static_cast<int>(Net::MirrorPolicyKind::OfficialOnly));
+    ui->mirrorPolicyComboBox->addItem(tr("Official first, fall back to the mirror"),
+                                      static_cast<int>(Net::MirrorPolicyKind::OfficialThenMirror));
+    ui->mirrorPolicyComboBox->addItem(tr("Mirror first, fall back to the official host"),
+                                      static_cast<int>(Net::MirrorPolicyKind::MirrorThenOfficial));
+    ui->mirrorPolicyComboBox->addItem(tr("Mirror only"), static_cast<int>(Net::MirrorPolicyKind::MirrorOnly));
+    ui->mirrorBaseUrl->setValidator(new QRegularExpressionValidator(s_validUrlRegExp, ui->mirrorBaseUrl));
 
     ui->metaURL->setPlaceholderText(BuildConfig.META_URL);
     ui->resourceURL->setPlaceholderText(BuildConfig.DEFAULT_RESOURCE_BASE);
@@ -146,6 +155,10 @@ void APIPage::loadSettings()
     ui->metaRefreshOnLaunchCB->setCheckState(s->get("MetaRefreshOnLaunch").toBool() ? Qt::Checked : Qt::Unchecked);
     QString resourceURL = s->get("ResourceURLOverride").toString();
     ui->resourceURL->setText(resourceURL);
+    int mirrorPolicy = s->get("MirrorPolicy").toInt();
+    int mirrorPolicyIndex = ui->mirrorPolicyComboBox->findData(mirrorPolicy);
+    ui->mirrorPolicyComboBox->setCurrentIndex(mirrorPolicyIndex == -1 ? 0 : mirrorPolicyIndex);
+    ui->mirrorBaseUrl->setText(s->get("MirrorBaseUrl").toString());
     QString fmlLibsURL = s->get("LegacyFMLLibsURLOverride").toString();
     ui->legacyFMLLibsURL->setText(fmlLibsURL);
     QString flameKey = s->get("FlameKeyOverride").toString();
@@ -192,6 +205,11 @@ void APIPage::applySettings()
     upgradeToHTTPS(metaURL);
     upgradeToHTTPS(resourceURL);
     upgradeToHTTPS(fmlLibsURL);
+
+    QUrl mirrorBaseURL(ui->mirrorBaseUrl->text().trimmed());
+    upgradeToHTTPS(mirrorBaseURL);
+    s->set("MirrorPolicy", ui->mirrorPolicyComboBox->currentData().toInt());
+    s->set("MirrorBaseUrl", mirrorBaseURL.toString());
 
     s->set("FallbackMRBlockedMods", ui->FallbackMRBlockedMods->checkState());
     s->set("MetaURLOverride", metaURL.toString());

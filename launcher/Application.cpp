@@ -895,6 +895,11 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
             // Legacy FML libs URL
             resetIfInvalid(m_settings->registerSetting("LegacyFMLLibsURLOverride", "").get());
+
+            // Download mirrors. Default is 0 = official only, so behaviour matches upstream until the
+            // user opts in; a mirror is not reliably faster and can be far slower.
+            m_settings->registerSetting("MirrorPolicy", 0);
+            resetIfInvalid(m_settings->registerSetting("MirrorBaseUrl", "https://bmclapi2.bangbang93.com").get());
         }
 
         m_settings->registerSetting("MetaRefreshOnLaunch", true);

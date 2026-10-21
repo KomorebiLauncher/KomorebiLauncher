@@ -98,6 +98,10 @@ Request::Request(const QUrl& url, QByteArray postData, Options options)
 
 Request::Request(const Spec& spec) : m_options(spec.options), m_url(spec.url), m_httpMethod(spec.method), m_postData(spec.data)
 {
+    m_originalUrl = spec.url;
+    m_sources = SourceSequence(MirrorPolicy::candidates(spec.url));
+    if (!m_sources.isEmpty())
+        m_url = m_sources.current();
     connect(&m_retryTimer, &QTimer::timeout, this, &Request::executeTask);
 
     if (spec.name.isEmpty()) {
@@ -122,9 +126,21 @@ void Request::executeTask()
 {
     setStatus(tr("Requesting %1").arg(StringUtils::truncateUrlHumanFriendly(m_url, 80)));
 
+#ifdef LAUNCHER_APPLICATION
+    /*
+     * APPLICATION_DYN, not APPLICATION: a unit test runs against a plain QCoreApplication, and
+     * static_casting that to Application yields a pointer that is neither null nor usable.
+     */
+    auto* app = APPLICATION_DYN;
+#endif
+
     if (m_network == nullptr) {
 #ifdef LAUNCHER_APPLICATION
-        m_network = APPLICATION->network();
+        if (!app) {
+            emitFailed("No network manager set for request");
+            return;
+        }
+        m_network = app->network();
 #else
         qCCritical(m_logCat) << getUid().toString() << "No network manager set for request:" << m_url.toString();
         emitFailed("No network manager set for request");
@@ -154,17 +170,23 @@ void Request::executeTask()
     }
 
 #ifdef LAUNCHER_APPLICATION
-    auto userAgent = APPLICATION->getUserAgent();
+    if (app) {
+        request.setHeader(QNetworkRequest::UserAgentHeader, app->getUserAgent().toUtf8());
+    }
 #else
     auto userAgent = BuildConfig.USER_AGENT;
-#endif
     request.setHeader(QNetworkRequest::UserAgentHeader, userAgent.toUtf8());
+#endif
     for (auto& headerProxy : m_headerProxies) {
         headerProxy->writeHeaders(request);
     }
 
 #ifdef LAUNCHER_APPLICATION
-    request.setTransferTimeout(APPLICATION->settings()->get("RequestTimeout").toInt() * 1000);
+    if (app) {
+        request.setTransferTimeout(app->settings()->get("RequestTimeout").toInt() * 1000);
+    } else {
+        request.setTransferTimeout();
+    }
 #else
     request.setTransferTimeout();
 #endif
@@ -335,6 +357,27 @@ auto Request::handleRedirect() -> bool
     return true;
 }
 
+auto Request::tryNextSource() -> bool
+{
+    auto failedUrl = m_url;
+    if (!m_sources.advance())
+        return false;
+
+    m_url = m_sources.current();
+    m_state = State::Running;
+    qCWarning(m_logCat) << getUid().toString() << "Switching source from" << failedUrl.toString() << "to" << m_url.toString()
+                       << "for" << m_originalUrl.toString() << "-" << m_sources.remaining() << "source(s) left";
+    setStatus(tr("Retrying from a different source"));
+
+    /*
+     * Re-entering executeTask is the same thing handleRedirect does after rewriting m_url: the sink
+     * is re-initialised, which resets the validators, so bytes from the dead source cannot leak
+     * into the next attempt's checksum.
+     */
+    executeTask();
+    return true;
+}
+
 void Request::handleAutoRetry(int64_t delay)
 {
     m_retryCount++;
@@ -377,6 +420,9 @@ void Request::downloadFinished()
         return;
     }
     if (m_state == State::Failed) {
+        if (tryNextSource()) {
+            return;
+        }
         qCDebug(m_logCat) << getUid().toString() << "Request failed in previous step:" << m_url.toString();
         m_sink->abort();
         m_failReason = m_reply->errorString();
@@ -410,6 +456,9 @@ void Request::downloadFinished()
     if (!result) {
         qCDebug(m_logCat) << getUid().toString() << "Request failed to finalize:" << m_url.toString();
         m_sink->abort();
+        if (tryNextSource()) {
+            return;
+        }
         emitFailed(result.error());
         return;
     }

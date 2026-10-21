@@ -53,6 +53,7 @@
 #include "EnumWrapper.h"
 #include "HeaderProxy.h"
 #include "HttpMetaCache.h"
+#include "MirrorPolicy.h"
 #include "QObjectPtr.h"
 #include "Sink.h"
 #include "Validator.h"
@@ -136,6 +137,14 @@ class Request : public Task {
     auto canAbort() const -> bool override { return true; }
 
     void setNetwork(QNetworkAccessManager* network) { m_network = network; }
+    /**
+     * Overrides the sources this request may try, in order.
+     *
+     * By default they come from MirrorPolicy for the URL the request was built with; this exists
+     * so a caller (or a test) can supply an explicit fallback list.
+     */
+    void setSources(SourceSequence sources) { m_sources = std::move(sources); }
+    auto sources() const -> const SourceSequence& { return m_sources; }
     void addHeaderProxy(std::unique_ptr<Net::HeaderProxy> proxy) { m_headerProxies.push_back(std::move(proxy)); }
     void setSink(std::unique_ptr<Sink> sink) { m_sink = std::move(sink); }
     void setLogCat(LogCatFunc logCat) { m_logCat = logCat; }
@@ -152,6 +161,8 @@ class Request : public Task {
    private:
     auto handleRedirect() -> bool;
     void handleAutoRetry(int64_t delay);
+    /** Moves to the next mirror of the original URL, or returns false when there is none left. */
+    auto tryNextSource() -> bool;
     virtual QNetworkReply* getReply(QNetworkRequest&);
 
    protected slots:
@@ -185,6 +196,10 @@ class Request : public Task {
 
     /// source URL
     QUrl m_url;
+    /// the URL as the caller asked for it, before any mirror rewriting
+    QUrl m_originalUrl;
+    /// attempt order for m_originalUrl; m_url is always one of these
+    SourceSequence m_sources;
     std::vector<std::unique_ptr<Net::HeaderProxy>> m_headerProxies;
 
     int m_retryCount = 0;
