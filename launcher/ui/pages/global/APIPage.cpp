@@ -161,6 +161,7 @@ void APIPage::loadSettings()
     ui->mirrorPolicyComboBox->setCurrentIndex(mirrorPolicyIndex == -1 ? 0 : mirrorPolicyIndex);
     ui->mirrorBaseUrl->setText(s->get("MirrorBaseUrl").toString());
     ui->servicesMirrorBaseUrl->setText(s->get("ServicesMirrorBaseUrl").toString());
+    ui->mavenMirrors->setEntries(s->get("MavenMirrors").toString());
     QString fmlLibsURL = s->get("LegacyFMLLibsURLOverride").toString();
     ui->legacyFMLLibsURL->setText(fmlLibsURL);
     QString flameKey = s->get("FlameKeyOverride").toString();
@@ -215,6 +216,9 @@ void APIPage::applySettings()
     s->set("MirrorPolicy", ui->mirrorPolicyComboBox->currentData().toInt());
     s->set("MirrorBaseUrl", mirrorBaseURL.toString());
     s->set("ServicesMirrorBaseUrl", servicesMirrorBaseURL.toString());
+    // Deliberately not run through upgradeToHTTPS: an education-network mirror is often plain HTTP
+    // on purpose, and the list is validated as it is typed.
+    s->set("MavenMirrors", ui->mavenMirrors->entries());
 
     s->set("FallbackMRBlockedMods", ui->FallbackMRBlockedMods->checkState());
     s->set("MetaURLOverride", metaURL.toString());

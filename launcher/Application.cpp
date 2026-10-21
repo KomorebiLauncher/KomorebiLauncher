@@ -905,6 +905,16 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
             // Empty by default: a Mojang content mirror does not carry our metadata or translations,
             // so enabling this is only meaningful against a verbatim mirror of those services.
             resetIfInvalid(m_settings->registerSetting("ServicesMirrorBaseUrl", "").get());
+            /*
+             * One entry per line, tried in order, '#' comments one out. These hold the maven tree -
+             * Mojang libraries, loader libraries and Maven Central all come out of it - which is the
+             * one the education-network mirrors carry, unlike the game files. The global base above
+             * is still appended, so an empty list keeps working through BMCLAPI's own /maven.
+             */
+            m_settings->registerSetting("MavenMirrors",
+                                        "https://mirrors.cernet.edu.cn/bmclapi\n"
+                                        "https://cmcc.mirrors.ustc.edu.cn/bmclapi\n"
+                                        "https://chinanet.mirrors.ustc.edu.cn/bmclapi");
         }
 
         m_settings->registerSetting("MetaRefreshOnLaunch", true);

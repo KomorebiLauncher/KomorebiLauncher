@@ -1145,6 +1145,8 @@ SET(LAUNCHER_SOURCES
     ui/widgets/PageContainer.cpp
     ui/widgets/PageContainer.h
     ui/widgets/PageContainer_p.h
+    ui/widgets/MirrorListEditor.cpp
+    ui/widgets/MirrorListEditor.h
     ui/widgets/ProjectDescriptionPage.h
     ui/widgets/ProjectDescriptionPage.cpp
     ui/widgets/VariableSizedImageObject.h

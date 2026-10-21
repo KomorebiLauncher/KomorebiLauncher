@@ -233,6 +233,20 @@
               </property>
              </widget>
             </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="mavenMirrorsLabel">
+              <property name="text">
+               <string>Library mirrors</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="MirrorListEditor" name="mavenMirrors">
+              <property name="toolTip">
+               <string>Tried in order for Mojang libraries, loader libraries and Maven Central, before the mirror base URL above. These mirrors carry that one tree, not the game itself.</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
          </layout>
@@ -530,4 +544,12 @@
  </widget>
  <resources/>
  <connections/>
+ <customwidgets>
+  <customwidget>
+   <class>MirrorListEditor</class>
+   <extends>QWidget</extends>
+   <header>ui/widgets/MirrorListEditor.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
 </ui>

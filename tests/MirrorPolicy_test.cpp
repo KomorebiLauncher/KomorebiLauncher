@@ -160,6 +160,57 @@ class MirrorPolicyTest : public QObject {
         QCOMPARE(second, QStringList{ QStringLiteral("https://b.example/assets/af/af96f5") });
     }
 
+    void test_MavenMirrorList()
+    {
+        const auto base = expected_base();
+        const QStringList prefixes{ QStringLiteral("https://mirrors.cernet.edu.cn/bmclapi"),
+                                    QStringLiteral("https://cmcc.mirrors.ustc.edu.cn/bmclapi") };
+
+        // Measured: one maven tree holds Mojang libraries, loader libraries and Maven Central alike,
+        // so all three hosts are rewritten the same way, prefixes first, then the global base.
+        const QStringList hosts{ QStringLiteral("libraries.minecraft.net"), QStringLiteral("maven.minecraftforge.net"),
+                                 QStringLiteral("maven.neoforged.net"), QStringLiteral("maven.fabricmc.net"),
+                                 QStringLiteral("repo1.maven.org") };
+        for (const auto& host : hosts) {
+            auto url = QUrl(QStringLiteral("https://%1/com/example/lib/1.0/lib-1.0.jar").arg(host));
+            auto candidates = toStrings(Net::MirrorPolicy::candidatesFor(url, Kind::MirrorOnly, base, QString(), prefixes));
+            QStringList expected{ QStringLiteral("https://mirrors.cernet.edu.cn/bmclapi/com/example/lib/1.0/lib-1.0.jar"),
+                                  QStringLiteral("https://cmcc.mirrors.ustc.edu.cn/bmclapi/com/example/lib/1.0/lib-1.0.jar"),
+                                  base + QStringLiteral("/maven/com/example/lib/1.0/lib-1.0.jar"),
+                                  base + QStringLiteral("/libraries/com/example/lib/1.0/lib-1.0.jar") };
+            QCOMPARE(candidates, expected);
+        }
+
+        // A game file must not be sent to those prefixes; they do not carry it.
+        auto jar = QUrl(QStringLiteral("https://piston-data.mojang.com/v1/objects/a7e5a6/client.jar"));
+        QCOMPARE(toStrings(Net::MirrorPolicy::candidatesFor(jar, Kind::MirrorOnly, base, QString(), prefixes)),
+                 QStringList{ base + QStringLiteral("/v1/objects/a7e5a6/client.jar") });
+    }
+
+    void test_MavenListDoesNotDuplicateTheBase()
+    {
+        auto url = QUrl(QStringLiteral("https://libraries.minecraft.net/com/mojang/patchy/2.2.10/patchy-2.2.10.jar"));
+
+        // The default setting may well list the base's own /maven; trying it twice buys nothing.
+        auto candidates = toStrings(
+            Net::MirrorPolicy::candidatesFor(url, Kind::MirrorOnly, expected_base(), QString(), { expected_base() + QStringLiteral("/maven") }));
+        QStringList expected{ expected_base() + QStringLiteral("/maven/com/mojang/patchy/2.2.10/patchy-2.2.10.jar"),
+                              expected_base() + QStringLiteral("/libraries/com/mojang/patchy/2.2.10/patchy-2.2.10.jar") };
+        QCOMPARE(candidates, expected);
+    }
+
+    void test_ParseMirrorList()
+    {
+        auto list = Net::parseMirrorList(QStringLiteral("  https://a.example/maven \n"
+                                                        "# https://b.example/disabled-on-purpose\n"
+                                                        "\n"
+                                                        "https://c.example/bmclapi\n"));
+        QStringList expected{ QStringLiteral("https://a.example/maven"), QStringLiteral("https://c.example/bmclapi") };
+        QCOMPARE(list, expected);
+
+        QVERIFY(Net::parseMirrorList(QString()).isEmpty());
+    }
+
     void test_SourceSequence()
     {
         Net::SourceSequence empty;

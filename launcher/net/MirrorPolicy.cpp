@@ -11,6 +11,7 @@
 #include "MirrorPolicy.h"
 
 #include <QStringList>
+#include <algorithm>
 
 #if defined(LAUNCHER_APPLICATION)
 #include "Application.h"
@@ -18,6 +19,18 @@
 #endif
 
 namespace Net {
+
+auto parseMirrorList(const QString& text) -> QStringList
+{
+    QStringList entries;
+    for (const auto& line : text.split(QLatin1Char('\n'))) {
+        auto entry = line.trimmed();
+        if (entry.isEmpty() || entry.startsWith(QLatin1Char('#')))
+            continue;
+        entries.append(entry);
+    }
+    return entries;
+}
 
 namespace {
 
@@ -33,6 +46,21 @@ const QStringList kMojangObjectHosts = {
 const QStringList kOwnServiceHosts = {
     QStringLiteral("meta.prismlauncher.org"),
     QStringLiteral("wtflauncher.github.io"),
+};
+
+/**
+ * Hosts whose files all live in one maven tree.
+ *
+ * Measured on 2026-10-21: the same prefix answers a Mojang library, a Forge library, a Maven
+ * Central artifact and the Forge installer jar, so one list of prefixes covers loaders and
+ * libraries together.
+ */
+const QStringList kMavenHosts = {
+    QStringLiteral("libraries.minecraft.net"),
+    QStringLiteral("maven.minecraftforge.net"),
+    QStringLiteral("maven.neoforged.net"),
+    QStringLiteral("maven.fabricmc.net"),
+    QStringLiteral("repo1.maven.org"),
 };
 
 /**
@@ -64,7 +92,8 @@ auto withPath(const QUrl& source, const QUrl& base, const QString& prefix) -> QU
 
 }  // namespace
 
-auto MirrorPolicy::mirrorUrls(const QUrl& url, const QString& mirrorBase, const QString& servicesMirrorBase) -> std::vector<QUrl>
+auto MirrorPolicy::mirrorUrls(const QUrl& url, const QString& mirrorBase, const QString& servicesMirrorBase, const QStringList& mavenMirrors)
+    -> std::vector<QUrl>
 {
     if (!url.isValid() || !url.host().size())
         return {};
@@ -84,22 +113,32 @@ auto MirrorPolicy::mirrorUrls(const QUrl& url, const QString& mirrorBase, const 
         out.push_back(withPath(url, base, {}));
     } else if (host == QLatin1String("resources.download.minecraft.net")) {
         out.push_back(withPath(url, base, QStringLiteral("/assets")));
-    } else if (host == QLatin1String("libraries.minecraft.net")) {
+    } else if (kMavenHosts.contains(host)) {
+        for (const auto& entry : mavenMirrors) {
+            auto prefix = validatedBase(entry);
+            if (prefix.isValid())
+                out.push_back(withPath(url, prefix, {}));
+        }
         // Both prefixes are served by BMCLAPI and either can rate-limit, so keep both in order.
         out.push_back(withPath(url, base, QStringLiteral("/maven")));
         out.push_back(withPath(url, base, QStringLiteral("/libraries")));
     }
 
-    return out;
+    std::vector<QUrl> unique;
+    for (const auto& candidate : out) {
+        if (std::find(unique.begin(), unique.end(), candidate) == unique.end())
+            unique.push_back(candidate);
+    }
+    return unique;
 }
 
-auto MirrorPolicy::candidatesFor(const QUrl& url, MirrorPolicyKind kind, const QString& mirrorBase, const QString& servicesMirrorBase)
-    -> std::vector<QUrl>
+auto MirrorPolicy::candidatesFor(const QUrl& url, MirrorPolicyKind kind, const QString& mirrorBase, const QString& servicesMirrorBase,
+                                 const QStringList& mavenMirrors) -> std::vector<QUrl>
 {
     if (kind == MirrorPolicyKind::OfficialOnly)
         return { url };
 
-    auto mirrors = mirrorUrls(url, mirrorBase, servicesMirrorBase);
+    auto mirrors = mirrorUrls(url, mirrorBase, servicesMirrorBase, mavenMirrors);
     if (mirrors.empty())
         return { url };
 
@@ -128,7 +167,8 @@ auto MirrorPolicy::candidates(const QUrl& url) -> std::vector<QUrl>
         return { url };
     auto* settings = app->settings();
     auto kind = static_cast<MirrorPolicyKind>(settings->get("MirrorPolicy").toInt());
-    return candidatesFor(url, kind, settings->get("MirrorBaseUrl").toString(), settings->get("ServicesMirrorBaseUrl").toString());
+    return candidatesFor(url, kind, settings->get("MirrorBaseUrl").toString(), settings->get("ServicesMirrorBaseUrl").toString(),
+                         parseMirrorList(settings->get("MavenMirrors").toString()));
 #else
     return { url };
 #endif

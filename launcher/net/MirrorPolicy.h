@@ -11,6 +11,7 @@
 #pragma once
 
 #include <QString>
+#include <QStringList>
 #include <QUrl>
 #include <vector>
 
@@ -37,6 +38,12 @@ enum class MirrorPolicyKind : int {
  * path segment; the rest of the URL is untouched. Keeping this free of settings and network
  * access is what makes it testable.
  *
+ * Two shapes of mirror exist and they are not interchangeable, which is why the maven tree gets
+ * its own list. Measured on 2026-10-21, BMCLAPI serves the game files at its root, the assets
+ * under /assets and the libraries under /maven, and none of those three at the others' prefix;
+ * the education-network mirrors of it expose only the maven tree, at their root, with no /maven
+ * segment. A single base therefore cannot stand for both kinds.
+ *
  * The launcher's own services (the metadata server and the translation site) need a separate
  * base: a content mirror such as BMCLAPI does not carry them, so folding them into the same base
  * would make 'mirror only' leave the launcher unable to read any metadata at all.
@@ -44,15 +51,25 @@ enum class MirrorPolicyKind : int {
 class MirrorPolicy {
 public:
     /** Mirrors of `url`, in the order they should be tried; empty when the host is not mirrored. */
-    static auto mirrorUrls(const QUrl& url, const QString& mirrorBase, const QString& servicesMirrorBase = {}) -> std::vector<QUrl>;
+    static auto mirrorUrls(const QUrl& url, const QString& mirrorBase, const QString& servicesMirrorBase = {},
+                           const QStringList& mavenMirrors = {}) -> std::vector<QUrl>;
 
     /** The full attempt order for a given policy. Always contains at least `url`. */
     static auto candidatesFor(const QUrl& url, MirrorPolicyKind kind, const QString& mirrorBase,
-                              const QString& servicesMirrorBase = {}) -> std::vector<QUrl>;
+                              const QString& servicesMirrorBase = {}, const QStringList& mavenMirrors = {}) -> std::vector<QUrl>;
 
     /** Same, using the user's settings. Returns just `url` when there is no launcher instance. */
     static auto candidates(const QUrl& url) -> std::vector<QUrl>;
 };
+
+/**
+ * Reads a mirror list stored one entry per line.
+ *
+ * Blank lines and lines starting with '#' are skipped, so the setting stays readable and
+ * switchable by hand in the configuration file: commenting an entry out disables it without
+ * losing the entry.
+ */
+auto parseMirrorList(const QString& text) -> QStringList;
 
 /**
  * The ordered sources one request may try.
