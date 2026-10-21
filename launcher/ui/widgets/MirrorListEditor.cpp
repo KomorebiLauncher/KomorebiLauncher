@@ -76,7 +76,7 @@ MirrorListEditor::MirrorListEditor(QWidget* parent) : QWidget(parent)
         makeItem(text, m_list, true);
         m_newEntry->clear();
     });
-    connect(m_newEntry, &QLineEdit::textChanged, this, [this, addButton = m_addButton](const QString& text) {
+    connect(m_newEntry, &QLineEdit::textChanged, this, [addButton = m_addButton](const QString& text) {
         addButton->setEnabled(isUsablePrefix(text));
     });
     connect(m_newEntry, &QLineEdit::returnPressed, m_addButton, &QPushButton::click);
