@@ -91,6 +91,9 @@ MSALoginDialog::MSALoginDialog(QWidget* parent) : QDialog(parent), ui(new Ui::MS
     });
 
     ui->buttonBox->button(QDialogButtonBox::Cancel)->setText(tr("Cancel"));
+
+    // Drop this along with the label once the shipped app id is on Xbox Live's allowlist.
+    ui->approvalNotice->setVisible(APPLICATION->settings()->get("MSAClientIDOverride").toString().isEmpty());
 }
 
 int MSALoginDialog::exec()
