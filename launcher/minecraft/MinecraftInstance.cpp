@@ -196,6 +196,7 @@ void MinecraftInstance::loadSpecificSettings()
         m_settings->registerOverride(global_settings->getSetting("JavaPath"), locationOverride);
         m_settings->registerOverride(global_settings->getSetting("JvmArgs"), argsOverride);
         m_settings->registerOverride(global_settings->getSetting("IgnoreJavaCompatibility"), locationOverride);
+        m_settings->registerOverride(global_settings->getSetting("AllowedJavaVersions"), locationOverride);
 
         // special!
         m_settings->registerPassthrough(global_settings->getSetting("JavaSignature"), locationOverride);

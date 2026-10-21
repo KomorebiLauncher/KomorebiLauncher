@@ -765,6 +765,8 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("JvmArgs", "");
         m_settings->registerSetting("IgnoreJavaCompatibility", false);
         m_settings->registerSetting("IgnoreJavaWizard", false);
+        // Empty means no restriction, so the default keeps upstream behaviour.
+        m_settings->registerSetting("AllowedJavaVersions", "");
         auto defaultEnableAutoJava = m_settings->get("JavaPath").toString().isEmpty();
         m_settings->registerSetting("AutomaticJavaSwitch", defaultEnableAutoJava);
         m_settings->registerSetting("AutomaticJavaDownload", defaultEnableAutoJava);

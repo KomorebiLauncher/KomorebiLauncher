@@ -421,6 +421,8 @@ set(JAVA_SOURCES
     java/JavaInstall.cpp
     java/JavaInstallList.h
     java/JavaInstallList.cpp
+    java/JavaSelection.h
+    java/JavaSelection.cpp
     java/JavaUtils.h
     java/JavaUtils.cpp
     java/JavaVersion.h

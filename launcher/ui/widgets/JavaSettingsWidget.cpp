@@ -130,6 +130,7 @@ void JavaSettingsWidget::loadSettings()
     m_ui->javaPathTextBox->setText(settings->get("JavaPath").toString());
 
     m_ui->skipCompatibilityCheckBox->setChecked(settings->get("IgnoreJavaCompatibility").toBool());
+    m_ui->allowedJavaVersionsEdit->setText(settings->get("AllowedJavaVersions").toString());
 
     m_ui->javaArgumentsGroupBox->setChecked(m_instance == nullptr || settings->get("OverrideJavaArgs").toBool());
     m_ui->jvmArgsTextBox->setPlainText(settings->get("JvmArgs").toString());
@@ -180,9 +181,11 @@ void JavaSettingsWidget::saveSettings()
     if (javaInstall) {
         settings->set("JavaPath", m_ui->javaPathTextBox->text());
         settings->set("IgnoreJavaCompatibility", m_ui->skipCompatibilityCheckBox->isChecked());
+        settings->set("AllowedJavaVersions", m_ui->allowedJavaVersionsEdit->text().trimmed());
     } else {
         settings->reset("JavaPath");
         settings->reset("IgnoreJavaCompatibility");
+        settings->reset("AllowedJavaVersions");
     }
 
     if (m_instance == nullptr) {

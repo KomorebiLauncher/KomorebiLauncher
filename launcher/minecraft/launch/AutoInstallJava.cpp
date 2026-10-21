@@ -34,6 +34,8 @@
  */
 
 #include "AutoInstallJava.h"
+
+#include <algorithm>
 #include <QDir>
 #include <QFileInfo>
 #include <memory>
@@ -45,6 +47,7 @@
 #include "SysInfo.h"
 #include "java/JavaInstall.h"
 #include "java/JavaInstallList.h"
+#include "java/JavaSelection.h"
 #include "java/JavaUtils.h"
 #include "java/JavaVersion.h"
 #include "java/download/ArchiveDownloadTask.h"
@@ -72,14 +75,26 @@ void AutoInstallJava::executeTask()
         auto javas = APPLICATION->javalist();
         m_current_task = javas->getLoadTask();
         connect(m_current_task.get(), &Task::finished, this, [this, javas, packProfile] {
+            auto required = packProfile->getProfile()->getCompatibleJavaMajors();
+            auto allowed = Java::parseVersionList(m_instance->settings()->get("AllowedJavaVersions").toString());
+            QList<JavaInstallPtr> installs;
             for (auto i = 0; i < javas->count(); i++) {
-                auto java = std::dynamic_pointer_cast<JavaInstall>(javas->at(i));
-                if (java && packProfile->getProfile()->getCompatibleJavaMajors().contains(java->id.major())) {
-                    if (!java->is_64bit) {
-                        emit logLine(tr("The automatic Java mechanism detected a 32-bit installation of Java."), MessageLevel::Launcher);
-                    }
-                    setJavaPath(java->path);
-                    return;
+                if (auto java = std::dynamic_pointer_cast<JavaInstall>(javas->at(i)))
+                    installs.append(java);
+            }
+            if (auto java = Java::pickInstall(installs, required, allowed)) {
+                if (!java->is_64bit) {
+                    emit logLine(tr("The automatic Java mechanism detected a 32-bit installation of Java."), MessageLevel::Launcher);
+                }
+                setJavaPath(java->path);
+                return;
+            }
+            if (!allowed.isEmpty() && !installs.isEmpty()) {
+                auto unrestricted = Java::pickInstall(installs, required, {});
+                if (unrestricted) {
+                    emit logLine(tr("A compatible Java was found but excluded by the allowed versions '%1'. Using the default Java path.")
+                                     .arg(m_instance->settings()->get("AllowedJavaVersions").toString()),
+                                 MessageLevel::Warning);
                 }
             }
             emit logLine(tr("No compatible Java version was found. Using the default one."), MessageLevel::Warning);
@@ -104,6 +119,24 @@ void AutoInstallJava::executeTask()
         emit logLine(tr("Your meta information is out of date or doesn't have the information necessary to determine what installation of "
                         "Java should be used. "
                         "Using the default Java path."),
+                     MessageLevel::Warning);
+        emitSucceeded();
+        return;
+    }
+    /*
+     * Mojang's recommendation for a version is a single runtime, so an allow-list that excludes
+     * every compatible major can only be honoured by not downloading anything.
+     */
+    auto allowed = Java::parseVersionList(m_instance->settings()->get("AllowedJavaVersions").toString());
+    auto requiredMajors = packProfile->getProfile()->getCompatibleJavaMajors();
+    if (!allowed.isEmpty() && std::none_of(requiredMajors.begin(), requiredMajors.end(),
+                                           [&](int major) { return Java::isVersionAllowed(major, allowed); })) {
+        QStringList requiredNames;
+        for (auto major : requiredMajors) {
+            requiredNames << QString::number(major);
+        }
+        emit logLine(tr("The allowed Java versions '%1' exclude every version this instance can use (%2), so no Java will be downloaded.")
+                         .arg(m_instance->settings()->get("AllowedJavaVersions").toString(), requiredNames.join(QStringLiteral(", "))),
                      MessageLevel::Warning);
         emitSucceeded();
         return;
