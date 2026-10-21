@@ -128,6 +128,22 @@ class MirrorFallbackTest : public QObject {
         QCOMPARE(sources.urls().size(), size_t(1));
         QCOMPARE(*bodyPtr, QByteArrayLiteral("first-source"));
     }
+
+    /** Instance-local OptiFine jars are referenced with file:// URLs, so the downloader has to accept them. */
+    void test_FileUrlIsFetchable()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        auto path = QDir(dir.path()).filePath("local-library.jar");
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write("local-library-bytes");
+        file.close();
+
+        auto [request, bodyPtr] = Net::Request::makeByteArray(QUrl::fromLocalFile(path));
+        QCOMPARE(run(request), QStringLiteral("succeeded"));
+        QCOMPARE(*bodyPtr, QByteArrayLiteral("local-library-bytes"));
+    }
 };
 
 QTEST_GUILESS_MAIN(MirrorFallbackTest)
