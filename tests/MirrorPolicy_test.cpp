@@ -79,6 +79,35 @@ class MirrorPolicyTest : public QObject {
         QTest::newRow("keeps query") << QStringLiteral("https://piston-meta.mojang.com/v1/packages/e61d8c/19.json?sig=abc")
                                      << static_cast<int>(Kind::MirrorOnly)
                                      << QStringList{ base + QStringLiteral("/v1/packages/e61d8c/19.json?sig=abc") };
+
+        // Our own services follow a separate base, because a content mirror does not carry them.
+        QTest::newRow("meta untouched by the content mirror") << QStringLiteral("https://meta.prismlauncher.org/v1/net.minecraft/index.json")
+                                                              << static_cast<int>(Kind::MirrorOnly)
+                                                              << QStringList{
+                                                                 QStringLiteral("https://meta.prismlauncher.org/v1/net.minecraft/index.json") };
+
+        QTest::newRow("translations untouched by the content mirror")
+            << QStringLiteral("https://wtflauncher.github.io/i18n/index_v2.json") << static_cast<int>(Kind::MirrorThenOfficial)
+            << QStringList{ QStringLiteral("https://wtflauncher.github.io/i18n/index_v2.json") };
+    }
+
+    void test_ServicesMirror()
+    {
+        const auto services = QStringLiteral("https://mirror.example");
+        auto meta = QUrl(QStringLiteral("https://meta.prismlauncher.org/v1/net.minecraft/1.21.4.json"));
+        auto i18n = QUrl(QStringLiteral("https://wtflauncher.github.io/i18n/index_v2.json"));
+
+        // Path is preserved verbatim, including the /i18n prefix, so any crawler of the two sites works.
+        QStringList expectedMeta{ QStringLiteral("https://mirror.example/v1/net.minecraft/1.21.4.json"), meta.toString() };
+        QCOMPARE(toStrings(Net::MirrorPolicy::candidatesFor(meta, Kind::MirrorThenOfficial, expected_base(), services)), expectedMeta);
+
+        QStringList expectedI18n{ QStringLiteral("https://mirror.example/i18n/index_v2.json") };
+        QCOMPARE(toStrings(Net::MirrorPolicy::candidatesFor(i18n, Kind::MirrorOnly, expected_base(), services)), expectedI18n);
+
+        // A Mojang host must keep using the content mirror even when the services base is set.
+        auto jar = QUrl(QStringLiteral("https://piston-data.mojang.com/v1/objects/a7e5a6/client.jar"));
+        QStringList expectedJar{ expected_base() + QStringLiteral("/v1/objects/a7e5a6/client.jar") };
+        QCOMPARE(toStrings(Net::MirrorPolicy::candidatesFor(jar, Kind::MirrorOnly, expected_base(), services)), expectedJar);
     }
 
     void test_Rules()

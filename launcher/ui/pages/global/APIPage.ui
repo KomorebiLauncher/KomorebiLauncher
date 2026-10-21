@@ -216,6 +216,23 @@
               </property>
              </widget>
             </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="servicesMirrorBaseUrlLabel">
+              <property name="text">
+               <string>Services mirror</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1">
+             <widget class="QLineEdit" name="servicesMirrorBaseUrl">
+              <property name="toolTip">
+               <string>Optional verbatim mirror of the metadata server and the translation site. Content mirrors such as BMCLAPI do not carry them, so leave this empty unless the mirror really is a copy of those two.</string>
+              </property>
+              <property name="placeholderText">
+               <string>Empty unless you have a verbatim mirror</string>
+              </property>
+             </widget>
+            </item>
            </layout>
           </item>
          </layout>

@@ -36,14 +36,19 @@ enum class MirrorPolicyKind : int {
  * Mirrors of Mojang content are addressed by swapping the host and, for some hosts, prefixing a
  * path segment; the rest of the URL is untouched. Keeping this free of settings and network
  * access is what makes it testable.
+ *
+ * The launcher's own services (the metadata server and the translation site) need a separate
+ * base: a content mirror such as BMCLAPI does not carry them, so folding them into the same base
+ * would make 'mirror only' leave the launcher unable to read any metadata at all.
  */
 class MirrorPolicy {
 public:
     /** Mirrors of `url`, in the order they should be tried; empty when the host is not mirrored. */
-    static auto mirrorUrls(const QUrl& url, const QString& mirrorBase) -> std::vector<QUrl>;
+    static auto mirrorUrls(const QUrl& url, const QString& mirrorBase, const QString& servicesMirrorBase = {}) -> std::vector<QUrl>;
 
     /** The full attempt order for a given policy. Always contains at least `url`. */
-    static auto candidatesFor(const QUrl& url, MirrorPolicyKind kind, const QString& mirrorBase) -> std::vector<QUrl>;
+    static auto candidatesFor(const QUrl& url, MirrorPolicyKind kind, const QString& mirrorBase,
+                              const QString& servicesMirrorBase = {}) -> std::vector<QUrl>;
 
     /** Same, using the user's settings. Returns just `url` when there is no launcher instance. */
     static auto candidates(const QUrl& url) -> std::vector<QUrl>;
