@@ -157,6 +157,16 @@
         </property>
        </widget>
       </item>
+      <item row="13" column="0">
+       <widget class="QCheckBox" name="useLocalJavaCheckBox">
+        <property name="toolTip">
+         <string>Look for a Java runtime inside this instance's runtime folder and prefer it. The version is verified by running the binary, not guessed from the folder name. A Java path set above takes precedence over this.</string>
+        </property>
+        <property name="text">
+         <string>Use the Java &amp;runtime inside the instance folder</string>
+        </property>
+       </widget>
+      </item>
       <item row="0" column="0">
        <widget class="QLabel" name="label_4">
         <property name="text">

@@ -423,6 +423,8 @@ set(JAVA_SOURCES
     java/JavaInstallList.cpp
     java/JavaSelection.h
     java/JavaSelection.cpp
+    java/LocalJavaScanTask.h
+    java/LocalJavaScanTask.cpp
     java/JavaUtils.h
     java/JavaUtils.cpp
     java/JavaVersion.h

@@ -189,6 +189,7 @@ void MinecraftInstance::loadSpecificSettings()
     auto locationOverride = m_settings->registerSetting("OverrideJavaLocation", false);
     auto argsOverride = m_settings->registerSetting("OverrideJavaArgs", false);
     m_settings->registerSetting("AutomaticJava", false);
+    m_settings->registerSetting("UseLocalJava", false);
     m_settings->registerSetting("UseLatestMinecraftVersion", false);
     m_settings->registerSetting("UseLatestMinecraftVersionType", "release");
 

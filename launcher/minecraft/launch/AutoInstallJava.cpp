@@ -65,11 +65,67 @@ AutoInstallJava::AutoInstallJava(LaunchTask* parent)
 void AutoInstallJava::executeTask()
 {
     auto settings = m_instance->settings();
-    if (!APPLICATION->settings()->get("AutomaticJavaSwitch").toBool() ||
-        (settings->get("OverrideJavaLocation").toBool() && QFileInfo::exists(settings->get("JavaPath").toString()))) {
+    auto pinnedJava = settings->get("OverrideJavaLocation").toBool() && QFileInfo::exists(settings->get("JavaPath").toString());
+    if (pinnedJava) {
+        // An explicit path always wins, including over a runtime inside the instance folder.
         emitSucceeded();
         return;
     }
+
+    /*
+     * Deliberately before AutomaticJavaSwitch: choosing the runtime that ships inside the instance
+     * is an explicit instruction from the user, not an automatic guess, so it must keep working
+     * when automatic detection is off.
+     */
+    if (settings->get("UseLocalJava").toBool()) {
+        startLocalScan();
+        return;
+    }
+
+    if (!APPLICATION->settings()->get("AutomaticJavaSwitch").toBool()) {
+        emitSucceeded();
+        return;
+    }
+    resolveJava();
+}
+
+void AutoInstallJava::startLocalScan()
+{
+    m_local_scan = Java::LocalJavaScanTask::Ptr(new Java::LocalJavaScanTask(m_instance->instanceRoot()));
+    connect(m_local_scan.get(), &Task::succeeded, this, &AutoInstallJava::chooseLocalJava);
+    connect(m_local_scan.get(), &Task::failed, this, &AutoInstallJava::chooseLocalJava);
+    connect(m_local_scan.get(), &Task::aborted, this, [this] { emitFailed(tr("Looking for Java inside the instance was aborted.")); });
+    connect(m_local_scan.get(), &Task::progress, this, &AutoInstallJava::setProgress);
+    connect(m_local_scan.get(), &Task::stepProgress, this, &AutoInstallJava::propagateStepProgress);
+    connect(m_local_scan.get(), &Task::status, this, &AutoInstallJava::setStatus);
+    connect(m_local_scan.get(), &Task::details, this, &AutoInstallJava::setDetails);
+    emit progressReportingRequest();
+    m_local_scan->start();
+}
+
+void AutoInstallJava::chooseLocalJava()
+{
+    QList<JavaInstallPtr> installs;
+    if (m_local_scan)
+        installs = m_local_scan->installs();
+    m_local_scan.reset();
+
+    auto packProfile = m_instance->getPackProfile();
+    auto allowed = Java::parseVersionList(m_instance->settings()->get("AllowedJavaVersions").toString());
+    if (auto java = Java::pickInstall(installs, packProfile->getProfile()->getCompatibleJavaMajors(), allowed)) {
+        setJavaPath(java->path);
+        return;
+    }
+
+    emit logLine(installs.isEmpty() ? tr("No Java runtime was found inside the instance, using the usual Java resolution.")
+                                    : tr("None of the Java runtimes inside the instance can be used by this version, using the usual "
+                                         "Java resolution."),
+                 MessageLevel::Warning);
+    resolveJava();
+}
+
+void AutoInstallJava::resolveJava()
+{
     auto packProfile = m_instance->getPackProfile();
     if (!APPLICATION->settings()->get("AutomaticJavaDownload").toBool()) {
         auto javas = APPLICATION->javalist();
@@ -275,6 +331,11 @@ void AutoInstallJava::tryNextMajorJava()
 }
 bool AutoInstallJava::abort()
 {
+    if (m_local_scan && m_local_scan->canAbort()) {
+        auto status = m_local_scan->abort();
+        emitAborted();
+        return status;
+    }
     if (m_current_task && m_current_task->canAbort()) {
         auto status = m_current_task->abort();
         emitAborted();

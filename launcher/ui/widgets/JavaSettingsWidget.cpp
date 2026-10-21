@@ -61,6 +61,8 @@ JavaSettingsWidget::JavaSettingsWidget(MinecraftInstance* instance, QWidget* par
 
     if (m_instance == nullptr) {
         m_ui->javaDownloadBtn->hide();
+        // Only meaningful for one instance at a time; the global page has no instance folder.
+        m_ui->useLocalJavaCheckBox->hide();
         if (BuildConfig.JAVA_DOWNLOADER_ENABLED) {
             connect(m_ui->autodetectJavaCheckBox, &QCheckBox::checkStateChanged, this, [this](bool state) {
                 m_ui->autodownloadJavaCheckBox->setEnabled(state);
@@ -131,6 +133,9 @@ void JavaSettingsWidget::loadSettings()
 
     m_ui->skipCompatibilityCheckBox->setChecked(settings->get("IgnoreJavaCompatibility").toBool());
     m_ui->allowedJavaVersionsEdit->setText(settings->get("AllowedJavaVersions").toString());
+    if (m_instance != nullptr) {
+        m_ui->useLocalJavaCheckBox->setChecked(settings->get("UseLocalJava").toBool());
+    }
 
     m_ui->javaArgumentsGroupBox->setChecked(m_instance == nullptr || settings->get("OverrideJavaArgs").toBool());
     m_ui->jvmArgsTextBox->setPlainText(settings->get("JvmArgs").toString());
@@ -182,10 +187,16 @@ void JavaSettingsWidget::saveSettings()
         settings->set("JavaPath", m_ui->javaPathTextBox->text());
         settings->set("IgnoreJavaCompatibility", m_ui->skipCompatibilityCheckBox->isChecked());
         settings->set("AllowedJavaVersions", m_ui->allowedJavaVersionsEdit->text().trimmed());
+        if (m_instance != nullptr) {
+            settings->set("UseLocalJava", m_ui->useLocalJavaCheckBox->isChecked());
+        }
     } else {
         settings->reset("JavaPath");
         settings->reset("IgnoreJavaCompatibility");
         settings->reset("AllowedJavaVersions");
+        if (m_instance != nullptr) {
+            settings->reset("UseLocalJava");
+        }
     }
 
     if (m_instance == nullptr) {

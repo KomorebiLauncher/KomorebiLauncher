@@ -37,6 +37,7 @@
 
 #include <launch/LaunchStep.h>
 #include <launch/LaunchTask.h>
+#include "java/LocalJavaScanTask.h"
 #include "meta/Version.h"
 #include "minecraft/MinecraftInstance.h"
 #include "tasks/Task.h"
@@ -49,7 +50,7 @@ class AutoInstallJava : public LaunchStep {
     ~AutoInstallJava() override = default;
 
     void executeTask() override;
-    bool canAbort() const override { return m_current_task ? m_current_task->canAbort() : false; }
+    bool canAbort() const override { return m_current_task ? m_current_task->canAbort() : (m_local_scan && m_local_scan->canAbort()); }
     bool abort() override;
 
    protected:
@@ -57,10 +58,16 @@ class AutoInstallJava : public LaunchStep {
     void setJavaPathFromPartial();
     void downloadJava(Meta::Version::Ptr version, QString javaName);
     void tryNextMajorJava();
+    /** Detection and download, i.e. what upstream does. */
+    void resolveJava();
+    /** Picks from the runtimes inside the instance folder, or falls back to resolveJava. */
+    void chooseLocalJava();
+    void startLocalScan();
 
    private:
     MinecraftInstance* m_instance;
     Task::Ptr m_current_task;
+    Java::LocalJavaScanTask::Ptr m_local_scan;
 
     qsizetype m_majorJavaVersionIndex = 0;
     const QString m_supported_arch;
