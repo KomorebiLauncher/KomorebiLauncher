@@ -57,6 +57,9 @@ ecm_add_test(JavaSelection_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION
 ecm_add_test(LocalJavaScan_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME LocalJavaScan)
 
+ecm_add_test(OptiFineList_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME OptiFineList)
+
 ecm_add_test(Packwiz_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME Packwiz)
 

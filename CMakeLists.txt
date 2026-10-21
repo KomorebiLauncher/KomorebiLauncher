@@ -532,6 +532,7 @@ option(NBT_BUILD_TESTS "Build NBT library tests" OFF) #FIXME: fix unit tests.
 add_subdirectory(libraries/libnbtplusplus)
 
 add_subdirectory(libraries/launcher) # java based launcher part for Minecraft
+add_subdirectory(libraries/optifinerunner) # headless driver for OptiFine's own installer
 add_subdirectory(libraries/javacheck) # java compatibility checker
 
 add_subdirectory(libraries/rainbow) # Qt extension for colors

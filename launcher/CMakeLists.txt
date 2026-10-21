@@ -557,6 +557,11 @@ set(MODRINTH_SOURCES
     modplatform/modrinth/ModrinthPackExportTask.h
 )
 
+set(OPTIFINE_SOURCES
+    modplatform/optifine/OptiFineList.cpp
+    modplatform/optifine/OptiFineList.h
+)
+
 set(PACKWIZ_SOURCES
     modplatform/packwiz/Packwiz.h
     modplatform/packwiz/Packwiz.cpp
@@ -771,6 +776,7 @@ set(LOGIC_SOURCES
     ${FTB_SOURCES}
     ${FLAME_SOURCES}
     ${MODRINTH_SOURCES}
+    ${OPTIFINE_SOURCES}
     ${PACKWIZ_SOURCES}
     ${TECHNIC_SOURCES}
     ${ATLAUNCHER_SOURCES}
