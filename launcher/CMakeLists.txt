@@ -560,6 +560,8 @@ set(MODRINTH_SOURCES
 set(OPTIFINE_SOURCES
     modplatform/optifine/OptiFineList.cpp
     modplatform/optifine/OptiFineList.h
+    modplatform/optifine/OptiFineListTask.cpp
+    modplatform/optifine/OptiFineListTask.h
     modplatform/optifine/OptiFineInstallTask.cpp
     modplatform/optifine/OptiFineInstallTask.h
 )
@@ -1102,6 +1104,8 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/ResourceUpdateDialog.h
     ui/dialogs/InstallLoaderDialog.cpp
     ui/dialogs/InstallLoaderDialog.h
+    ui/dialogs/OptiFineInstallDialog.cpp
+    ui/dialogs/OptiFineInstallDialog.h
     ui/dialogs/ChooseOfflineNameDialog.cpp
     ui/dialogs/ChooseOfflineNameDialog.h
     ui/dialogs/UntrustedModsDialog.cpp

@@ -67,6 +67,7 @@ class VersionPage : public QMainWindow, public BasePage {
    private slots:
     void on_actionChange_version_triggered();
     void on_actionInstall_Loader_triggered();
+    void on_actionInstall_OptiFine_triggered();
     void on_actionAdd_Empty_triggered();
     void on_actionReload_triggered();
     void on_actionRemove_triggered();

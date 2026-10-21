@@ -54,8 +54,11 @@
 #include "QObjectPtr.h"
 #include "VersionPage.h"
 #include "meta/JsonFormat.h"
+#include "modplatform/optifine/OptiFineInstallTask.h"
+#include "modplatform/optifine/OptiFineListTask.h"
 #include "tasks/SequentialTask.h"
 #include "ui/dialogs/InstallLoaderDialog.h"
+#include "ui/dialogs/OptiFineInstallDialog.h"
 #include "ui_VersionPage.h"
 
 #include "ui/dialogs/CustomMessageBox.h"
@@ -428,6 +431,38 @@ void VersionPage::on_actionInstall_Loader_triggered()
 {
     InstallLoaderDialog dialog(m_inst->getPackProfile(), QString(), this);
     dialog.exec();
+    m_container->refreshContainer();
+}
+
+void VersionPage::on_actionInstall_OptiFine_triggered()
+{
+    const QString minecraftVersion = m_profile->getComponentVersion("net.minecraft");
+    if (minecraftVersion.isEmpty()) {
+        CustomMessageBox::selectable(this, tr("Install OptiFine"),
+                                     tr("OptiFine can only be installed into an instance that has a Minecraft version."),
+                                     QMessageBox::Warning)
+            ->show();
+        return;
+    }
+
+    QString mirrorBase = APPLICATION->settings()->get("MirrorBaseUrl").toString().trimmed();
+    if (mirrorBase.isEmpty())
+        mirrorBase = QStringLiteral("https://bmclapi2.bangbang93.com");
+
+    auto listTask = makeShared<OptiFine::ListTask>(mirrorBase, minecraftVersion);
+    ProgressDialog listDialog(this);
+    if (listDialog.execWithTask(listTask.get()) != QDialog::Accepted)
+        return;
+
+    OptiFineInstallDialog dialog(listTask->builds(), minecraftVersion, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    auto installTask = makeShared<OptiFine::InstallTask>(m_inst, dialog.selectedBuild(), mirrorBase);
+    ProgressDialog installDialog(this);
+    if (installDialog.execWithTask(installTask.get()) != QDialog::Accepted)
+        return;
+
     m_container->refreshContainer();
 }
 

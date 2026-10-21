@@ -85,7 +85,7 @@ void InstallTask::fetch(QUrl url, std::function<void(const QByteArray&)> ok, con
     request->setNetwork(APPLICATION->network());
     m_current = request;
     connect(request.get(), &Task::failed, this, [this, what](const QString& reason) { failWith(tr("Could not download %1: %2").arg(what, reason)); });
-    connect(request.get(), &Task::succeeded, this, [this, body, ok = std::move(ok)]() { ok(*body); });
+    connect(request.get(), &Task::succeeded, this, [body, ok = std::move(ok)]() { ok(*body); });
     request->start();
 }
 
@@ -96,7 +96,7 @@ void InstallTask::fetchToFile(QUrl url, QString path, std::function<void()> ok, 
     request->setNetwork(APPLICATION->network());
     m_current = request;
     connect(request.get(), &Task::failed, this, [this, what](const QString& reason) { failWith(tr("Could not download %1: %2").arg(what, reason)); });
-    connect(request.get(), &Task::succeeded, this, [this, ok = std::move(ok)]() { ok(); });
+    connect(request.get(), &Task::succeeded, this, [ok = std::move(ok)]() { ok(); });
     request->start();
 }
 
@@ -128,6 +128,7 @@ void InstallTask::fetchVersionJson(QUrl url)
 {
     setStatus(tr("Downloading the Minecraft %1 metadata", "The version OptiFine patches").arg(m_build.mcVersion));
     auto path = FS::PathCombine(m_scratchRoot, "versions", m_build.mcVersion, m_build.mcVersion + ".json");
+    FS::ensureFolderPathExists(QFileInfo(path).absolutePath());
     fetch(url,
           [this, path](const QByteArray& json) {
               QSaveFile out(path);
@@ -171,9 +172,9 @@ void InstallTask::runInstaller()
 {
     setStatus(tr("Running the OptiFine installer"));
 
-    auto java = APPLICATION->settings()->get("JavaPath").toString();
+    auto java = m_instance->settings()->get("JavaPath").toString();
     if (java.isEmpty()) {
-        failWith(tr("OptiFine needs a Java runtime in order to install. Configure Java first."));
+        failWith(tr("OptiFine needs a Java runtime in order to install. Set one in this instance's Java settings first."));
         return;
     }
     auto runner = APPLICATION->getJarPath("OptiFineRunner.jar");
@@ -218,6 +219,19 @@ void InstallTask::harvest()
 
     auto id = versionId(m_build);
     auto producedPath = FS::PathCombine(m_scratchRoot, "versions", id, id + ".json");
+    if (!QFileInfo::exists(producedPath)) {
+        // The classic installer names its own profile; take whatever it wrote for this OptiFine.
+        auto prefix = m_build.mcVersion + QStringLiteral("-OptiFine");
+        QDirIterator it(FS::PathCombine(m_scratchRoot, "versions"), { QStringLiteral("*.json") }, QDir::Files,
+                        QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            auto candidate = it.next();
+            if (QFileInfo(candidate).fileName().startsWith(prefix)) {
+                producedPath = candidate;
+                break;
+            }
+        }
+    }
     if (!QFileInfo::exists(producedPath)) {
         failWith(tr("The OptiFine installer did not produce %1.").arg(id + ".json"));
         return;
@@ -281,7 +295,14 @@ void InstallTask::harvest()
         return;
     }
 
-    if (!m_instance->getPackProfile()->installComponents({ staging })) {
+    auto packProfile = m_instance->getPackProfile();
+    // Reinstalling replaces the previous build; the component system refuses a second patch with
+    // the same uid.
+    if (packProfile->getComponent(componentUid) && !packProfile->remove(componentUid)) {
+        failWith(tr("Could not replace the OptiFine component already in this instance."));
+        return;
+    }
+    if (!packProfile->installComponents({ staging })) {
         failWith(tr("Could not add the OptiFine component to the instance."));
         return;
     }
