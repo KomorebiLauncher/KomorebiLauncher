@@ -52,6 +52,7 @@ class InstallTask : public Task {
     void fetchVersionJson(QUrl url);
     void fetchClientJar(QUrl url);
     void fetchOptiFineJar();
+    void resolveJava();
     void runInstaller();
     void harvest();
 
@@ -65,6 +66,7 @@ class InstallTask : public Task {
     MinecraftInstance* m_instance;
     Build m_build;
     QString m_mirrorBase;
+    QString m_javaPath;
     QString m_scratchRoot;
     QString m_appDataDir;  ///< Windows only: where APPDATA points, so the installer finds .minecraft
     QString m_optiFineJar;

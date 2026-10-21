@@ -23,6 +23,9 @@
 
 #include "Application.h"
 #include "FileSystem.h"
+#include "java/JavaInstall.h"
+#include "java/JavaInstallList.h"
+#include "java/JavaUtils.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
 #include "net/Request.h"
@@ -164,19 +167,68 @@ void InstallTask::fetchOptiFineJar()
                                                 : m_build.filename;
     fetchToFile(downloadUrl(m_mirrorBase, m_build), FS::PathCombine(m_scratchRoot, filename), [this, filename] {
         m_optiFineJar = FS::PathCombine(m_scratchRoot, filename);
-        runInstaller();
+        resolveJava();
     }, tr("OptiFine"));
+}
+
+/*
+ * The installer is a jar, so it needs a JVM of its own. An explicit path wins because that is what
+ * the instance will launch with anyway; otherwise the launcher's own detection is used, which is
+ * what would otherwise only run as part of launching.
+ */
+void InstallTask::resolveJava()
+{
+    auto configured = m_instance->settings()->get("JavaPath").toString();
+    if (QFileInfo::exists(configured)) {
+        m_javaPath = configured;
+        runInstaller();
+        return;
+    }
+
+    setStatus(tr("Looking for a Java runtime to run the installer with"));
+    auto javas = APPLICATION->javalist();
+    m_current = javas->getLoadTask();
+    connect(m_current.get(), &Task::finished, this, [this, javas] {
+        m_current.reset();
+
+        // Any runtime from 8 up can run an OptiFine installer, so take the newest one found.
+        int newest = 0;
+        QString found;
+        for (int i = 0; i < javas->count(); i++) {
+            auto java = std::dynamic_pointer_cast<JavaInstall>(javas->at(i));
+            if (!java || java->id.major() < 8 || !QFileInfo::exists(java->path)) {
+                continue;
+            }
+            if (java->id.major() > newest) {
+                newest = java->id.major();
+                found = java->path;
+            }
+        }
+        if (found.isEmpty()) {
+            JavaUtils utils;
+            for (const auto& path : utils.FindJavaPaths()) {
+                if (QFileInfo::exists(path)) {
+                    found = path;
+                    break;
+                }
+            }
+        }
+        if (found.isEmpty()) {
+            failWith(tr("OptiFine needs a Java runtime to install. Launch this instance once so the launcher downloads one, or set a "
+                        "Java path in its settings."));
+            return;
+        }
+
+        m_javaPath = found;
+        runInstaller();
+    });
+    m_current->start();
 }
 
 void InstallTask::runInstaller()
 {
     setStatus(tr("Running the OptiFine installer"));
 
-    auto java = m_instance->settings()->get("JavaPath").toString();
-    if (java.isEmpty()) {
-        failWith(tr("OptiFine needs a Java runtime in order to install. Set one in this instance's Java settings first."));
-        return;
-    }
     auto runner = APPLICATION->getJarPath("OptiFineRunner.jar");
     if (!QFileInfo::exists(runner)) {
         failWith(tr("The OptiFine runner jar is missing from this build."));
@@ -209,7 +261,7 @@ void InstallTask::runInstaller()
     });
 
     auto classPath = QStringList{ m_optiFineJar, runner }.join(QDir::listSeparator());
-    m_process->start(java, { QStringLiteral("-cp"), classPath, QStringLiteral("wtf.optifine.Runner"), m_scratchRoot });
+    m_process->start(m_javaPath, { QStringLiteral("-cp"), classPath, QStringLiteral("wtf.optifine.Runner"), m_scratchRoot });
 }
 
 void InstallTask::harvest()
