@@ -81,6 +81,9 @@ class LaunchController : public Task {
     QString askOfflineName(const QString& playerName, bool* ok = nullptr);
     bool reauthenticateAccount(const MinecraftAccountPtr& account, const QString& reason);
 
+    //! Offers to put the authlib-injector agent into the instance a third-party account is being launched in.
+    void offerAuthlibInjector();
+
    private slots:
     void readyForLaunch();
 

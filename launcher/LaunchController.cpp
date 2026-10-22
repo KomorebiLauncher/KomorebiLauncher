@@ -39,6 +39,9 @@
 #include "launch/steps/PrintServers.h"
 #include "minecraft/auth/AccountData.h"
 #include "minecraft/auth/AccountList.h"
+#include "minecraft/PackProfile.h"
+#include "modplatform/authlibinjector/AuthlibInjectorInstallTask.h"
+#include "settings/SettingsObject.h"
 
 #include "net/NetUtils.h"
 #include "ui/InstanceWindow.h"
@@ -310,12 +313,17 @@ void LaunchController::login()
     m_accountToUse->fillSession(m_session);
 
     if (m_accountToUse->accountType() != AccountType::Offline) {
-        if (m_actualLaunchMode == LaunchMode::Normal && !m_accountToUse->hasProfile()) {
+        auto isMsa = m_accountToUse->accountType() == AccountType::MSA;
+        if (m_actualLaunchMode == LaunchMode::Normal && isMsa && !m_accountToUse->hasProfile()) {
             // Now handle setting up a profile name here...
             if (ProfileSetupDialog dialog(m_accountToUse, m_parentWidget); dialog.exec() != QDialog::Accepted) {
                 emitAborted();
                 return;
             }
+        }
+
+        if (m_accountToUse->accountType() == AccountType::Yggdrasil) {
+            offerAuthlibInjector();
         }
 
         if (m_actualLaunchMode == LaunchMode::Offline && m_accountToUse->accountType() != AccountType::Offline) {
@@ -360,10 +368,42 @@ bool LaunchController::reauthenticateAccount(const MinecraftAccountPtr& account,
                 }
                 return true;
             }
+        } else if (account->accountType() == AccountType::Yggdrasil) {
+            // The login is stored, so signing in again is all the recovery there is.
+            auto flow = account->login();
+            ProgressDialog progress(m_parentWidget);
+            if (progress.execWithTask(flow.get()) == QDialog::Accepted) {
+                return true;
+            }
         }
     }
 
     return false;
+}
+
+void LaunchController::offerAuthlibInjector()
+{
+    if (m_instance->getPackProfile()->getComponent(AuthlibInjector::componentUid)) {
+        return;
+    }
+
+    auto answer = QMessageBox::question(
+        m_parentWidget, tr("authlib-injector is not installed"),
+        tr("This account signs in through %1, but this instance has no authlib-injector agent, so the game cannot reach "
+           "that server to load skins or to join its online-mode servers.\n\nInstall the agent into this instance now?")
+            .arg(m_accountToUse->authServerUrl()),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+    if (answer != QMessageBox::Yes) {
+        return;
+    }
+
+    auto task = makeShared<AuthlibInjector::InstallTask>(m_instance, m_accountToUse->authServerUrl(),
+                                                         APPLICATION->settings()->get("MirrorBaseUrl").toString());
+    connect(task.get(), &Task::failed, this, [this](QString reason) {
+        CustomMessageBox::selectable(m_parentWidget, tr("Install authlib-injector"), reason, QMessageBox::Warning)->show();
+    });
+    ProgressDialog progress(m_parentWidget);
+    progress.execWithTask(task.get());
 }
 
 void LaunchController::launchInstance()
