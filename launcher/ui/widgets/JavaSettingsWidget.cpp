@@ -44,9 +44,11 @@
 #include "FileSystem.h"
 #include "HardwareInfo.h"
 #include "JavaCommon.h"
+#include "MemoryAdvice.h"
 #include "java/JavaInstallList.h"
 #include "java/JavaUtils.h"
 #include "minecraft/MinecraftInstance.h"
+#include "minecraft/mod/ModFolderModel.h"
 #include "settings/Setting.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/VersionSelectDialog.h"
@@ -63,6 +65,8 @@ JavaSettingsWidget::JavaSettingsWidget(MinecraftInstance* instance, QWidget* par
         m_ui->javaDownloadBtn->hide();
         // Only meaningful for one instance at a time; the global page has no instance folder.
         m_ui->useLocalJavaCheckBox->hide();
+        m_ui->labelMemSuggestion->hide();
+        m_ui->memSuggestButton->hide();
         if (BuildConfig.JAVA_DOWNLOADER_ENABLED) {
             connect(m_ui->autodetectJavaCheckBox, &QCheckBox::checkStateChanged, this, [this](bool state) {
                 m_ui->autodownloadJavaCheckBox->setEnabled(state);
@@ -107,6 +111,12 @@ JavaSettingsWidget::JavaSettingsWidget(MinecraftInstance* instance, QWidget* par
 
     connect(m_ui->maxMemSpinBox, &QSpinBox::valueChanged, this, &JavaSettingsWidget::updateThresholds);
     connect(m_ui->minMemSpinBox, &QSpinBox::valueChanged, this, &JavaSettingsWidget::updateThresholds);
+
+    connect(m_ui->memSuggestButton, &QPushButton::clicked, this, [this] {
+        auto advice = adviseMemory(HardwareInfo::totalRamMiB(), modCount());
+        m_ui->minMemSpinBox->setValue(advice.minMiB);
+        m_ui->maxMemSpinBox->setValue(advice.maxMiB);
+    });
 
     loadSettings();
     updateThresholds();
@@ -160,6 +170,7 @@ void JavaSettingsWidget::loadSettings()
     }
     m_ui->permGenSpinBox->setValue(settings->get("PermGen").toInt());
     m_ui->lowMemWarningCheckBox->setChecked(settings->get("LowMemWarning").toBool());
+    updateMemorySuggestion();
 
     // Java arguments
     m_ui->javaArgumentsGroupBox->setChecked(m_instance == nullptr || settings->get("OverrideJavaArgs").toBool());
@@ -307,6 +318,46 @@ void JavaSettingsWidget::onJavaAutodetect()
         }
     }
 }
+int JavaSettingsWidget::modCount() const
+{
+    if (m_instance == nullptr) {
+        return 0;
+    }
+    return m_instance->coreModList()->rowCount();
+}
+
+void JavaSettingsWidget::updateMemorySuggestion()
+{
+    if (m_instance == nullptr) {
+        return;
+    }
+
+    auto total = HardwareInfo::totalRamMiB();
+    auto mods = modCount();
+    auto advice = adviseMemory(total, mods);
+
+    QString reason;
+    switch (advice.limit) {
+        case MemoryLimit::Mods: {
+            reason = tr("%1 installed here, so %2 MiB of heap.").arg(mods).arg(advice.maxMiB);
+        } break;
+        case MemoryLimit::SystemShare: {
+            reason = tr("This machine has %1 MiB, and three quarters of it is as much as the game should be given.").arg(total);
+        } break;
+        case MemoryLimit::SystemHeadroom: {
+            reason = tr("This machine has %1 MiB, so the game can have %2 MiB and still leave room for everything else.").arg(total)
+                         .arg(advice.maxMiB);
+        } break;
+        case MemoryLimit::Floor: {
+            reason = tr("This machine has only %1 MiB in total. The game needs %2 MiB to start, so close what else is running.")
+                         .arg(total)
+                         .arg(advice.maxMiB);
+        } break;
+    }
+    m_ui->labelMemSuggestion->setText(
+        tr("%1 Both limits are the same number, so the heap does not have to grow while you play.").arg(reason));
+}
+
 void JavaSettingsWidget::updateThresholds()
 {
     auto sysMiB = HardwareInfo::totalRamMiB();

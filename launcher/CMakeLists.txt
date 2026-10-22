@@ -816,6 +816,8 @@ SET(LAUNCHER_SOURCES
     SysInfo.cpp
     HardwareInfo.cpp
     HardwareInfo.h
+    MemoryAdvice.cpp
+    MemoryAdvice.h
 
     # console utils
     console/Console.h

@@ -63,6 +63,9 @@ class JavaSettingsWidget : public QWidget {
     void updateThresholds();
 
    private:
+    int modCount() const;
+    void updateMemorySuggestion();
+
     MinecraftInstance* m_instance;
     Ui::JavaSettingsWidget* m_ui;
     unique_qobject_ptr<JavaCommon::TestCheck> m_checker;
