@@ -211,22 +211,27 @@ void JavaChecker::finished(int exitcode, QProcess::ExitStatus status)
 
 void JavaChecker::error(QProcess::ProcessError err)
 {
-    if (err == QProcess::FailedToStart) {
-        qDebug() << "Java checker has failed to start:" << m_process->errorString();
-        qDebug() << "Process environment:";
-        qDebug() << m_process->environment();
-        qDebug() << "Native environment:";
-        qDebug() << QProcessEnvironment::systemEnvironment().toStringList();
-        m_killTimer.stop();
-
-        Result result = {
-            .path = m_path,
-            .id = m_id,
-        };
-        result.errorLog = m_process->errorString();
-        result.validity = Result::Validity::Errored;
-        emit checkFinished(result);
+    if (err != QProcess::FailedToStart) {
+        // The process did start, so finished() is the one that reports the outcome. Succeeding here as well ends
+        // the task twice, which trips an assert in Task and takes the launcher down with it - what a killed
+        // timeout used to do.
+        return;
     }
+
+    qDebug() << "Java checker has failed to start:" << m_process->errorString();
+    qDebug() << "Process environment:";
+    qDebug() << m_process->environment();
+    qDebug() << "Native environment:";
+    qDebug() << QProcessEnvironment::systemEnvironment().toStringList();
+    m_killTimer.stop();
+
+    Result result = {
+        .path = m_path,
+        .id = m_id,
+    };
+    result.errorLog = m_process->errorString();
+    result.validity = Result::Validity::Errored;
+    emit checkFinished(result);
     emitSucceeded();
 }
 
