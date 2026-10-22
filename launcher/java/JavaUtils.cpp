@@ -35,6 +35,7 @@
 
 #include <QDir>
 #include <QFileInfo>
+#include <QStandardPaths>
 #include <QString>
 #include <QStringList>
 
@@ -182,9 +183,32 @@ QStringList addJavasFromEnv(QList<QString> javas)
     QList<QString> javaPaths = env.split(QLatin1String(":"));
 #endif
     for (QString i : javaPaths) {
+        if (i.isEmpty()) {
+            continue;
+        }
         javas.append(i);
     };
     return javas;
+}
+
+/**
+ * Resolves a bare program name the way QProcess will, and keeps it only if the winner is a real runtime.
+ *
+ * A name without a directory is looked up on PATH, and on Windows PATH very often begins with a launcher
+ * stub that answers a broken registry with a modal error box.
+ */
+static QString resolveDefaultJava(const QString& name)
+{
+    auto found = QStandardPaths::findExecutable(name);
+    if (found.isEmpty()) {
+        return {};
+    }
+#if defined(Q_OS_WIN32)
+    if (!QFileInfo::exists(QFileInfo(found).path() + "/java.dll")) {
+        return {};
+    }
+#endif
+    return found;
 }
 
 #if defined(Q_OS_WIN32)
@@ -353,7 +377,10 @@ QList<QString> JavaUtils::FindJavaPaths()
     java_candidates.append(ZULU32s);
     java_candidates.append(LIBERICA32s);
 
-    java_candidates.append(MakeJavaPtr(this->GetDefaultJava()->path));
+    auto defaultJava = resolveDefaultJava(this->GetDefaultJava()->path);
+    if (!defaultJava.isEmpty()) {
+        java_candidates.append(MakeJavaPtr(defaultJava));
+    }
 
     QList<QString> candidates;
     for (JavaInstallPtr java_candidate : java_candidates) {
