@@ -566,6 +566,13 @@ set(OPTIFINE_SOURCES
     modplatform/optifine/OptiFineInstallTask.h
 )
 
+set(AUTHLIBINJECTOR_SOURCES
+    modplatform/authlibinjector/AuthlibInjector.cpp
+    modplatform/authlibinjector/AuthlibInjector.h
+    modplatform/authlibinjector/AuthlibInjectorInstallTask.cpp
+    modplatform/authlibinjector/AuthlibInjectorInstallTask.h
+)
+
 set(PACKWIZ_SOURCES
     modplatform/packwiz/Packwiz.h
     modplatform/packwiz/Packwiz.cpp
@@ -781,6 +788,7 @@ set(LOGIC_SOURCES
     ${FLAME_SOURCES}
     ${MODRINTH_SOURCES}
     ${OPTIFINE_SOURCES}
+    ${AUTHLIBINJECTOR_SOURCES}
     ${PACKWIZ_SOURCES}
     ${TECHNIC_SOURCES}
     ${ATLAUNCHER_SOURCES}
@@ -1106,6 +1114,8 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/InstallLoaderDialog.h
     ui/dialogs/OptiFineInstallDialog.cpp
     ui/dialogs/OptiFineInstallDialog.h
+    ui/dialogs/AuthlibInjectorDialog.cpp
+    ui/dialogs/AuthlibInjectorDialog.h
     ui/dialogs/ChooseOfflineNameDialog.cpp
     ui/dialogs/ChooseOfflineNameDialog.h
     ui/dialogs/UntrustedModsDialog.cpp

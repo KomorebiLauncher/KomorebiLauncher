@@ -68,6 +68,7 @@ class VersionPage : public QMainWindow, public BasePage {
     void on_actionChange_version_triggered();
     void on_actionInstall_Loader_triggered();
     void on_actionInstall_OptiFine_triggered();
+    void on_actionInstall_AuthlibInjector_triggered();
     void on_actionAdd_Empty_triggered();
     void on_actionReload_triggered();
     void on_actionRemove_triggered();
@@ -112,7 +113,7 @@ class VersionPage : public QMainWindow, public BasePage {
 
    private slots:
     void onGameUpdateError(QString error);
-    void onOptiFineError(QString error);
+    void onInstallError(QString error);
     void packageCurrent(const QModelIndex& current, const QModelIndex& previous);
     void showContextMenu(const QPoint& pos);
     void onFilterTextChanged(const QString& newContents);

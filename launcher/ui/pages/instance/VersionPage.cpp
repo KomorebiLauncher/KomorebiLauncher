@@ -54,9 +54,11 @@
 #include "QObjectPtr.h"
 #include "VersionPage.h"
 #include "meta/JsonFormat.h"
+#include "modplatform/authlibinjector/AuthlibInjectorInstallTask.h"
 #include "modplatform/optifine/OptiFineInstallTask.h"
 #include "modplatform/optifine/OptiFineListTask.h"
 #include "tasks/SequentialTask.h"
+#include "ui/dialogs/AuthlibInjectorDialog.h"
 #include "ui/dialogs/InstallLoaderDialog.h"
 #include "ui/dialogs/OptiFineInstallDialog.h"
 #include "ui_VersionPage.h"
@@ -451,7 +453,7 @@ void VersionPage::on_actionInstall_OptiFine_triggered()
 
     auto listTask = makeShared<OptiFine::ListTask>(mirrorBase, minecraftVersion);
     ProgressDialog listDialog(this);
-    connect(listTask.get(), &Task::failed, this, &VersionPage::onOptiFineError);
+    connect(listTask.get(), &Task::failed, this, &VersionPage::onInstallError);
     if (listDialog.execWithTask(listTask.get()) != QDialog::Accepted)
         return;
 
@@ -461,17 +463,33 @@ void VersionPage::on_actionInstall_OptiFine_triggered()
 
     auto installTask = makeShared<OptiFine::InstallTask>(m_inst, dialog.selectedBuild(), mirrorBase);
     ProgressDialog installDialog(this);
-    connect(installTask.get(), &Task::failed, this, &VersionPage::onOptiFineError);
+    connect(installTask.get(), &Task::failed, this, &VersionPage::onInstallError);
     if (installDialog.execWithTask(installTask.get()) != QDialog::Accepted)
         return;
 
     m_container->refreshContainer();
 }
 
-// The progress dialog closes itself on failure and never shows the reason, so it has to be surfaced here.
-void VersionPage::onOptiFineError(QString error)
+void VersionPage::on_actionInstall_AuthlibInjector_triggered()
 {
-    CustomMessageBox::selectable(this, tr("Install OptiFine"), error, QMessageBox::Warning)->show();
+    AuthlibInjectorDialog dialog(this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+
+    auto task = makeShared<AuthlibInjector::InstallTask>(m_inst, dialog.serverUrl(),
+                                                         APPLICATION->settings()->get("MirrorBaseUrl").toString());
+    ProgressDialog tDialog(this);
+    connect(task.get(), &Task::failed, this, &VersionPage::onInstallError);
+    if (tDialog.execWithTask(task.get()) != QDialog::Accepted)
+        return;
+
+    m_container->refreshContainer();
+}
+
+// The progress dialog closes itself on failure and never shows the reason, so it has to be surfaced here.
+void VersionPage::onInstallError(QString error)
+{
+    CustomMessageBox::selectable(this, tr("Install"), error, QMessageBox::Warning)->show();
 }
 
 void VersionPage::on_actionAdd_Empty_triggered()

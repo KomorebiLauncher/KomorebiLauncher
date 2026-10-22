@@ -105,6 +105,7 @@
    <addaction name="separator"/>
    <addaction name="actionInstall_Loader"/>
    <addaction name="actionInstall_OptiFine"/>
+   <addaction name="actionInstall_AuthlibInjector"/>
    <addaction name="actionAdd_to_Minecraft_jar"/>
    <addaction name="actionReplace_Minecraft_jar"/>
    <addaction name="actionAdd_Agents"/>
@@ -186,6 +187,14 @@
    </property>
    <property name="toolTip">
     <string>Install OptiFine for this instance's Minecraft version.</string>
+   </property>
+  </action>
+  <action name="actionInstall_AuthlibInjector">
+   <property name="text">
+    <string>Install authlib-injector</string>
+   </property>
+   <property name="toolTip">
+    <string>Point this instance at a third-party authentication server.</string>
    </property>
   </action>
   <action name="actionAdd_to_Minecraft_jar">
