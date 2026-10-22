@@ -39,6 +39,12 @@ jobs:
   build:
     name: Build (${{ matrix.artifact-name }})
 
+    # A push to main needs one target per toolchain - GCC, MSVC and a clang - not all six. The
+    # cross-compiled arm64 and the MinGW target still run on pull requests and on tags, which are
+    # what produce the artifacts we ship. The ref_type test matters because a tag push reaches this
+    # job through release.yml with event_name still set to push.
+    if: ${{ github.event_name != 'push' || github.ref_type == 'tag' || matrix.on-main }}
+
     environment: ${{ inputs.environment || '' }}
 
     permissions:
@@ -56,6 +62,7 @@ jobs:
             artifact-name: Linux
             cmake-preset: linux
             qt-version: 6.11.2
+            on-main: true
 
           - os: ubuntu-24.04-arm
             artifact-name: Linux-aarch64
@@ -75,6 +82,7 @@ jobs:
             # TODO(@getchoo): This is the default in setup-dependencies/windows. Why isn't it working?!?!
             vcvars-arch: amd64
             qt-version: 6.11.2
+            on-main: true
 
           - os: windows-11-arm
             artifact-name: Windows-MSVC-arm64
@@ -87,6 +95,7 @@ jobs:
             cmake-preset: macos_universal
             macosx-deployment-target: 13.0
             qt-version: 6.11.2
+            on-main: true
 
     runs-on: ${{ matrix.os }}
 
