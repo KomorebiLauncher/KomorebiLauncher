@@ -45,6 +45,7 @@
 #include <variant>
 #include "Commandline.h"
 #include "MessageLevel.h"
+#include "minecraft/CrashAnalysis.h"
 #include "tasks/Task.h"
 
 void LaunchTask::init()
@@ -299,7 +300,28 @@ void LaunchTask::emitFailed(QString reason)
 {
     m_instance->setRunning(false);
     m_instance->setCrashed(true);
+    appendCrashDiagnosis();
     Task::emitFailed(reason);
+}
+
+// The window showing the failure goes away as soon as the task does, so anything the launcher worked out has to
+// live in the log - that is what gets copied and posted looking for help.
+void LaunchTask::appendCrashDiagnosis()
+{
+    auto* model = getLogModel().get();
+    if (!model) {
+        return;
+    }
+
+    QStringList lines;
+    for (int i = 0; i < model->rowCount(); i++) {
+        lines << model->data(model->index(i), Qt::DisplayRole).toString();
+    }
+
+    for (const auto& finding : CrashAnalysis::analyze(lines)) {
+        model->append(MessageLevel::Launcher, tr("Diagnosis: %1").arg(finding.title));
+        model->append(MessageLevel::Launcher, tr("Suggestion: %1").arg(finding.suggestion));
+    }
 }
 
 QStringList LaunchTask::substituteVariables(QString& cmd, bool isLaunch) const

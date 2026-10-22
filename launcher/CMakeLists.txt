@@ -207,6 +207,8 @@ set(MINECRAFT_SOURCES
     # Logging
     minecraft/Logging.h
     minecraft/Logging.cpp
+    minecraft/CrashAnalysis.h
+    minecraft/CrashAnalysis.cpp
 
     # Minecraft support
     minecraft/auth/AccountData.cpp

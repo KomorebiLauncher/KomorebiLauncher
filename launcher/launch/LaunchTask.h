@@ -94,6 +94,9 @@ class LaunchTask : public Task {
     virtual void emitFailed(QString reason) override;
     virtual void emitSucceeded() override;
 
+    /** Writes what the log explains about the failure into the log itself. */
+    void appendCrashDiagnosis();
+
    signals:
     /**
      * @brief emitted when the launch preparations are done
