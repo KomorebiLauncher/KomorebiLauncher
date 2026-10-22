@@ -36,6 +36,7 @@
 #include "JavaChecker.h"
 
 #include <QDebug>
+#include <QFileInfo>
 #include <QMap>
 #include <QProcess>
 #include <utility>
@@ -43,6 +44,35 @@
 #include "Commandline.h"
 #include "FileSystem.h"
 #include "java/JavaUtils.h"
+
+#ifdef Q_OS_WIN
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <windows.h>
+#endif
+
+namespace {
+
+#ifdef Q_OS_WIN
+/** The console launcher beside the given javaw.exe, which is what a check should run. */
+auto checkerExecutable(const QString& path) -> QString
+{
+    static const QLatin1StringView s_javaw("javaw.exe");
+    if (!path.endsWith(s_javaw, Qt::CaseInsensitive))
+        return path;
+
+    auto console = path.left(path.size() - s_javaw.size()) + QLatin1StringView("java.exe");
+    return QFileInfo::exists(console) ? console : path;
+}
+#else
+auto checkerExecutable(const QString& path) -> QString
+{
+    return path;
+}
+#endif
+
+}  // namespace
 
 JavaChecker::JavaChecker(QString path, QString args, int minMem, int maxMem, int permGen, int id)
     : m_path(std::move(path)), m_args(std::move(args)), m_minMem(minMem), m_maxMem(maxMem), m_permGen(permGen), m_id(id)
@@ -78,10 +108,15 @@ void JavaChecker::executeTask()
 
     args.append({ "-jar", checkerJar });
     m_process->setArguments(args);
-    m_process->setProgram(m_path);
+    m_process->setProgram(checkerExecutable(m_path));
     m_process->setProcessChannelMode(QProcess::SeparateChannels);
     m_process->setProcessEnvironment(CleanEnviroment());
-    qDebug() << "Running java checker:" << m_path << args.join(" ");
+#ifdef Q_OS_WIN
+    // The console launcher is used for checking only, and with no window: a runtime that refuses to
+    // start reports through javaw's modal error box, which blocks whoever is waiting for it.
+    m_process->setCreateProcessArgumentsModifier([](QProcess::CreateProcessArguments* args) { args->flags |= CREATE_NO_WINDOW; });
+#endif
+    qDebug() << "Running java checker:" << m_process->program() << args.join(" ");
 
     connect(m_process.get(), &QProcess::finished, this, &JavaChecker::finished, Qt::QueuedConnection);
     connect(m_process.get(), &QProcess::errorOccurred, this, &JavaChecker::error, Qt::QueuedConnection);
