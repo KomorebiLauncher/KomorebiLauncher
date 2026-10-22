@@ -339,7 +339,7 @@ void JavaSettingsWidget::updateMemorySuggestion()
     QString reason;
     switch (advice.limit) {
         case MemoryLimit::Mods: {
-            reason = tr("%1 installed here, so %2 MiB of heap.").arg(mods).arg(advice.maxMiB);
+            reason = tr("%1 mods installed here, so %2 MiB of heap.").arg(mods).arg(advice.maxMiB);
         } break;
         case MemoryLimit::SystemShare: {
             reason = tr("This machine has %1 MiB, and three quarters of it is as much as the game should be given.").arg(total);
