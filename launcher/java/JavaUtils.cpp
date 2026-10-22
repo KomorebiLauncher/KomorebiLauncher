@@ -170,6 +170,12 @@ QStringList addJavasFromEnv(QList<QString> javas)
     auto envPath = qEnvironmentVariable("PATH");
     QList<QString> javaPathsfromPath = envPath.replace("\\", "/").split(QLatin1String(";"));
     for (QString string : javaPathsfromPath) {
+        // Having a javaw.exe in a PATH directory does not make it a runtime. The Oracle shims forward to
+        // whatever the registry points at and, when that is broken, put up a modal error box that stops the
+        // whole scan until someone clicks it. A real bin directory always ships its java.dll next door.
+        if (!QFileInfo::exists(string + "/java.dll")) {
+            continue;
+        }
         javaPaths.append(string + "/javaw.exe");
     }
 #else
