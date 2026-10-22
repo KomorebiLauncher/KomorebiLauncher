@@ -400,7 +400,10 @@ QList<QString> JavaUtils::FindJavaPaths()
 QList<QString> JavaUtils::FindJavaPaths()
 {
     QList<QString> javas;
-    javas.append(this->GetDefaultJava()->path);
+    auto defaultJava = resolveDefaultJava(this->GetDefaultJava()->path);
+    if (!defaultJava.isEmpty()) {
+        javas.append(defaultJava);
+    }
     javas.append("/Applications/Xcode.app/Contents/Applications/Application Loader.app/Contents/MacOS/itms/java/bin/java");
     javas.append("/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home/bin/java");
     javas.append("/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/java");
@@ -454,7 +457,10 @@ QList<QString> JavaUtils::FindJavaPaths()
 QList<QString> JavaUtils::FindJavaPaths()
 {
     QList<QString> javas;
-    javas.append(this->GetDefaultJava()->path);
+    auto defaultJava = resolveDefaultJava(this->GetDefaultJava()->path);
+    if (!defaultJava.isEmpty()) {
+        javas.append(defaultJava);
+    }
     auto scanJavaDir = [&javas](
                            const QString& dirPath,
                            const std::function<bool(const QFileInfo&)>& filter = [](const QFileInfo&) { return true; }) {
@@ -539,7 +545,10 @@ QList<QString> JavaUtils::FindJavaPaths()
     qDebug() << "Unknown operating system build - defaulting to \"java\"";
 
     QList<QString> javas;
-    javas.append(this->GetDefaultJava()->path);
+    auto defaultJava = resolveDefaultJava(this->GetDefaultJava()->path);
+    if (!defaultJava.isEmpty()) {
+        javas.append(defaultJava);
+    }
 
     javas.append(getMinecraftJavaBundle());
     javas.append(getPrismJavaBundle());
