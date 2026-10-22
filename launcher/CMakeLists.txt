@@ -1118,6 +1118,8 @@ SET(LAUNCHER_SOURCES
     ui/dialogs/OptiFineInstallDialog.h
     ui/dialogs/AuthlibInjectorDialog.cpp
     ui/dialogs/AuthlibInjectorDialog.h
+    ui/dialogs/YggdrasilLoginDialog.cpp
+    ui/dialogs/YggdrasilLoginDialog.h
     ui/dialogs/ChooseOfflineNameDialog.cpp
     ui/dialogs/ChooseOfflineNameDialog.h
     ui/dialogs/UntrustedModsDialog.cpp

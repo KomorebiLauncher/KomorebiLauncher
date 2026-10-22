@@ -47,6 +47,7 @@
 #include "ui/dialogs/ChooseOfflineNameDialog.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/MSALoginDialog.h"
+#include "ui/dialogs/YggdrasilLoginDialog.h"
 
 #include "Application.h"
 
@@ -154,6 +155,18 @@ void AccountListPage::on_actionAddOffline_triggered()
     }
 }
 
+void AccountListPage::on_actionAddThirdParty_triggered()
+{
+    auto account = YggdrasilLoginDialog::newAccount(this);
+    if (!account) {
+        return;
+    }
+    m_accounts->addAccount(account);
+    if (m_accounts->count() == 1) {
+        m_accounts->setDefaultAccount(account);
+    }
+}
+
 void AccountListPage::on_actionRemove_triggered()
 {
     auto response = CustomMessageBox::selectable(this, tr("Remove account?"), tr("Do you really want to delete this account?"),
@@ -201,6 +214,7 @@ void AccountListPage::updateButtonStates()
     bool hasSelection = !selection.empty();
     bool accountIsReady = false;
     bool accountIsOnline = false;
+    bool accountHasMojangServices = false;
     bool accountCanMoveUp = false;
     bool accountCanMoveDown = false;
     if (hasSelection) {
@@ -208,6 +222,7 @@ void AccountListPage::updateButtonStates()
         MinecraftAccountPtr account = selected.data(AccountList::PointerRole).value<MinecraftAccountPtr>();
         accountIsReady = !account->isActive();
         accountIsOnline = account->accountType() != AccountType::Offline;
+        accountHasMojangServices = account->accountType() == AccountType::MSA;
 
         accountCanMoveUp = selected.row() > 0;
         int indexOfLast = m_accounts->count() - 1;
@@ -215,7 +230,7 @@ void AccountListPage::updateButtonStates()
     }
     ui->actionRemove->setEnabled(accountIsReady);
     ui->actionSetDefault->setEnabled(accountIsReady);
-    ui->actionManageSkins->setEnabled(accountIsReady && accountIsOnline);
+    ui->actionManageSkins->setEnabled(accountIsReady && accountHasMojangServices);
     ui->actionRefresh->setEnabled(accountIsReady && accountIsOnline);
 
     if (m_accounts->defaultAccount().get() == nullptr) {
