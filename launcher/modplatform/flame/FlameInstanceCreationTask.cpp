@@ -483,8 +483,6 @@ void FlameCreationTask::createInstance()
             m_newInstance->setIconKey("steve");
         } else if (m_pack.name.contains("FTB") || m_pack.name.contains("Feed The Beast")) {
             m_newInstance->setIconKey("ftb_logo");
-        } else {
-            m_newInstance->setIconKey("flame");
         }
     }
 

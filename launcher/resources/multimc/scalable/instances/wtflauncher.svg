@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- WTFLauncher mark, original work, SPDX-License-Identifier: CC0-1.0 -->
+  <rect width="1024" height="1024" fill="#1f2430"/>
+  <polygon points="262,420 512,545 512,795 262,670" fill="#2f8fa8"/>
+  <polygon points="512,545 762,420 762,670 512,795" fill="#26405c"/>
+  <polygon points="512,295 762,420 512,545 262,420" fill="#57d9a3"/>
+  <clipPath id="topface"><polygon points="512,295 762,420 512,545 262,420"/></clipPath>
+  <polyline points="352,332 432,440 512,352 592,440 672,332" fill="none" stroke="#ffffff" stroke-width="58"
+            stroke-linejoin="miter" stroke-linecap="butt" clip-path="url(#topface)"/>
+</svg>
