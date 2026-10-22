@@ -931,7 +931,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // Custom Flame API Key
         m_settings->registerSetting({ "FlameKeyOverride", "CFKeyOverride" }, "");
 
-        m_settings->registerSetting("FallbackMRBlockedMods", true);
+        // A withheld CurseForge download is the author declining third-party distribution, so substituting the
+        // same file from Modrinth stays off until the player asks for it.
+        m_settings->registerSetting("FallbackMRBlockedMods", false);
         m_settings->registerSetting("ModrinthToken", "");
         m_settings->registerSetting("UserAgentOverride", "");
 

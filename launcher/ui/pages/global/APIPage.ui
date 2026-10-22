@@ -473,7 +473,10 @@
           <item>
            <widget class="QCheckBox" name="FallbackMRBlockedMods">
             <property name="text">
-             <string>Enable fallback to Modrinth for blocked mods</string>
+             <string>Look blocked mods up on Modrinth</string>
+            </property>
+            <property name="toolTip">
+             <string>CurseForge leaves out the download link when an author does not allow third-party launchers to distribute a file. This option looks the same file up on Modrinth by hash and downloads it from there instead. Off by default.</string>
             </property>
            </widget>
           </item>
