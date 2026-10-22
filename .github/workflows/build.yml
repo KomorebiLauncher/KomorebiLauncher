@@ -36,14 +36,38 @@ on:
 permissions: {}
 
 jobs:
+  # The matrix is produced here rather than written out in the build job so that a push to main can
+  # ask for fewer targets: one per toolchain is enough to catch a compile error, while pull requests
+  # and tags - the latter being what produces the artifacts we ship - still build all six.
+  pick-matrix:
+    runs-on: ubuntu-slim
+    outputs:
+      include: ${{ steps.pick.outputs.include }}
+    steps:
+      - name: Pick the platforms to build
+        id: pick
+        shell: bash
+        env:
+          MATRIX: |
+            [
+              {"os":"ubuntu-24.04","artifact-name":"Linux","cmake-preset":"linux","qt-version":"6.11.2","on-main":true},
+              {"os":"ubuntu-24.04-arm","artifact-name":"Linux-aarch64","cmake-preset":"linux","qt-version":"6.11.2"},
+              {"os":"windows-2022","artifact-name":"Windows-MinGW-w64","cmake-preset":"windows_mingw","msystem":"CLANG64","vcvars-arch":"amd64_x86","qt-version":"6.11.2"},
+              {"os":"windows-2022","artifact-name":"Windows-MSVC","cmake-preset":"windows_msvc","vcvars-arch":"amd64","qt-version":"6.11.2","on-main":true},
+              {"os":"windows-11-arm","artifact-name":"Windows-MSVC-arm64","cmake-preset":"windows_msvc","vcvars-arch":"arm64","qt-version":"6.11.2"},
+              {"os":"macos-26","artifact-name":"macOS","cmake-preset":"macos_universal","macosx-deployment-target":"13.0","qt-version":"6.11.2","on-main":true}
+            ]
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_TYPE" = "branch" ]; then
+            echo "include=$(printf '%s' "$MATRIX" | jq -c '[.[] | select(."on-main")]')" >> "$GITHUB_OUTPUT"
+          else
+            echo "include=$(printf '%s' "$MATRIX" | jq -c .)" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     name: Build (${{ matrix.artifact-name }})
 
-    # A push to main needs one target per toolchain - GCC, MSVC and a clang - not all six. The
-    # cross-compiled arm64 and the MinGW target still run on pull requests and on tags, which are
-    # what produce the artifacts we ship. The ref_type test matters because a tag push reaches this
-    # job through release.yml with event_name still set to push.
-    if: ${{ github.event_name != 'push' || github.ref_type == 'tag' || matrix.on-main }}
+    needs: pick-matrix
 
     environment: ${{ inputs.environment || '' }}
 
@@ -57,45 +81,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: ubuntu-24.04
-            artifact-name: Linux
-            cmake-preset: linux
-            qt-version: 6.11.2
-            on-main: true
-
-          - os: ubuntu-24.04-arm
-            artifact-name: Linux-aarch64
-            cmake-preset: linux
-            qt-version: 6.11.2
-
-          - os: windows-2022
-            artifact-name: Windows-MinGW-w64
-            cmake-preset: windows_mingw
-            msystem: CLANG64
-            vcvars-arch: amd64_x86
-            qt-version: 6.11.2
-
-          - os: windows-2022
-            artifact-name: Windows-MSVC
-            cmake-preset: windows_msvc
-            # TODO(@getchoo): This is the default in setup-dependencies/windows. Why isn't it working?!?!
-            vcvars-arch: amd64
-            qt-version: 6.11.2
-            on-main: true
-
-          - os: windows-11-arm
-            artifact-name: Windows-MSVC-arm64
-            cmake-preset: windows_msvc
-            vcvars-arch: arm64
-            qt-version: 6.11.2
-
-          - os: macos-26
-            artifact-name: macOS
-            cmake-preset: macos_universal
-            macosx-deployment-target: 13.0
-            qt-version: 6.11.2
-            on-main: true
+        include: ${{ fromJSON(needs.pick-matrix.outputs.include) }}
 
     runs-on: ${{ matrix.os }}
 
