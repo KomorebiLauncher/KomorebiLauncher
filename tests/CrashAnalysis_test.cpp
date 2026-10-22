@@ -32,7 +32,7 @@ class CrashAnalysisTest : public QObject {
     void test_OutOfMemory()
     {
         QStringList heap = { QStringLiteral("[12:00:01] [Render thread/ERROR]: java.lang.OutOfMemoryError: Java heap space"),
-                             QStringLiteral("[12:00:01] [Render thread/ERROR]:     at java.base/java.util.Arrays.copyOf(Arrays.java:1511)") };
+                             QStringLiteral("    at java.base/java.util.Arrays.copyOf(Arrays.java:1511)") };
         auto findings = CrashAnalysis::analyze(heap);
         QCOMPARE(findings.size(), 1);
         QCOMPARE(findings.at(0).title, QStringLiteral("The game ran out of memory"));
@@ -79,6 +79,66 @@ class CrashAnalysisTest : public QObject {
         // The deepest cause is the one that actually failed.
         QVERIFY(findings.at(0).detail.contains(QStringLiteral("the real reason")));
         QVERIFY(!findings.at(0).detail.contains(QStringLiteral("the first thing blamed")));
+    }
+
+    /** Each rule fires on the wording the loader or the JVM really prints, behind a log4j prefix. */
+    void test_Rules_data()
+    {
+        QTest::addColumn<QString>("line");
+        QTest::addColumn<QString>("title");
+
+        QTest::newRow("missing dependency")
+            << QStringLiteral("[14:28:38] [main/ERROR] [ne.mi.fm.lo.ModSorter/LOADING]: Missing or unsupported mandatory "
+                              "dependencies:")
+            << QStringLiteral("A mod is missing something it needs");
+        QTest::newRow("duplicate mod")
+            << QStringLiteral("[16:22:31] [main/ERROR] [fml.loading/]: Found duplicate mods:")
+            << QStringLiteral("The same mod is installed twice");
+        QTest::newRow("fabric conflict") << QStringLiteral("net.fabricmc.loader.impl.FormattedException: Incompatible mods found!")
+                                         << QStringLiteral("The mods installed do not agree with each other");
+        QTest::newRow("mixin")
+            << QStringLiteral("org.spongepowered.asm.mixin.transformer.throwables.MixinTransformerError: An unexpected critical "
+                              "error was encountered")
+            << QStringLiteral("A mod could not patch the game");
+        QTest::newRow("window") << QStringLiteral("[16:22:33] [Render thread/ERROR]: GLFW error 65542 : WGL: The driver does not "
+                                                  "appear to support OpenGL")
+                                << QStringLiteral("The graphics driver cannot open a window");
+        QTest::newRow("native library") << QStringLiteral("[LWJGL] Failed to load a library. Possible solutions:")
+                                        << QStringLiteral("A native library was not unpacked");
+        QTest::newRow("atlas") << QStringLiteral("net.minecraft.client.texture.Stitcher$StitcherException: Unable to fit: "
+                                                 "minecraft:textures/item/netherite_sword.png - size 512x512")
+                               << QStringLiteral("There is no room left in the texture atlas");
+        QTest::newRow("ids") << QStringLiteral("java.lang.IllegalStateException: maximum id range exceeded")
+                             << QStringLiteral("The game ran out of registration numbers");
+        QTest::newRow("jvm crash") << QStringLiteral("# A fatal error has been detected by the Java Runtime Environment:")
+                                   << QStringLiteral("The Java runtime itself crashed");
+        QTest::newRow("heap refused") << QStringLiteral("Error: Could not create the Java Virtual Machine.\nError: A fatal "
+                                                       "exception has occurred. Error: Could not reserve enough space for object heap")
+                                      << QStringLiteral("The memory requested cannot be given");
+    }
+
+    void test_Rules()
+    {
+        QFETCH(QString, line);
+        QFETCH(QString, title);
+
+        bool matched = false;
+        for (const auto& finding : CrashAnalysis::analyze(line.split('\n'))) {
+            matched = matched || finding.title == title;
+        }
+        QVERIFY2(matched, qPrintable(QStringLiteral("Expected '%1' from '%2'").arg(title, line)));
+    }
+
+    /** A class reported as missing was already reported failing to initialize, earlier in the log. */
+    void test_PointsAtTheFirstFailure()
+    {
+        QStringList lines = { QStringLiteral("[12:00:00] [main/ERROR]: java.lang.ExceptionInInitializerError: cannot read config"),
+                              QStringLiteral("[12:00:01] [main/ERROR]: java.lang.NoClassDefFoundError: Could not initialize class "
+                                             "com.example.ModClass") };
+        auto findings = CrashAnalysis::analyze(lines);
+        QCOMPARE(findings.size(), 1);
+        QCOMPARE(findings.at(0).title, QStringLiteral("A mod failed while it was starting up"));
+        QVERIFY(findings.at(0).detail.contains(QStringLiteral("cannot read config")));
     }
 
     /** A diagnosis nobody asked for is a false alarm; nothing here must fire on an ordinary log. */
