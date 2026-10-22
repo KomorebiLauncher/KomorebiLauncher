@@ -87,6 +87,11 @@ JavaSettingsWidget::JavaSettingsWidget(MinecraftInstance* instance, QWidget* par
         m_ui->memoryGroupBox->setCheckable(true);
         m_ui->javaArgumentsGroupBox->setCheckable(true);
 
+        // The mod folders are scanned on their own schedule, so the suggestion has to follow the list rather
+        // than trust whatever was loaded when this page opened.
+        connect(m_instance->loaderModList(), &QAbstractItemModel::modelReset, this, [this] { updateMemorySuggestion(); });
+        connect(m_instance->coreModList(), &QAbstractItemModel::modelReset, this, [this] { updateMemorySuggestion(); });
+
         SettingsObject* settings = m_instance->settings();
 
         connect(settings->getSetting("OverrideJavaLocation").get(), &Setting::SettingChanged, m_ui->javaInstallationGroupBox,
@@ -323,7 +328,9 @@ int JavaSettingsWidget::modCount() const
     if (m_instance == nullptr) {
         return 0;
     }
-    return m_instance->coreModList()->rowCount();
+    // The mods folder is the loader's list; "core mods" is a separate, much smaller one. Counting only the
+    // latter reports a 300-mod pack as having none.
+    return m_instance->loaderModList()->rowCount() + m_instance->coreModList()->rowCount();
 }
 
 void JavaSettingsWidget::updateMemorySuggestion()
