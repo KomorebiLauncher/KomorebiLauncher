@@ -37,6 +37,7 @@
 
 #include "JavaSettingsWidget.h"
 
+#include <QDir>
 #include <QFileDialog>
 #include <QFileInfo>
 #include "Application.h"
@@ -48,7 +49,6 @@
 #include "java/JavaInstallList.h"
 #include "java/JavaUtils.h"
 #include "minecraft/MinecraftInstance.h"
-#include "minecraft/mod/ModFolderModel.h"
 #include "settings/Setting.h"
 #include "ui/dialogs/CustomMessageBox.h"
 #include "ui/dialogs/VersionSelectDialog.h"
@@ -86,11 +86,6 @@ JavaSettingsWidget::JavaSettingsWidget(MinecraftInstance* instance, QWidget* par
         m_ui->javaInstallationGroupBox->setCheckable(true);
         m_ui->memoryGroupBox->setCheckable(true);
         m_ui->javaArgumentsGroupBox->setCheckable(true);
-
-        // The mod folders are scanned on their own schedule, so the suggestion has to follow the list rather
-        // than trust whatever was loaded when this page opened.
-        connect(m_instance->loaderModList(), &QAbstractItemModel::modelReset, this, [this] { updateMemorySuggestion(); });
-        connect(m_instance->coreModList(), &QAbstractItemModel::modelReset, this, [this] { updateMemorySuggestion(); });
 
         SettingsObject* settings = m_instance->settings();
 
@@ -328,9 +323,16 @@ int JavaSettingsWidget::modCount() const
     if (m_instance == nullptr) {
         return 0;
     }
-    // The mods folder is the loader's list; "core mods" is a separate, much smaller one. Counting only the
-    // latter reports a 300-mod pack as having none.
-    return m_instance->loaderModList()->rowCount() + m_instance->coreModList()->rowCount();
+    // Count the folders rather than asking the models: a mod list only fills in once something starts
+    // watching it, which this page never does, so the models report an empty pack here.
+    auto count = [](const QString& dirPath) -> int {
+        QDir dir(dirPath);
+        if (!dir.exists()) {
+            return 0;
+        }
+        return static_cast<int>(dir.entryList({ QStringLiteral("*.jar"), QStringLiteral("*.zip") }, QDir::Files).size());
+    };
+    return count(m_instance->modsRoot()) + count(m_instance->coreModsDir());
 }
 
 void JavaSettingsWidget::updateMemorySuggestion()
