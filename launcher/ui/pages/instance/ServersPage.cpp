@@ -55,7 +55,7 @@
 #include <QMenu>
 #include <QTimer>
 
-static const int COLUMN_COUNT = 3;  // 3 , TBD: latency and other nice things.
+static const int COLUMN_COUNT = 5;
 
 struct Server {
     // Types
@@ -112,7 +112,7 @@ struct Server {
     QByteArray m_icon;
 
     // Data - temporary
-    std::optional<int> m_currentPlayers;  // nullopt if not calculated/calculating
+    std::optional<ServerStatus> m_status;  // empty until the server has answered a ping
 };
 
 static std::unique_ptr<nbt::tag_compound> parseServersDat(const QString& filename)
@@ -299,7 +299,11 @@ class ServersModel : public QAbstractListModel {
                 case 1:
                     return tr("Address");
                 case 2:
-                    return tr("Online");
+                    return tr("Players");
+                case 3:
+                    return tr("Version");
+                case 4:
+                    return tr("Ping");
             }
         }
 
@@ -333,21 +337,42 @@ class ServersModel : public QAbstractListModel {
                     return QVariant();
                 }
             }
-            case Qt::DisplayRole:
+            case Qt::DisplayRole: {
+                auto& status = m_servers[row].m_status;
                 switch (column) {
                     case 0:
                         return m_servers[row].m_name;
                     case 1:
                         return m_servers[row].m_address;
                     case 2:
-                        if (m_servers[row].m_currentPlayers) {
-                            return *m_servers[row].m_currentPlayers;
-                        } else {
-                            return "...";
+                        if (!status) {
+                            return QStringLiteral("...");
                         }
+                        if (!status->isOnline()) {
+                            return tr("Offline");
+                        }
+                        if (status->max >= 0) {
+                            return QStringLiteral("%1/%2").arg(status->online).arg(status->max);
+                        }
+                        return QString::number(status->online);
+                    case 3:
+                        return status ? status->versionName : QVariant();
+                    case 4:
+                        if (status && status->latencyMs >= 0) {
+                            return QStringLiteral("%1 ms").arg(status->latencyMs);
+                        }
+                        return QVariant();
                     default:
                         return QVariant();
                 }
+            }
+            case Qt::ToolTipRole: {
+                auto& status = m_servers[row].m_status;
+                if (status && !status->motd.isEmpty()) {
+                    return status->motd;
+                }
+                return QVariant();
+            }
             case ServerPtrRole:
                 if (column == 0)
                     return QVariant::fromValue<void*>((void*)&m_servers[row]);
@@ -455,8 +480,8 @@ class ServersModel : public QAbstractListModel {
             new ConcurrentTask("Query servers status", APPLICATION->settings()->get("NumberOfConcurrentTasks").toInt()));
         int row = 0;
         for (Server& server : m_servers) {
-            // reset current players
-            server.m_currentPlayers = {};
+            // reset the last answer
+            server.m_status = {};
             emit dataChanged(index(row, 0), index(row, COLUMN_COUNT - 1));
 
             // Start task to query server status
@@ -469,7 +494,7 @@ class ServersModel : public QAbstractListModel {
                 if (row >= m_servers.size()) {
                     return;
                 }
-                m_servers[row].m_currentPlayers = task->m_outputOnlinePlayers;
+                m_servers[row].m_status = task->m_outputStatus;
                 emit dataChanged(index(row, 0), index(row, COLUMN_COUNT - 1));
             });
             row++;

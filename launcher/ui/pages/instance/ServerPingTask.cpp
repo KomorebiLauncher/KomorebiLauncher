@@ -1,3 +1,4 @@
+#include <QElapsedTimer>
 #include <QFutureWatcher>
 
 #include <Json.h>
@@ -5,18 +6,6 @@
 #include "McResolver.h"
 #include "Result.h"
 #include "ServerPingTask.h"
-
-namespace {
-unsigned getOnlinePlayers(const QJsonObject& data)
-{
-    auto res = Json::requireObject(data, "players").and_then([](const auto& v) { return Json::requireInteger(v, "online"); });
-    if (!res) {
-        qWarning() << "server ping failed to parse response" << res.error();
-        return 0;
-    }
-    return res.value();
-}
-}  // namespace
 
 void ServerPingTask::executeTask()
 {
@@ -29,10 +18,13 @@ void ServerPingTask::executeTask()
 
         // Now that we have the IP and port, query the server
         McClient* client = new McClient(nullptr, m_domain, ip, port);
+        auto started = std::make_shared<QElapsedTimer>();
+        started->start();
 
-        connect(client, &McClient::succeeded, this, [this](QJsonObject data) {
-            m_outputOnlinePlayers = getOnlinePlayers(data);
-            qDebug() << "Online players:" << m_outputOnlinePlayers;
+        connect(client, &McClient::succeeded, this, [this, started](QJsonObject data) {
+            m_outputStatus = readServerStatus(data);
+            m_outputStatus.latencyMs = static_cast<int>(started->elapsed());
+            qDebug() << "Server status:" << m_outputStatus.online << "of" << m_outputStatus.max << "in" << m_outputStatus.latencyMs << "ms";
             emitSucceeded();
         });
         connect(client, &McClient::failed, this, [this](QString error) { emitFailed(error); });

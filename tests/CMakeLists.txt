@@ -66,6 +66,9 @@ ecm_add_test(AuthlibInjector_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSI
 ecm_add_test(YggdrasilAuth_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME YggdrasilAuth)
 
+ecm_add_test(ServerStatus_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME ServerStatus)
+
 ecm_add_test(Packwiz_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME Packwiz)
 
