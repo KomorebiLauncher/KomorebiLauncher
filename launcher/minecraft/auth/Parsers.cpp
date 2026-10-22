@@ -425,4 +425,60 @@ bool parseMojangResponse(const QByteArray& data, Token& output)
     return true;
 }
 
+bool parseYggdrasilResponse(const QByteArray& data, Token& outputToken, MinecraftProfile& outputProfile)
+{
+    qDebug() << "Parsing Yggdrasil response...";
+    qCDebug(authCredentials()) << data;
+
+    auto obj = Json::requireObject(data, "yggdrasil response");
+    if (!obj) {
+        qWarning() << "Failed to parse the authentication server response as JSON:" << obj.error();
+        return false;
+    }
+
+    QString accessToken;
+    if (!getString(obj->value("accessToken"), accessToken) || accessToken.isEmpty()) {
+        qWarning() << "accessToken is not valid";
+        return false;
+    }
+    outputToken.issueInstant = QDateTime::currentDateTimeUtc();
+    // These servers do not report an expiry, so the token is treated as a day-old one from now on.
+    outputToken.notAfter = QDateTime();
+    outputToken.token = accessToken;
+    outputToken.validity = Validity::Certain;
+
+    auto clientToken = obj->value("clientToken");
+    if (clientToken.isString()) {
+        outputToken.extra["clientToken"] = clientToken.toString();
+    }
+
+    auto profile = obj->value("selectedProfile");
+    if (!profile.isObject()) {
+        qDebug() << "Yggdrasil response is valid but names no character.";
+        return true;
+    }
+    auto profileObject = profile.toObject();
+    QString id;
+    QString name;
+    if (!getString(profileObject.value("id"), id) || !getString(profileObject.value("name"), name) || id.isEmpty() || name.isEmpty()) {
+        qWarning() << "selectedProfile is missing its id or name";
+        return false;
+    }
+    outputProfile.id = id;
+    outputProfile.name = name;
+    outputProfile.validity = Validity::Certain;
+    qDebug() << "Yggdrasil response is valid.";
+    return true;
+}
+
+QString parseYggdrasilError(const QByteArray& data)
+{
+    auto obj = Json::requireObject(data, "yggdrasil error");
+    if (!obj) {
+        return QString();
+    }
+    auto message = obj->value("errorMessage");
+    return message.isString() ? message.toString() : QString();
+}
+
 }  // namespace Parsers

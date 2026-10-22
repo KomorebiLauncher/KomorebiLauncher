@@ -63,6 +63,9 @@ ecm_add_test(OptiFineList_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_
 ecm_add_test(AuthlibInjector_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME AuthlibInjector)
 
+ecm_add_test(YggdrasilAuth_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME YggdrasilAuth)
+
 ecm_add_test(Packwiz_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME Packwiz)
 

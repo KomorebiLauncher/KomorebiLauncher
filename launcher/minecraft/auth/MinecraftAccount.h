@@ -87,6 +87,8 @@ class MinecraftAccount : public QObject, public Usable {
 
     static MinecraftAccountPtr createOffline(const QString& username);
 
+    static MinecraftAccountPtr createYggdrasil(const QString& serverUrl, const QString& loginName, const QString& password);
+
     static MinecraftAccountPtr loadFromJsonV3(const QJsonObject& json);
 
     static QUuid uuidFromUsername(QString username);
@@ -110,6 +112,9 @@ class MinecraftAccount : public QObject, public Usable {
 
     QString profileName() const { return data.profileName(); }
 
+    //! The authentication server a third-party account signs in to. Empty for every other kind.
+    QString authServerUrl() const { return data.authServerUrl; }
+
     QString displayName() const;
 
     bool isActive() const;
@@ -128,6 +133,10 @@ class MinecraftAccount : public QObject, public Usable {
             } break;
             case AccountType::Offline: {
                 return "offline";
+            } break;
+            // A third-party server stands in for Mojang's own session service, and that is what the game is told.
+            case AccountType::Yggdrasil: {
+                return "mojang";
             } break;
             default: {
                 return "unknown";

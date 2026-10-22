@@ -88,7 +88,7 @@ struct MinecraftProfile {
     Validity validity = Validity::None;
 };
 
-enum class AccountType { MSA, Offline };
+enum class AccountType { MSA, Offline, Yggdrasil };
 
 enum class AccountState { Unchecked, Offline, Working, Online, Disabled, Errored, Expired, Gone };
 
@@ -105,6 +105,11 @@ struct AccountData {
     QString lastError() const;
 
     AccountType type = AccountType::MSA;
+
+    // Third-party servers only trade an access token for the login itself, so the credentials outlive the token.
+    QString authServerUrl;
+    QString loginName;
+    QString password;
 
     QString msaClientID;
     Token msaToken;

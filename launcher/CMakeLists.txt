@@ -230,6 +230,8 @@ set(MINECRAFT_SOURCES
     minecraft/auth/steps/GetSkinStep.h
     minecraft/auth/steps/LauncherLoginStep.cpp
     minecraft/auth/steps/LauncherLoginStep.h
+    minecraft/auth/steps/YggdrasilStep.cpp
+    minecraft/auth/steps/YggdrasilStep.h
     minecraft/auth/steps/MinecraftProfileStep.cpp
     minecraft/auth/steps/MinecraftProfileStep.h
     minecraft/auth/steps/MSADeviceCodeStep.cpp

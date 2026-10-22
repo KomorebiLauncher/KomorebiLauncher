@@ -157,6 +157,7 @@ class Request : public Task {
     int replyStatusCode() const;
     QNetworkReply::NetworkError error() const;
     QString errorString() const;
+    QByteArray errorResponse() const { return m_errorResponse; }
 
    private:
     auto handleRedirect() -> bool;
