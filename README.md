@@ -3,6 +3,8 @@
 面向需要国内下载环境的 Minecraft 玩家的启动器，fork 自 Prism Launcher。
 A Minecraft launcher forked from Prism Launcher, aimed at players who need China-oriented download sources.
 
+官网 https://wtflauncher.github.io/ ｜ 下载 https://github.com/WTFLauncher/WTFLauncher/releases
+
 GPL-3.0-only，见 LICENSE 。
 
 ## 当前能力
