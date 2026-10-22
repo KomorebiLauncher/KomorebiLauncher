@@ -126,19 +126,27 @@ BaseVersionList::RoleList JavaInstallList::providesRoles() const
 
 void JavaInstallList::updateListData(QList<BaseVersion::Ptr> versions)
 {
-    beginResetModel();
+    // sortVersions resets the model itself, so wrapping it in a second reset would hand views a
+    // nested begin/end pair and leave the picker empty.
     m_vlist = versions;
     sortVersions();
-    endResetModel();
     m_status = Status::Done;
     m_load_task.reset();
 }
 
 bool sortJavas(BaseVersion::Ptr left, BaseVersion::Ptr right)
 {
-    auto rleft = std::dynamic_pointer_cast<JavaInstall>(right);
-    auto rright = std::dynamic_pointer_cast<JavaInstall>(left);
-    return (*rleft) > (*rright);
+    auto l = std::dynamic_pointer_cast<JavaInstall>(left);
+    auto r = std::dynamic_pointer_cast<JavaInstall>(right);
+
+    // Newest first: AutoInstallJava takes the first compatible entry of this list, so an ascending
+    // one would silently prefer the oldest runtime. JavaInstall's own ordering puts the
+    // architecture name first, which would rank a 32-bit runtime above a 64-bit one once reversed.
+    if (l->id < r->id)
+        return false;
+    if (r->id < l->id)
+        return true;
+    return l->is_64bit && !r->is_64bit;
 }
 
 void JavaInstallList::sortVersions()

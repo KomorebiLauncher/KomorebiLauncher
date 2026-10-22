@@ -8,8 +8,10 @@
  *  the Free Software Foundation, version 3.
  */
 
+#include <QSignalSpy>
 #include <QTest>
 
+#include "java/JavaInstallList.h"
 #include "java/JavaSelection.h"
 
 static auto makeInstall(const QString& path, int major) -> JavaInstallPtr
@@ -79,6 +81,34 @@ class JavaSelectionTest : public QObject {
         // A null entry in the list must not be dereferenced.
         QList<JavaInstallPtr> withNull{ nullptr, makeInstall(QStringLiteral("jre8"), 8) };
         QCOMPARE(Java::pickInstall(withNull, { 8 }, {})->path, QStringLiteral("jre8"));
+    }
+
+    /**
+     * Settings - Java - Select a Java version showed "no versions available" even though detection
+     * had found runtimes, because the list reset its model twice in a row.
+     */
+    void test_ListResetsTheModelOnce()
+    {
+        JavaInstallList list;
+        QList<BaseVersion::Ptr> entries;
+        for (auto major : { 11, 21, 8 }) {
+            auto install = makeInstall(QStringLiteral("C:/java-%1/bin/javaw.exe").arg(major), major);
+            entries.append(std::dynamic_pointer_cast<BaseVersion>(install));
+        }
+        // Same version as the newest entry above, but 32-bit: it must not win the tie.
+        auto thirtyTwo = makeInstall(QStringLiteral("C:/java-32/bin/javaw.exe"), 21);
+        thirtyTwo->is_64bit = false;
+        entries.append(std::dynamic_pointer_cast<BaseVersion>(thirtyTwo));
+
+        QSignalSpy resets(&list, &QAbstractItemModel::modelReset);
+        list.updateListData(entries);
+
+        QCOMPARE(resets.count(), 1);
+        QCOMPARE(list.count(), 4);
+        auto newest = std::dynamic_pointer_cast<JavaInstall>(list.at(0));
+        QVERIFY(newest != nullptr);
+        QCOMPARE(newest->id.major(), 21);
+        QVERIFY(newest->is_64bit);
     }
 };
 
