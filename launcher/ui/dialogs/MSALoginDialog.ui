@@ -23,7 +23,7 @@
    <item>
     <widget class="QLabel" name="approvalNotice">
      <property name="text">
-      <string>This build's Microsoft app ID is not yet authorized by Xbox Live, so Microsoft may reject the sign-in. Offline accounts and authlib-injector are unaffected; an authorized app ID can be set in Settings - API.</string>
+      <string>This build's Microsoft app ID is not yet authorized by Xbox Live, so Microsoft may reject the sign-in. Offline accounts are unaffected; an authorized app ID can be set in Settings - API.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
