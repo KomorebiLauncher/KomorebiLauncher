@@ -54,15 +54,14 @@ runs:
 
     # TODO(@getchoo): Get this working on MSYS2!
     - name: Setup ccache
-      if: ${{ (runner.os != 'Windows' || inputs.msystem == '') && inputs.build-type == 'Debug' }}
+      if: ${{ runner.os != 'Windows' || inputs.msystem == '' }}
       uses: hendrikmuhs/ccache-action@v1.2.23
       with:
         variant: sccache
         create-symlink: ${{ runner.os != 'Windows' }}
         key: ${{ runner.os }}-${{ runner.arch }}-${{ inputs.artifact-name }}-sccache
 
-    - name: Use ccache on debug builds
-      if: ${{ inputs.build-type == 'Debug' }}
+    - name: Use the compiler launcher
       shell: bash
       env:
         # Only use ccache on MSYS2
@@ -126,7 +125,7 @@ runs:
         setup-python: false
         aqtsource: git+https://github.com/miurahr/aqtinstall.git@16db45a70b5905ad596941b223469bc86a56901e
         modules: qtimageformats qtnetworkauth
-        cache: ${{ inputs.build-type == 'Debug' }}
+        cache: true
         arch: ${{ inputs.msystem != '' && 'win64_llvm_mingw' || '' }}
 
     - name: Set Qt6_DIR

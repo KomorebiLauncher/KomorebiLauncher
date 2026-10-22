@@ -9,10 +9,14 @@ on:
     types: [checks_requested]
   pull_request:
   # Upstream only validates pull requests; this fork pushes to main directly, so main needs its own
-  # verification rather than being merged unverified.
+  # verification rather than being merged unverified. Documentation cannot break a build, and six
+  # platforms of it costs about an hour of runner time.
   push:
     branches:
       - main
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   workflow_call:
     inputs:
       build-type:
@@ -129,6 +133,12 @@ jobs:
       - name: Run build
         run: |
           cmake --build --preset "$CMAKE_PRESET" --config "$BUILD_TYPE"
+
+      # Not a gate: this only reports whether the compiler cache paid for itself.
+      - name: Compiler cache stats
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: sccache --show-stats || ccache --show-stats || true
 
       - name: Run tests
         env:
