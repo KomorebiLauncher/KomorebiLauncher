@@ -9,6 +9,7 @@
  */
 
 #pragma once
+#include <QJsonObject>
 #include <QObject>
 #include <QUrl>
 
@@ -28,8 +29,11 @@ class YggdrasilStep : public AuthStep {
 
     QString describe() override;
 
-    /** The address of one of the server's operations, with nothing invented about where the server lives. */
+    /** The address of one of the server's operations, below the authserver the server address is the root of. */
     static auto endpoint(const QString& serverUrl, const QString& operation) -> QUrl;
+
+    /** What gets sent: a login for the token, or the token to have it renewed. */
+    static auto requestBody(const AccountData& data, bool interactive) -> QJsonObject;
 
    private slots:
     void onRequestDone(QByteArray* response);

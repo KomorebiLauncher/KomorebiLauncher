@@ -136,15 +136,42 @@ class YggdrasilAuthTest : public QObject {
         QVERIFY(Parsers::parseYggdrasilError("Forbidden").isEmpty());
     }
 
-    /** Whatever address the player typed is the server's own root, so only the operation is added to it. */
-    void test_UsesTheAddressAsTyped()
+    /** The server address is the root of the APIs it hosts, so the operation goes below authserver. */
+    void test_PutsTheOperationBelowAuthserver()
     {
         QCOMPARE(YggdrasilStep::endpoint(QStringLiteral("https://littleskin.cn/api/yggdrasil"), QStringLiteral("authenticate")).toString(),
-                 QStringLiteral("https://littleskin.cn/api/yggdrasil/authenticate"));
+                 QStringLiteral("https://littleskin.cn/api/yggdrasil/authserver/authenticate"));
         QCOMPARE(YggdrasilStep::endpoint(QStringLiteral(" https://auth.example.com/yggdrasil/ "), QStringLiteral("refresh")).toString(),
-                 QStringLiteral("https://auth.example.com/yggdrasil/refresh"));
-        QCOMPARE(YggdrasilStep::endpoint(QStringLiteral("https://mc.example.com/auth"), QStringLiteral("authenticate")).toString(),
-                 QStringLiteral("https://mc.example.com/auth/authenticate"));
+                 QStringLiteral("https://auth.example.com/yggdrasil/authserver/refresh"));
+    }
+
+    /** The spec asks for the agent version as a number, and a string is refused before the login is looked at. */
+    void test_SendsTheShapeTheSpecRequires()
+    {
+        AccountData data;
+        data.loginName = QStringLiteral("kujou");
+        data.password = QStringLiteral("hunter2");
+        data.yggdrasilToken.extra[QStringLiteral("clientToken")] = QStringLiteral("cccc");
+
+        auto body = YggdrasilStep::requestBody(data, true);
+        auto agent = body.value(QStringLiteral("agent")).toObject();
+        QCOMPARE(agent.value(QStringLiteral("name")).toString(), QStringLiteral("Minecraft"));
+        auto version = agent.value(QStringLiteral("version"));
+        QVERIFY2(version.isDouble(), "the agent version has to be a number, not a string");
+        QCOMPARE(version.toInt(), 1);
+        QCOMPARE(body.value(QStringLiteral("username")).toString(), QStringLiteral("kujou"));
+        QCOMPARE(body.value(QStringLiteral("password")).toString(), QStringLiteral("hunter2"));
+        QCOMPARE(body.value(QStringLiteral("requestUser")).toBool(), true);
+        QCOMPARE(body.value(QStringLiteral("clientToken")).toString(), QStringLiteral("cccc"));
+        QVERIFY(!agent.contains(QStringLiteral("id")));
+
+        auto refresh = YggdrasilStep::requestBody(data, false);
+        QVERIFY(!refresh.contains(QStringLiteral("agent")));
+        QVERIFY(!refresh.contains(QStringLiteral("password")));
+
+        data.profileChoice = QStringLiteral("deadbeef");
+        auto chosen = YggdrasilStep::requestBody(data, true);
+        QCOMPARE(chosen.value(QStringLiteral("agent")).toObject().value(QStringLiteral("id")).toString(), QStringLiteral("deadbeef"));
     }
 
     /** Whatever the server says, the account has to survive a restart with its credentials. */

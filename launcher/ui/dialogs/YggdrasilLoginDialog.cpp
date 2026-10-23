@@ -66,9 +66,10 @@ YggdrasilLoginDialog::YggdrasilLoginDialog(QWidget* parent) : QDialog(parent)
     auto layout = new QVBoxLayout(this);
 
     auto explanation = new QLabel(
-        tr("Sign in to a server that answers the Yggdrasil API with a username and password. The address is used exactly "
-           "as it is typed, so give the one the server itself documents. Instances that join an online-mode server on that "
-           "account also need the authlib-injector agent, which this launcher installs on request."),
+        tr("Sign in to a server that answers the Yggdrasil API with a username and password. Type the authentication "
+           "address the server gives its players, and the sign-in path goes below it. Instances that join an "
+           "online-mode server on that account also need the authlib-injector agent, which this launcher installs on "
+           "request."),
         this);
     explanation->setWordWrap(true);
     layout->addWidget(explanation);

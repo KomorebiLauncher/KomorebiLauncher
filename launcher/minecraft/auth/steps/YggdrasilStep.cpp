@@ -42,43 +42,50 @@ QString YggdrasilStep::describe()
 
 auto YggdrasilStep::endpoint(const QString& serverUrl, const QString& operation) -> QUrl
 {
-    // What the server calls its own authentication root is the server's business: yggdrasil-go answers under
-    // /api/yggdrasil, an authlib-injector mount goes wherever it was put. So the typed address is used as it is.
+    /*
+     * The address a server hands its players is the root of both APIs it hosts, because the session lookups live
+     * under sessionserver next to authserver. So the operation goes below authserver, and nothing else is invented.
+     */
     auto base = serverUrl.trimmed();
     while (base.endsWith('/')) {
         base.chop(1);
     }
-    return QUrl(base + QLatin1Char('/') + operation, QUrl::TolerantMode);
+    return QUrl(base + QLatin1String("/authserver/") + operation, QUrl::TolerantMode);
+}
+
+auto YggdrasilStep::requestBody(const AccountData& data, bool interactive) -> QJsonObject
+{
+    QJsonObject body;
+    if (interactive) {
+        QJsonObject agent{ { QStringLiteral("name"), QStringLiteral("Minecraft") }, { QStringLiteral("version"), 1 } };
+        // Servers that let one account hold several characters pick one themselves unless it is told which.
+        if (!data.profileChoice.isEmpty()) {
+            agent[QStringLiteral("id")] = data.profileChoice;
+        }
+        body[QStringLiteral("agent")] = agent;
+        body[QStringLiteral("username")] = data.loginName;
+        body[QStringLiteral("password")] = data.password;
+        body[QStringLiteral("requestUser")] = true;
+    } else {
+        body[QStringLiteral("accessToken")] = data.yggdrasilToken.token;
+    }
+    body[QStringLiteral("clientToken")] = clientTokenOf(&data);
+    return body;
 }
 
 void YggdrasilStep::perform()
 {
     m_url = endpoint(m_data->authServerUrl, m_interactive ? QStringLiteral("authenticate") : QStringLiteral("refresh"));
 
-    QJsonObject body;
-    if (m_interactive) {
-        QJsonObject agent{ { QStringLiteral("name"), QStringLiteral("Minecraft") }, { QStringLiteral("version"), QStringLiteral("1.5") } };
-        // Servers that let one account hold several characters pick one themselves unless it is told which.
-        if (!m_data->profileChoice.isEmpty()) {
-            agent[QStringLiteral("id")] = m_data->profileChoice;
-        }
-        body[QStringLiteral("agent")] = agent;
-        body[QStringLiteral("username")] = m_data->loginName;
-        body[QStringLiteral("password")] = m_data->password;
-        body[QStringLiteral("requestUser")] = true;
-    } else {
-        body[QStringLiteral("accessToken")] = m_data->yggdrasilToken.token;
-    }
-    body[QStringLiteral("clientToken")] = clientTokenOf(m_data);
-
-    auto requestBody = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
+    auto body = requestBody(*m_data, m_interactive);
+    auto requestBodyText = QString::fromUtf8(QJsonDocument(body).toJson(QJsonDocument::Compact));
 
     auto headers = QList<Net::HeaderPair>{
         { "Content-Type", "application/json" },
         { "Accept", "application/json" },
     };
 
-    auto [request, response] = Net::Request::makeByteArray(m_url, requestBody.toUtf8());
+    auto [request, response] = Net::Request::makeByteArray(m_url, requestBodyText.toUtf8());
     m_request = request;
     m_request->addHeaderProxy(std::make_unique<Net::RawHeaderProxy>(headers));
 
@@ -104,11 +111,11 @@ void YggdrasilStep::onRequestDone(QByteArray* response)
         auto status = m_request->replyStatusCode();
         qWarning() << "Yggdrasil request failed with" << status << ":" << reason;
         if (status == 404) {
-            // 404 is not a refusal, it is the address having no such operation. A server that moved to Yggdrasil
-            // Connect answers sign-in through a browser instead and never takes a password here.
+            // 404 is not a refusal, it is the address having no such operation, which is what an address typed one
+            // step too far looks like from here.
             emit finished(AccountTaskState::STATE_FAILED_SOFT,
-                          tr("Nothing is served at %1. Use the authentication address the server itself gives - and a "
-                             "server that signs in through a browser rather than by password cannot be used here.")
+                          tr("Nothing answers sign-in at %1. The address should be the one the server gives its "
+                             "players, without the authserver part on the end.")
                               .arg(m_url.toString()));
         } else if (status == 401 || status == 403) {
             emit finished(AccountTaskState::STATE_FAILED_HARD, reason);
