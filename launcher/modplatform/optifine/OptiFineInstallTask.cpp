@@ -301,44 +301,43 @@ void InstallTask::harvest()
         return;
     }
     /*
-     * The OptiFine artifact has no public maven coordinate, so it lives inside the instance and is
-     * referenced by a file:// URL. Everything else (launchwrapper and friends) resolves normally.
+     * OptiFine names libraries that exist nowhere public - it forks launchwrapper and publishes neither - so
+     * everything the installer left in its scratch tree moves into the instance and is read from there.
      */
+    auto scratchLibraries = FS::PathCombine(m_scratchRoot, "libraries");
     auto instanceLibraries = FS::PathCombine(m_instance->instanceRoot(), "libraries");
-    QDir().mkpath(instanceLibraries);
-    auto mavenVersionText = mavenVersion(m_build);
+    auto scratchRoot = QDir(scratchLibraries);
 
-    QString source;
-    QDirIterator it(FS::PathCombine(m_scratchRoot, "libraries"), { QStringLiteral("*.jar") }, QDir::Files, QDirIterator::Subdirectories);
+    QList<LocalLibrary> files;
+    QDirIterator it(scratchLibraries, { QStringLiteral("*.jar") }, QDir::Files, QDirIterator::Subdirectories);
     while (it.hasNext()) {
-        auto candidate = it.next();
-        if (QFileInfo(candidate).fileName().contains(mavenVersionText)) {
-            source = candidate;
-            break;
+        auto source = it.next();
+        auto storage = scratchRoot.relativeFilePath(source);
+        auto target = FS::PathCombine(instanceLibraries, storage);
+        auto name = QFileInfo(target).fileName();
+        FS::ensureFolderPathExists(QFileInfo(target).absolutePath());
+        if (QFileInfo::exists(target) && !QFile::remove(target)) {
+            failWith(tr("Could not replace the %1 already in the instance.").arg(name));
+            return;
         }
+        if (!QFile::copy(source, target)) {
+            failWith(tr("Could not copy %1 into the instance.").arg(name));
+            return;
+        }
+        QFile copied(target);
+        if (!copied.open(QIODevice::ReadOnly)) {
+            failWith(tr("Could not read back the copied %1.").arg(name));
+            return;
+        }
+        auto digest = QString::fromLatin1(QCryptographicHash::hash(copied.readAll(), QCryptographicHash::Sha1).toHex());
+        files.append(LocalLibrary{ storage, QUrl::fromLocalFile(target).toString(), digest, QFileInfo(target).size() });
     }
-    if (source.isEmpty()) {
-        failWith(tr("The installer did not extract the OptiFine jar."));
+    if (files.isEmpty()) {
+        failWith(tr("The OptiFine installer did not extract anything."));
         return;
     }
 
-    auto target = FS::PathCombine(instanceLibraries, QFileInfo(source).fileName());
-    if (QFileInfo::exists(target) && !QFile::remove(target)) {
-        failWith(tr("Could not replace the OptiFine jar already in the instance."));
-        return;
-    }
-    if (!QFile::copy(source, target)) {
-        failWith(tr("Could not copy the OptiFine jar into the instance."));
-        return;
-    }
-
-    QFile copied(target);
-    if (!copied.open(QIODevice::ReadOnly)) {
-        failWith(tr("Could not read back the copied OptiFine jar."));
-        return;
-    }
-    auto digest = QString::fromLatin1(QCryptographicHash::hash(copied.readAll(), QCryptographicHash::Sha1).toHex());
-    auto profile = buildComponent(doc.object(), m_build, QUrl::fromLocalFile(target).toString(), digest, QFileInfo(target).size());
+    auto profile = buildComponent(doc.object(), m_build, files);
 
     auto staging = FS::PathCombine(m_scratchRoot, "optifine-component.json");
     QSaveFile out(staging);

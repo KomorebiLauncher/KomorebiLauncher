@@ -84,8 +84,10 @@ class OptiFineListTest : public QObject {
 
         OptiFine::Build build{ QStringLiteral("1.13.2"), QStringLiteral("HD_U"), QStringLiteral("E7"),
                      QStringLiteral("OptiFine_1.13.2_HD_U_E7.jar"), QStringLiteral("Forge N/A"), true };
-        auto component = OptiFine::buildComponent(produced, build, QStringLiteral("file:///C:/inst/libraries/OptiFine-1.13.2_HD_U_E7.jar"),
-                                                  QStringLiteral("0123456789abcdef0123456789abcdef01234567"), 2709891);
+        QList<OptiFine::LocalLibrary> files{ OptiFine::LocalLibrary{ QStringLiteral("optifine/OptiFine/1.13.2_HD_U_E7/OptiFine-1.13.2_HD_U_E7.jar"),
+                                                                    QStringLiteral("file:///C:/inst/libraries/optifine/OptiFine/1.13.2_HD_U_E7/OptiFine-1.13.2_HD_U_E7.jar"),
+                                                                    QStringLiteral("0123456789abcdef0123456789abcdef01234567"), 2709891 } };
+        auto component = OptiFine::buildComponent(produced, build, files);
 
         QCOMPARE(component.value("uid").toString(), QStringLiteral("wtf.optifine"));
         QCOMPARE(component.value("name").toString(), QStringLiteral("OptiFine HD_U_E7"));
@@ -105,7 +107,8 @@ class OptiFineListTest : public QObject {
         auto optifine = libraries.at(0).toObject();
         QCOMPARE(optifine.value("name").toString(), QStringLiteral("optifine:OptiFine:1.13.2_HD_U_E7"));
         auto artifact = optifine.value("downloads").toObject().value("artifact").toObject();
-        QCOMPARE(artifact.value("url").toString(), QStringLiteral("file:///C:/inst/libraries/OptiFine-1.13.2_HD_U_E7.jar"));
+        QCOMPARE(artifact.value("url").toString(),
+                 QStringLiteral("file:///C:/inst/libraries/optifine/OptiFine/1.13.2_HD_U_E7/OptiFine-1.13.2_HD_U_E7.jar"));
         QCOMPARE(artifact.value("sha1").toString(), QStringLiteral("0123456789abcdef0123456789abcdef01234567"));
         QCOMPARE(artifact.value("size").toVariant().toLongLong(), 2709891LL);
 
@@ -119,10 +122,55 @@ class OptiFineListTest : public QObject {
         QJsonObject produced;
         produced.insert(QStringLiteral("libraries"), QJsonArray{ QJsonObject{ { "name", QStringLiteral("net.minecraft:launchwrapper:1.12") } } });
 
-        auto component = OptiFine::buildComponent(produced, build, QStringLiteral("file:///x"), QStringLiteral("aa"), 1);
+        auto component = OptiFine::buildComponent(produced, build, {});
         // Nothing to point at the local copy, but the component itself must still be well formed.
         QCOMPARE(component.value("uid").toString(), QStringLiteral("wtf.optifine"));
         QCOMPARE(component.value("libraries").toArray().size(), 1);
+    }
+
+    /** Newer OptiFine forks launchwrapper as well, and that artifact is published nowhere at all. */
+    void test_BuildsComponentFromNewerInstallerOutput()
+    {
+        auto path = QFINDTESTDATA("testdata/optifine-installer-output-1.20.1.json");
+        QVERIFY2(!path.isEmpty(), "1.20.1 installer output fixture not found");
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        auto produced = QJsonDocument::fromJson(file.readAll()).object();
+
+        OptiFine::Build build{ QStringLiteral("1.20.1"), QStringLiteral("HD_U"), QStringLiteral("I6"),
+                               QStringLiteral("OptiFine_1.20.1_HD_U_I6.jar"), QStringLiteral("Forge 47.2.18"), true };
+        QList<OptiFine::LocalLibrary> files{
+            OptiFine::LocalLibrary{ QStringLiteral("optifine/OptiFine/1.20.1_HD_U_I6/OptiFine-1.20.1_HD_U_I6.jar"),
+                                    QStringLiteral("file:///inst/libraries/optifine/OptiFine/1.20.1_HD_U_I6/OptiFine-1.20.1_HD_U_I6.jar"),
+                                    QStringLiteral("28458529e7153d0d6aefc81099141dc908a49005"), 6638739 },
+            OptiFine::LocalLibrary{ QStringLiteral("optifine/launchwrapper-of/2.3/launchwrapper-of-2.3.jar"),
+                                    QStringLiteral("file:///inst/libraries/optifine/launchwrapper-of/2.3/launchwrapper-of-2.3.jar"),
+                                    QStringLiteral("073b25f1667904d481b10f706288c95ea9656f0c"), 15930 },
+        };
+
+        auto component = OptiFine::buildComponent(produced, build, files);
+        auto libraries = component.value("libraries").toArray();
+        QCOMPARE(libraries.size(), 2);
+        for (const auto& value : libraries) {
+            auto name = value.toObject().value("name").toString();
+            auto artifact = value.toObject().value("downloads").toObject().value("artifact").toObject();
+            QVERIFY2(!artifact.isEmpty(), qPrintable(name));
+            QVERIFY2(artifact.value("url").toString().startsWith(QStringLiteral("file:///inst/libraries/")), qPrintable(name));
+            QVERIFY(!artifact.value("sha1").toString().isEmpty());
+            QVERIFY(artifact.value("size").toVariant().toLongLong() > 0);
+        }
+    }
+
+    /** The path a maven name implies is how the files the installer left behind are recognised. */
+    void test_MavenStoragePath()
+    {
+        QCOMPARE(OptiFine::mavenStoragePath(QStringLiteral("optifine:launchwrapper-of:2.3")),
+                 QStringLiteral("optifine/launchwrapper-of/2.3/launchwrapper-of-2.3.jar"));
+        QCOMPARE(OptiFine::mavenStoragePath(QStringLiteral("optifine:OptiFine:1.20.1_HD_U_I6")),
+                 QStringLiteral("optifine/OptiFine/1.20.1_HD_U_I6/OptiFine-1.20.1_HD_U_I6.jar"));
+        QCOMPARE(OptiFine::mavenStoragePath(QStringLiteral("com.mojang:patchy:1.3.9")),
+                 QStringLiteral("com/mojang/patchy/1.3.9/patchy-1.3.9.jar"));
+        QVERIFY(OptiFine::mavenStoragePath(QStringLiteral("not-a-coordinate")).isEmpty());
     }
 
     void test_BuildsForFiltersByVersion()

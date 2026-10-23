@@ -10,6 +10,8 @@
 
 #include "OptiFineList.h"
 
+#include <algorithm>
+
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -73,22 +75,36 @@ auto downloadUrl(const QString& mirrorBase, const Build& build) -> QUrl
     return QUrl(base + QStringLiteral("/optifine/%1/%2/%3").arg(build.mcVersion, build.type, build.patch));
 }
 
-auto buildComponent(const QJsonObject& produced, const Build& build, const QString& jarUrl, const QString& jarSha1, qint64 jarSize)
-    -> QJsonObject
+auto mavenStoragePath(const QString& mavenName) -> QString
+{
+    auto parts = mavenName.split(QLatin1Char(':'));
+    if (parts.size() < 3) {
+        return QString();
+    }
+    auto group = parts.at(0);
+    group.replace(QLatin1Char('.'), QLatin1Char('/'));
+    auto const& artifact = parts.at(1);
+    auto const& version = parts.at(2);
+    return QStringLiteral("%1/%2/%3/%2-%4.jar").arg(group, artifact, version, version);
+}
+
+auto buildComponent(const QJsonObject& produced, const Build& build, const QList<LocalLibrary>& files) -> QJsonObject
 {
     auto profile = produced;
 
     QJsonArray libraries;
     for (const auto& value : profile.value("libraries").toArray()) {
         auto lib = value.toObject();
-        if (!lib.value("name").toString().startsWith(QStringLiteral("optifine:OptiFine:"))) {
-            libraries.append(lib);
-            continue;
+        auto storage = mavenStoragePath(lib.value("name").toString());
+        auto found = std::find_if(files.begin(), files.end(), [&](const LocalLibrary& file) {
+            return !storage.isEmpty() && file.storage.compare(storage, Qt::CaseInsensitive) == 0;
+        });
+        if (found != files.end()) {
+            lib["downloads"] = QJsonObject{ { "artifact",
+                                             QJsonObject{ { "url", found->url },
+                                                          { "sha1", found->sha1 },
+                                                          { "size", static_cast<double>(found->size) } } } };
         }
-        lib["downloads"] = QJsonObject{ { "artifact",
-                                         QJsonObject{ { "url", jarUrl },
-                                                      { "sha1", jarSha1 },
-                                                      { "size", static_cast<double>(jarSize) } } } };
         libraries.append(lib);
     }
     profile["libraries"] = libraries;

@@ -51,14 +51,26 @@ auto mavenVersion(const Build& build) -> QString;
 /** The mirror's download endpoint for this build. */
 auto downloadUrl(const QString& mirrorBase, const Build& build) -> QUrl;
 
+/** Where a maven name such as optifine:launchwrapper-of:2.3 lives below a maven repository root. */
+auto mavenStoragePath(const QString& mavenName) -> QString;
+
+/** A jar the installer left in its scratch tree, once it has been copied into the instance. */
+struct LocalLibrary {
+    QString storage;  /// the maven path it was found under, e.g. optifine/OptiFine/1.20.1_HD_U_I6/OptiFine-1.20.1_HD_U_I6.jar
+    QString url;
+    QString sha1;
+    qint64 size = 0;
+};
+
 /**
  * Turns the json OptiFine's installer wrote into an instance component.
  *
- * The produced json is plain Mojang format, so it needs the fields the component system keys on,
- * and the OptiFine artifact has to be pointed at a copy inside the instance because it has no
- * public maven home. Kept free of file and instance access so it can be tested directly.
+ * The produced json is plain Mojang format, so it needs the fields the component system keys on. The libraries it
+ * names have no public maven home - OptiFine ships its own fork of launchwrapper under optifine: and never
+ * publishes it - so every one the installer left a file for is pointed at the copy inside the instance, and the
+ * rest are left to resolve wherever they came from. Kept free of file and instance access so it can be tested
+ * directly.
  */
-auto buildComponent(const QJsonObject& produced, const Build& build, const QString& jarUrl, const QString& jarSha1, qint64 jarSize)
-    -> QJsonObject;
+auto buildComponent(const QJsonObject& produced, const Build& build, const QList<LocalLibrary>& files) -> QJsonObject;
 
 }  // namespace OptiFine
