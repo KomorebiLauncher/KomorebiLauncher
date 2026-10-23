@@ -25,18 +25,6 @@
 
 namespace {
 
-auto endpoint(const QString& serverUrl, const QString& operation) -> QUrl
-{
-    auto base = serverUrl.trimmed();
-    while (base.endsWith('/')) {
-        base.chop(1);
-    }
-    if (!base.endsWith(QLatin1String("/api/yggdrasil"))) {
-        base += QLatin1String("/api/yggdrasil");
-    }
-    return QUrl(base + QLatin1Char('/') + operation, QUrl::TolerantMode);
-}
-
 auto clientTokenOf(const AccountData* data) -> QString
 {
     auto stored = data->yggdrasilToken.extra.value(QStringLiteral("clientToken")).toString();
@@ -52,9 +40,20 @@ QString YggdrasilStep::describe()
     return m_interactive ? tr("Logging in to the authentication server") : tr("Renewing the access token");
 }
 
+auto YggdrasilStep::endpoint(const QString& serverUrl, const QString& operation) -> QUrl
+{
+    // What the server calls its own authentication root is the server's business: yggdrasil-go answers under
+    // /api/yggdrasil, an authlib-injector mount goes wherever it was put. So the typed address is used as it is.
+    auto base = serverUrl.trimmed();
+    while (base.endsWith('/')) {
+        base.chop(1);
+    }
+    return QUrl(base + QLatin1Char('/') + operation, QUrl::TolerantMode);
+}
+
 void YggdrasilStep::perform()
 {
-    auto url = endpoint(m_data->authServerUrl, m_interactive ? QStringLiteral("authenticate") : QStringLiteral("refresh"));
+    m_url = endpoint(m_data->authServerUrl, m_interactive ? QStringLiteral("authenticate") : QStringLiteral("refresh"));
 
     QJsonObject body;
     if (m_interactive) {
@@ -79,7 +78,7 @@ void YggdrasilStep::perform()
         { "Accept", "application/json" },
     };
 
-    auto [request, response] = Net::Request::makeByteArray(url, requestBody.toUtf8());
+    auto [request, response] = Net::Request::makeByteArray(m_url, requestBody.toUtf8());
     m_request = request;
     m_request->addHeaderProxy(std::make_unique<Net::RawHeaderProxy>(headers));
 
@@ -90,7 +89,7 @@ void YggdrasilStep::perform()
     connect(m_task.get(), &Task::finished, this, [this, response] { onRequestDone(response); });
 
     m_task->start();
-    qDebug() << "Sending" << url.toString() << "request";
+    qDebug() << "Sending" << m_url.toString() << "request";
 }
 
 void YggdrasilStep::onRequestDone(QByteArray* response)
@@ -104,7 +103,14 @@ void YggdrasilStep::onRequestDone(QByteArray* response)
         }
         auto status = m_request->replyStatusCode();
         qWarning() << "Yggdrasil request failed with" << status << ":" << reason;
-        if (status == 401 || status == 403) {
+        if (status == 404) {
+            // 404 is not a refusal, it is the address having no such operation. A server that moved to Yggdrasil
+            // Connect answers sign-in through a browser instead and never takes a password here.
+            emit finished(AccountTaskState::STATE_FAILED_SOFT,
+                          tr("Nothing is served at %1. Use the authentication address the server itself gives - and a "
+                             "server that signs in through a browser rather than by password cannot be used here.")
+                              .arg(m_url.toString()));
+        } else if (status == 401 || status == 403) {
             emit finished(AccountTaskState::STATE_FAILED_HARD, reason);
         } else if (status >= 400 && status < 500) {
             emit finished(AccountTaskState::STATE_FAILED_SOFT, reason);

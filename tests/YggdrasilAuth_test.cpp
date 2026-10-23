@@ -15,6 +15,7 @@
 
 #include "minecraft/auth/AccountData.h"
 #include "minecraft/auth/Parsers.h"
+#include "minecraft/auth/steps/YggdrasilStep.h"
 
 namespace {
 
@@ -133,6 +134,17 @@ class YggdrasilAuthTest : public QObject {
         QCOMPARE(Parsers::parseYggdrasilError(body), QStringLiteral("Invalid credentials."));
 
         QVERIFY(Parsers::parseYggdrasilError("Forbidden").isEmpty());
+    }
+
+    /** Whatever address the player typed is the server's own root, so only the operation is added to it. */
+    void test_UsesTheAddressAsTyped()
+    {
+        QCOMPARE(YggdrasilStep::endpoint(QStringLiteral("https://littleskin.cn/api/yggdrasil"), QStringLiteral("authenticate")).toString(),
+                 QStringLiteral("https://littleskin.cn/api/yggdrasil/authenticate"));
+        QCOMPARE(YggdrasilStep::endpoint(QStringLiteral(" https://auth.example.com/yggdrasil/ "), QStringLiteral("refresh")).toString(),
+                 QStringLiteral("https://auth.example.com/yggdrasil/refresh"));
+        QCOMPARE(YggdrasilStep::endpoint(QStringLiteral("https://mc.example.com/auth"), QStringLiteral("authenticate")).toString(),
+                 QStringLiteral("https://mc.example.com/auth/authenticate"));
     }
 
     /** Whatever the server says, the account has to survive a restart with its credentials. */

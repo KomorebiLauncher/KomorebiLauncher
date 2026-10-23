@@ -10,12 +10,13 @@
 
 #pragma once
 #include <QObject>
+#include <QUrl>
 
 #include "minecraft/auth/AuthStep.h"
 #include "net/NetJob.h"
 #include "net/Request.h"
 
-/** Trades a login for an access token, or renews the token, at an authlib-injector server. */
+/** Trades a login for an access token, or renews the token, at a server that answers the Yggdrasil API. */
 class YggdrasilStep : public AuthStep {
     Q_OBJECT
 
@@ -27,11 +28,15 @@ class YggdrasilStep : public AuthStep {
 
     QString describe() override;
 
+    /** The address of one of the server's operations, with nothing invented about where the server lives. */
+    static auto endpoint(const QString& serverUrl, const QString& operation) -> QUrl;
+
    private slots:
     void onRequestDone(QByteArray* response);
 
    private:
     bool m_interactive;
+    QUrl m_url;
     Net::Request::Ptr m_request;
     NetJob::Ptr m_task;
 };
