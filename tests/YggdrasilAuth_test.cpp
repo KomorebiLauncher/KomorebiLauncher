@@ -16,6 +16,7 @@
 #include "minecraft/auth/AccountData.h"
 #include "minecraft/auth/Parsers.h"
 #include "minecraft/auth/steps/YggdrasilStep.h"
+#include "ui/dialogs/YggdrasilLoginDialog.h"
 
 namespace {
 
@@ -201,6 +202,17 @@ class YggdrasilAuthTest : public QObject {
         QCOMPARE(restored.profileId(), QStringLiteral("deadbeef"));
         QCOMPARE(restored.profileName(), QStringLiteral("Kujou"));
         QCOMPARE(restored.yggdrasilToken.extra.value(QStringLiteral("clientToken")).toString(), QStringLiteral("a-client"));
+    }
+    /** A pasted sentence must not become part of the address, because no server can read it back. */
+    void test_RejectsAnAddressWithOtherTextInIt()
+    {
+        QVERIFY(YggdrasilLoginDialog::serverProblem(QStringLiteral("https://littleskin.cn/api/yggdrasil")).isEmpty());
+        QVERIFY(YggdrasilLoginDialog::serverProblem(QStringLiteral(" http://127.0.0.1:8000/yggdrasil ")).isEmpty());
+        QVERIFY(YggdrasilLoginDialog::serverProblem(QStringLiteral("   ")).isEmpty());
+
+        QVERIFY(!YggdrasilLoginDialog::serverProblem(QStringLiteral("http://127.0.0.1:8000/yggdrasil，用户名随便")).isEmpty());
+        QVERIFY(!YggdrasilLoginDialog::serverProblem(QStringLiteral("http://a.example/x y")).isEmpty());
+        QVERIFY(!YggdrasilLoginDialog::serverProblem(QStringLiteral("littleskin.cn/api/yggdrasil")).isEmpty());
     }
 };
 

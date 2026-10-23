@@ -30,6 +30,9 @@ class YggdrasilLoginDialog final : public QDialog {
 
     static auto newAccount(QWidget* parent) -> MinecraftAccountPtr;
 
+    /** Why the typed address cannot be used, or empty when it can. */
+    static auto serverProblem(const QString& text) -> QString;
+
    private slots:
     void signIn();
     void updateAcceptAllowed();
