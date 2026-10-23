@@ -15,6 +15,7 @@
 #include "minecraft/auth/MinecraftAccount.h"
 
 class QLineEdit;
+class QLabel;
 class QPushButton;
 
 /** Asks for an authentication server and the login there, and hands back the account once the server accepts it. */
@@ -40,6 +41,7 @@ class YggdrasilLoginDialog final : public QDialog {
     QLineEdit* m_server;
     QLineEdit* m_login;
     QLineEdit* m_password;
+    QLabel* m_hint;
     QPushButton* m_ok;
     MinecraftAccountPtr m_account;
     bool m_choiceRefused = false;

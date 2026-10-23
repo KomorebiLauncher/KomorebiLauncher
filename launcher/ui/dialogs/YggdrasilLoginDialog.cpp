@@ -30,11 +30,33 @@
 
 namespace {
 
+/** Why the typed address cannot be used, or empty when it can. */
+auto serverProblem(const QString& text) -> QString
+{
+    const auto trimmed = text.trimmed();
+    if (trimmed.isEmpty()) {
+        return QString();
+    }
+
+    // A URL is parsed tolerantly, which means a pasted address with its surrounding sentence still attached turns
+    // into encoded path characters and a server that answers 404. Say so before the login is attempted.
+    for (const auto& character : trimmed) {
+        if (character.unicode() > 127 || character.isSpace()) {
+            return QObject::tr("The address has to be only the web address the server gives, with no spaces or other text.");
+        }
+    }
+
+    const QUrl url(trimmed, QUrl::TolerantMode);
+    const auto scheme = url.scheme().toLower();
+    if (!url.isValid() || url.host().isEmpty() || (scheme != QLatin1String("https") && scheme != QLatin1String("http"))) {
+        return QObject::tr("The address has to start with http:// or https://");
+    }
+    return QString();
+}
+
 auto isUsableServer(const QString& text) -> bool
 {
-    const QUrl url(text.trimmed(), QUrl::TolerantMode);
-    const auto scheme = url.scheme().toLower();
-    return url.isValid() && !url.host().isEmpty() && (scheme == QLatin1String("https") || scheme == QLatin1String("http"));
+    return !text.trimmed().isEmpty() && serverProblem(text).isEmpty();
 }
 
 auto askForCharacter(QWidget* parent, const QList<YggdrasilProfile>& profiles) -> QString
@@ -87,6 +109,11 @@ YggdrasilLoginDialog::YggdrasilLoginDialog(QWidget* parent) : QDialog(parent)
     form->addRow(tr("Password"), m_password);
     layout->addLayout(form);
 
+    m_hint = new QLabel(this);
+    m_hint->setWordWrap(true);
+    m_hint->hide();
+    layout->addWidget(m_hint);
+
     auto buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, this);
     m_ok = buttons->button(QDialogButtonBox::Ok);
     m_ok->setText(tr("Sign in"));
@@ -106,6 +133,10 @@ YggdrasilLoginDialog::YggdrasilLoginDialog(QWidget* parent) : QDialog(parent)
 
 void YggdrasilLoginDialog::updateAcceptAllowed()
 {
+    auto problem = serverProblem(m_server->text());
+    m_hint->setText(problem);
+    m_hint->setVisible(!problem.isEmpty());
+
     m_ok->setEnabled(isUsableServer(m_server->text()) && !m_login->text().trimmed().isEmpty() && !m_password->text().isEmpty());
 }
 
