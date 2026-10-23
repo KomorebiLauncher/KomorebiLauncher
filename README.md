@@ -51,9 +51,9 @@ vcpkg 会在首次配置时从源码编译 libarchive 、 cmark 、 libqrencode 
 
 ## 仓库结构与上游同步
 
-默认分支 main 的历史被压缩为快照提交，完整上游历史与逐行 blame 保留在 upstream-prism 分支。
+默认分支 main 的历史是压缩后的快照，对应上游 Prism Launcher 的提交 77f2bee593eb9e0cdeef530e0e8686524b68d9d9 （2026-10-19）。完整上游历史与逐行 blame 由上游仓库自己维护，本仓库不保留副本。
 
-需要引入上游改动时，在 upstream-prism 分支上合并或拉取 Prism Launcher 的 develop ，然后用 cherry-pick 把具体提交应用到 main ；cherry-pick 不要求两个分支有共同祖先，因此跨分支可用。
+需要引入上游改动时，把 https://github.com/PrismLauncher/PrismLauncher 加为 remote 后 fetch ，再 cherry-pick 到 main ；cherry-pick 不要求两个分支有共同祖先，因此跨仓库同样可用。
 
 ## 许可与出处
 
