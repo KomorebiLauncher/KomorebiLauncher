@@ -20,6 +20,7 @@
 #include <QJsonObject>
 #include <QProcess>
 #include <QSaveFile>
+#include <QTimer>
 
 #include "Application.h"
 #include "FileSystem.h"
@@ -79,28 +80,67 @@ void InstallTask::executeTask()
     QDir().mkpath(FS::PathCombine(m_scratchRoot, "versions"));
     QDir().mkpath(FS::PathCombine(m_scratchRoot, "libraries"));
 
+    /*
+     * The installer ends by registering the new profile in the launcher's own profile file. Without one it puts up
+     * a dialog of its own behind our back, so it gets a throwaway file it is allowed to edit.
+     */
+    auto profilesPath = FS::PathCombine(m_scratchRoot, QStringLiteral("launcher_profiles.json"));
+    const QByteArray profilesJson = QByteArrayLiteral("{\"profiles\":{}}");
+    QFile profiles(profilesPath);
+    if (!QFileInfo::exists(profilesPath)
+        && (!profiles.open(QIODevice::WriteOnly) || profiles.write(profilesJson) != profilesJson.size())) {
+        failWith(tr("Could not create the profile file the OptiFine installer needs."));
+        return;
+    }
+
     fetchManifest();
 }
 
-void InstallTask::fetch(QUrl url, std::function<void(const QByteArray&)> ok, const QString& what)
+void InstallTask::fetch(QUrl url, std::function<void(const QByteArray&)> ok, const QString& what, int attemptsLeft)
 {
     auto [request, body] = Net::Request::makeByteArray(url);
     request->setNetwork(APPLICATION->network());
     m_current = request;
-    connect(request.get(), &Task::failed, this, [this, what](const QString& reason) { failWith(tr("Could not download %1: %2").arg(what, reason)); });
+    connect(request.get(), &Task::failed, this, [this, url, ok, what, attemptsLeft](const QString& reason) {
+        if (retryLater([this, url, ok, what, attemptsLeft] { fetch(url, ok, what, attemptsLeft - 1); }, what, attemptsLeft, reason)) {
+            return;
+        }
+        failWith(tr("Could not download %1: %2").arg(what, reason));
+    });
     connect(request.get(), &Task::succeeded, this, [body, ok = std::move(ok)]() { ok(*body); });
     request->start();
 }
 
-void InstallTask::fetchToFile(QUrl url, QString path, std::function<void()> ok, const QString& what)
+void InstallTask::fetchToFile(QUrl url, QString path, std::function<void()> ok, const QString& what, int attemptsLeft)
 {
     FS::ensureFolderPathExists(QFileInfo(path).absolutePath());
     auto request = Net::Request::makeFile(url, path);
     request->setNetwork(APPLICATION->network());
     m_current = request;
-    connect(request.get(), &Task::failed, this, [this, what](const QString& reason) { failWith(tr("Could not download %1: %2").arg(what, reason)); });
+    connect(request.get(), &Task::failed, this, [this, url, path, ok, what, attemptsLeft](const QString& reason) {
+        if (retryLater([this, url, path, ok, what, attemptsLeft] { fetchToFile(url, path, ok, what, attemptsLeft - 1); }, what, attemptsLeft,
+                       reason)) {
+            return;
+        }
+        failWith(tr("Could not download %1: %2").arg(what, reason));
+    });
     connect(request.get(), &Task::succeeded, this, [ok = std::move(ok)]() { ok(); });
     request->start();
+}
+
+auto InstallTask::retryLater(std::function<void()> again, const QString& what, int attemptsLeft, const QString& reason) -> bool
+{
+    if (attemptsLeft <= 0) {
+        return false;
+    }
+    setStatus(tr("Trying again to download %1: %2").arg(what, reason));
+    QTimer::singleShot(retryDelayMs, this, [this, again = std::move(again)] {
+        // The player may have aborted during the wait, and an aborted task must not start another download.
+        if (isRunning()) {
+            again();
+        }
+    });
+    return true;
 }
 
 void InstallTask::fetchManifest()
@@ -247,9 +287,9 @@ void InstallTask::runInstaller()
     m_process->setProcessChannelMode(QProcess::MergedChannels);
 
     /*
-     * OptiFine's final step patches the vanilla launcher's own profile file, which we neither use
-     * nor want modified, so it fails in a scratch tree even when everything before it worked.
-     * Success is therefore judged on the produced version json, not on the exit code.
+     * The installer registers the new profile in whichever launcher profile file it was given, which here is a
+     * throwaway in the scratch tree. Success is still judged on the version json it wrote rather than on the exit
+     * code, because the installer has more than one way to end badly after writing that file.
      */
     connect(m_process, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [this] { harvest(); });
     connect(m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {

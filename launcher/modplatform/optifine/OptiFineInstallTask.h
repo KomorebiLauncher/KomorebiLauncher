@@ -57,11 +57,18 @@ class InstallTask : public Task {
     void harvest();
 
     /** Downloads into memory; the body is only valid while the callback runs. */
-    void fetch(QUrl url, std::function<void(const QByteArray&)> ok, const QString& what);
+    void fetch(QUrl url, std::function<void(const QByteArray&)> ok, const QString& what, int attemptsLeft = downloadRetries);
     /** Downloads straight to disk. */
-    void fetchToFile(QUrl url, QString path, std::function<void()> ok, const QString& what);
+    void fetchToFile(QUrl url, QString path, std::function<void()> ok, const QString& what, int attemptsLeft = downloadRetries);
+
+    /** Waits a moment and asks for the same file again, which is what a mirror node that hung up needs. */
+    auto retryLater(std::function<void()> again, const QString& what, int attemptsLeft, const QString& reason) -> bool;
 
     void failWith(const QString& message);
+
+    /** The mirror hands these files off to volunteer nodes, and those drop connections often enough to matter. */
+    static constexpr int downloadRetries = 3;
+    static constexpr int retryDelayMs = 1000;
 
     MinecraftInstance* m_instance;
     Build m_build;
