@@ -34,12 +34,6 @@ auto parseRelease(const QByteArray& json) -> Release
     return release;
 }
 
-auto jarRelativePath(const Release& release) -> QString
-{
-    auto artifact = QStringLiteral("authlib-injector-%1.jar").arg(release.version);
-    return QStringLiteral("yushijinhun/authlib-injector/%1/%2").arg(release.version, artifact);
-}
-
 auto buildComponent(const Release& release, const QString& serverUrl, const QString& mcVersion, const QString& jarUrl,
                     const QString& jarSha1, qint64 jarSize) -> QJsonObject
 {

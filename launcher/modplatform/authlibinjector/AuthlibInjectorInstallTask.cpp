@@ -19,6 +19,7 @@
 
 #include "Application.h"
 #include "FileSystem.h"
+#include "minecraft/Library.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
 #include "net/ChecksumValidator.h"
@@ -98,7 +99,23 @@ void InstallTask::fetchRelease()
 
 void InstallTask::fetchJar()
 {
-    m_jarPath = FS::PathCombine(m_instance->instanceRoot(), "libraries", jarRelativePath(m_release));
+    /*
+     * Agents are never fetched while a profile is updated, so the jar has to end up exactly where the launch will
+     * look for it. Asking the library itself keeps the two in step, whatever it decides the storage prefix is.
+     */
+    Library library;
+    library.setRawName(GradleSpecifier(AuthlibInjector::mavenName + m_release.version));
+    QStringList native;
+    QStringList native32;
+    QStringList native64;
+    QStringList jars;
+    library.getApplicableFiles(m_instance->runtimeContext(), jars, native, native32, native64, QString());
+    m_jarPath = jars.value(0);
+    if (m_jarPath.isEmpty()) {
+        failWith(tr("Could not work out where the authlib-injector jar belongs."));
+        return;
+    }
+
     setStatus(tr("Downloading authlib-injector %1").arg(m_release.version));
 
     // A reinstall should not fetch a jar we already have verified.

@@ -8,10 +8,14 @@
  *  the Free Software Foundation, version 3.
  */
 
+#include <QDir>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QTest>
 
+#include <RuntimeContext.h>
+
+#include "minecraft/Library.h"
 #include "minecraft/OneSixVersionFormat.h"
 #include "minecraft/VersionFile.h"
 #include "modplatform/authlibinjector/AuthlibInjector.h"
@@ -46,11 +50,27 @@ class AuthlibInjectorTest : public QObject {
         QVERIFY(AuthlibInjector::parseRelease("[\"version\"]").version.isEmpty());
     }
 
-    void test_JarRelativePathIsTheMavenLayout()
+    /** The jar has to be saved where the launch will look for it, which is the maven layout under the storage prefix. */
+    void test_AgentLibraryResolvesToTheMavenLayout()
     {
         auto release = AuthlibInjector::parseRelease(fixture());
-        QCOMPARE(AuthlibInjector::jarRelativePath(release),
-                 QStringLiteral("yushijinhun/authlib-injector/1.2.8/authlib-injector-1.2.8.jar"));
+        Library library;
+        library.setRawName(GradleSpecifier(AuthlibInjector::mavenName + release.version));
+
+        RuntimeContext context;
+        context.system = QStringLiteral("windows");
+        context.javaArchitecture = QStringLiteral("64");
+        context.javaRealArchitecture = QStringLiteral("amd64");
+
+        QStringList jars;
+        QStringList native;
+        QStringList native32;
+        QStringList native64;
+        library.getApplicableFiles(context, jars, native, native32, native64, QString());
+
+        QCOMPARE(jars.size(), 1);
+        auto path = QDir::fromNativeSeparators(jars.at(0));
+        QVERIFY2(path.endsWith(QStringLiteral("/libraries/yushijinhun/authlib-injector/1.2.8/authlib-injector-1.2.8.jar")), qPrintable(path));
     }
 
     void test_BuildComponent()

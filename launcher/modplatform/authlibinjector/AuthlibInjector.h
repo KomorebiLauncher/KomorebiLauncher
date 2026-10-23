@@ -47,7 +47,4 @@ auto parseRelease(const QByteArray& json) -> Release;
 auto buildComponent(const Release& release, const QString& serverUrl, const QString& mcVersion, const QString& jarUrl,
                     const QString& jarSha1, qint64 jarSize) -> QJsonObject;
 
-/** The relative path the jar is stored at inside the instance's libraries folder. */
-auto jarRelativePath(const Release& release) -> QString;
-
 }  // namespace AuthlibInjector
