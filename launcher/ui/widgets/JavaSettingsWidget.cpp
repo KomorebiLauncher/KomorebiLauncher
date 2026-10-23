@@ -118,6 +118,14 @@ JavaSettingsWidget::JavaSettingsWidget(MinecraftInstance* instance, QWidget* par
         m_ui->maxMemSpinBox->setValue(advice.maxMiB);
     });
 
+    connect(m_ui->argsSuggestButton, &QPushButton::clicked, this, [this] {
+        // The text box is only saved when its group is switched on, so asking for the arguments turns it on rather
+        // than filling a box whose contents are thrown away.
+        m_ui->javaArgumentsGroupBox->setChecked(true);
+        auto merged = mergeJvmArgs(m_ui->jvmArgsTextBox->toPlainText(), suggestJvmArgs(m_ui->maxMemSpinBox->value()));
+        m_ui->jvmArgsTextBox->setPlainText(merged);
+    });
+
     loadSettings();
     updateThresholds();
 }
@@ -388,4 +396,7 @@ void JavaSettingsWidget::updateThresholds()
     } else {
         m_ui->labelMaxMemNotice->hide();
     }
+
+    auto heap = m_ui->maxMemSpinBox->value();
+    m_ui->labelArgsSuggestion->setText(tr("Suggested for %1 MiB of heap: %2").arg(heap).arg(suggestJvmArgs(heap).join(' ')));
 }

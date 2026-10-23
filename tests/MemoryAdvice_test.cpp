@@ -74,6 +74,60 @@ class MemoryAdviceTest : public QObject {
             }
         }
     }
+
+    /** The collector suggestions are memory arguments by another name, and those block the launch. */
+    void test_NeverSuggestsAMemoryArgument()
+    {
+        for (auto heap : { 1024, 2048, 3072, 6144, 8192, 32768 }) {
+            for (const auto& arg : suggestJvmArgs(heap)) {
+                QVERIFY2(!arg.startsWith("-Xm"), qPrintable(arg));
+                QVERIFY2(!arg.startsWith("-version:"), qPrintable(arg));
+            }
+        }
+    }
+
+    /** The region size is the one suggestion that depends on how big the heap is. */
+    void test_RegionSizeFollowsTheHeap()
+    {
+        QVERIFY(!suggestJvmArgs(1024).contains("-XX:G1HeapRegionSize=16m"));
+        QVERIFY(!suggestJvmArgs(2048).contains("-XX:G1HeapRegionSize=16m"));
+
+        QVERIFY(suggestJvmArgs(3072).contains("-XX:G1HeapRegionSize=16m"));
+        QVERIFY(!suggestJvmArgs(3072).contains("-XX:G1HeapRegionSize=32m"));
+
+        QVERIFY(suggestJvmArgs(6144).contains("-XX:G1HeapRegionSize=32m"));
+        QVERIFY(suggestJvmArgs(32768).contains("-XX:G1HeapRegionSize=32m"));
+    }
+
+    /** Everything else is a flag HotSpot accepts whether it is told to unlock experimentals or not. */
+    void test_AllOfItIsAProductFlag()
+    {
+        for (const auto& arg : suggestJvmArgs(2048)) {
+            QVERIFY2(arg.startsWith("-XX:"), qPrintable(arg));
+        }
+    }
+
+    /** A player's own arguments survive, and the ones the suggestion decides are replaced rather than repeated. */
+    void test_MergeKeepsWhatWasTyped()
+    {
+        auto preset = suggestJvmArgs(3072);
+        auto merged = mergeJvmArgs("-XX:+UseG1GC -XX:MaxGCPauseMillis=50 -Dio.netty.tryReflectionSetAccessible=true", preset);
+
+        auto tokens = merged.split(' ', Qt::SkipEmptyParts);
+        QVERIFY(tokens.contains("-Dio.netty.tryReflectionSetAccessible=true"));
+        QCOMPARE(tokens.count("-XX:MaxGCPauseMillis=200"), 1);
+        QCOMPARE(tokens.count("-XX:MaxGCPauseMillis=50"), 0);
+        QCOMPARE(tokens.count("-XX:+UseG1GC"), 1);
+        QVERIFY(tokens.endsWith("-XX:G1HeapRegionSize=16m"));
+    }
+
+    /** Pressing the button twice has to be the same as pressing it once. */
+    void test_MergeIsIdempotent()
+    {
+        auto once = mergeJvmArgs("-da", suggestJvmArgs(8192));
+        auto twice = mergeJvmArgs(once, suggestJvmArgs(8192));
+        QCOMPARE(twice, once);
+    }
 };
 
 QTEST_GUILESS_MAIN(MemoryAdviceTest)

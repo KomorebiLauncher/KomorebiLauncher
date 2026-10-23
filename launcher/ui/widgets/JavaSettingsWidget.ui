@@ -431,6 +431,27 @@
       <item row="1" column="1">
        <widget class="QPlainTextEdit" name="jvmArgsTextBox"/>
       </item>
+      <item row="2" column="1">
+       <layout class="QHBoxLayout" name="horizontalLayout_8">
+        <item>
+         <widget class="QLabel" name="labelArgsSuggestion">
+          <property name="text">
+           <string>Suggested arguments</string>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="argsSuggestButton">
+          <property name="text">
+           <string>Add these &amp;arguments</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
      </layout>
     </widget>
    </item>
