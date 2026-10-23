@@ -10,8 +10,11 @@
 
 #include "YggdrasilLoginDialog.h"
 
+#include <algorithm>
+
 #include <QDialogButtonBox>
 #include <QFormLayout>
+#include <QInputDialog>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
@@ -32,6 +35,25 @@ auto isUsableServer(const QString& text) -> bool
     const QUrl url(text.trimmed(), QUrl::TolerantMode);
     const auto scheme = url.scheme().toLower();
     return url.isValid() && !url.host().isEmpty() && (scheme == QLatin1String("https") || scheme == QLatin1String("http"));
+}
+
+auto askForCharacter(QWidget* parent, const QList<YggdrasilProfile>& profiles) -> QString
+{
+    QStringList names;
+    for (const auto& profile : profiles) {
+        // Two characters named the same can only be told apart by their id.
+        auto shared = std::ranges::count(profiles, profile.name, &YggdrasilProfile::name) > 1;
+        names.append(shared ? QStringLiteral("%1 (%2)").arg(profile.name, profile.id) : profile.name);
+    }
+
+    bool chose = false;
+    auto name = QInputDialog::getItem(parent, QObject::tr("Choose a character"),
+                                      QObject::tr("This account may play as more than one character. Which one should the launcher use?"),
+                                      names, 0, false, &chose);
+    if (!chose || name.isEmpty()) {
+        return QString();
+    }
+    return profiles.at(names.indexOf(name)).id;
 }
 
 }  // namespace
@@ -87,7 +109,41 @@ void YggdrasilLoginDialog::updateAcceptAllowed()
 
 void YggdrasilLoginDialog::signIn()
 {
+    auto account = makeAccount(QString());
+    if (!runLogin(account)) {
+        return;
+    }
+
+    auto& state = *account->accountData();
+    if (!m_choiceRefused && state.availableProfiles.size() > 1) {
+        auto choice = askForCharacter(this, state.availableProfiles);
+        if (!choice.isEmpty()) {
+            auto chosen = makeAccount(choice);
+            if (runLogin(chosen)) {
+                m_account = chosen;
+                accept();
+                return;
+            }
+            // The server refused to be told which character to hand over. Its own pick still plays, and asking
+            // again the next time the sign-in button is pressed would only refuse again.
+            m_choiceRefused = true;
+            return;
+        }
+    }
+
+    m_account = account;
+    accept();
+}
+
+auto YggdrasilLoginDialog::makeAccount(const QString& profileChoice) -> MinecraftAccountPtr
+{
     auto account = MinecraftAccount::createYggdrasil(m_server->text(), m_login->text().trimmed(), m_password->text());
+    account->accountData()->profileChoice = profileChoice;
+    return account;
+}
+
+bool YggdrasilLoginDialog::runLogin(const MinecraftAccountPtr& account)
+{
     auto flow = account->login();
 
     QString failure;
@@ -95,14 +151,13 @@ void YggdrasilLoginDialog::signIn()
 
     ProgressDialog progress(this);
     if (progress.execWithTask(flow.get()) == QDialog::Accepted) {
-        m_account = account;
-        accept();
-        return;
+        return true;
     }
 
     if (!failure.isEmpty()) {
         CustomMessageBox::selectable(this, tr("Add a third-party account"), failure, QMessageBox::Warning)->show();
     }
+    return false;
 }
 
 auto YggdrasilLoginDialog::newAccount(QWidget* parent) -> MinecraftAccountPtr

@@ -58,8 +58,12 @@ void YggdrasilStep::perform()
 
     QJsonObject body;
     if (m_interactive) {
-        body[QStringLiteral("agent")] = QJsonObject{ { QStringLiteral("name"), QStringLiteral("Minecraft") },
-                                                     { QStringLiteral("version"), QStringLiteral("1.5") } };
+        QJsonObject agent{ { QStringLiteral("name"), QStringLiteral("Minecraft") }, { QStringLiteral("version"), QStringLiteral("1.5") } };
+        // Servers that let one account hold several characters pick one themselves unless it is told which.
+        if (!m_data->profileChoice.isEmpty()) {
+            agent[QStringLiteral("id")] = m_data->profileChoice;
+        }
+        body[QStringLiteral("agent")] = agent;
         body[QStringLiteral("username")] = m_data->loginName;
         body[QStringLiteral("password")] = m_data->password;
         body[QStringLiteral("requestUser")] = true;
@@ -111,7 +115,7 @@ void YggdrasilStep::onRequestDone(QByteArray* response)
         return;
     }
 
-    if (!Parsers::parseYggdrasilResponse(*response, m_data->yggdrasilToken, m_data->minecraftProfile)) {
+    if (!Parsers::parseYggdrasilResponse(*response, m_data->yggdrasilToken, m_data->minecraftProfile, m_data->availableProfiles)) {
         qWarning() << "Could not parse the authentication server response...";
         emit finished(AccountTaskState::STATE_FAILED_SOFT, tr("The authentication server sent an answer that could not be understood."));
         return;
@@ -120,6 +124,10 @@ void YggdrasilStep::onRequestDone(QByteArray* response)
     if (m_data->minecraftProfile.id.isEmpty()) {
         emit finished(AccountTaskState::STATE_FAILED_SOFT, tr("The authentication server gave no character to play as."));
         return;
+    }
+
+    if (!m_data->profileChoice.isEmpty() && m_data->minecraftProfile.id != m_data->profileChoice) {
+        qWarning() << "The authentication server handed over" << m_data->minecraftProfile.name << "instead of the asked-for character";
     }
 
     // The server decides who owns the game, and it just said yes by handing out a token.

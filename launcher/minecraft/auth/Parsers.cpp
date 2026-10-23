@@ -425,7 +425,8 @@ bool parseMojangResponse(const QByteArray& data, Token& output)
     return true;
 }
 
-bool parseYggdrasilResponse(const QByteArray& data, Token& outputToken, MinecraftProfile& outputProfile)
+bool parseYggdrasilResponse(const QByteArray& data, Token& outputToken, MinecraftProfile& outputProfile,
+                            QList<YggdrasilProfile>& outputProfiles)
 {
     qDebug() << "Parsing Yggdrasil response...";
     qCDebug(authCredentials()) << data;
@@ -450,6 +451,23 @@ bool parseYggdrasilResponse(const QByteArray& data, Token& outputToken, Minecraf
     auto clientToken = obj->value("clientToken");
     if (clientToken.isString()) {
         outputToken.extra["clientToken"] = clientToken.toString();
+    }
+
+    outputProfiles.clear();
+    auto profiles = obj->value("availableProfiles");
+    if (profiles.isArray()) {
+        for (const auto& value : profiles.toArray()) {
+            auto entry = value.toObject();
+            auto id = entry.value("id").toString();
+            auto name = entry.value("name").toString();
+            if (id.isEmpty() || name.isEmpty()) {
+                // A server that lists a character without naming it is broken, but that is no reason to refuse
+                // the whole login when it also handed over a usable one.
+                qWarning() << "Ignoring an available character without an id or a name";
+                continue;
+            }
+            outputProfiles.append(YggdrasilProfile{ id, name });
+        }
     }
 
     auto profile = obj->value("selectedProfile");

@@ -34,9 +34,13 @@ class YggdrasilLoginDialog final : public QDialog {
     void updateAcceptAllowed();
 
    private:
+    auto makeAccount(const QString& profileChoice) -> MinecraftAccountPtr;
+    bool runLogin(const MinecraftAccountPtr& account);
+
     QLineEdit* m_server;
     QLineEdit* m_login;
     QLineEdit* m_password;
     QPushButton* m_ok;
     MinecraftAccountPtr m_account;
+    bool m_choiceRefused = false;
 };

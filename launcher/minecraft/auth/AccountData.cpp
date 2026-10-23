@@ -312,6 +312,7 @@ bool AccountData::resumeStateFromV3(QJsonObject data)
         authServerUrl = data.value("auth-server").toString();
         loginName = data.value("login").toString();
         password = data.value("password").toString();
+        profileChoice = data.value("profile-choice").toString();
     }
 
     yggdrasilToken = tokenFromJSONV3(data, "ygg");
@@ -348,6 +349,9 @@ QJsonObject AccountData::saveState() const
         output["auth-server"] = authServerUrl;
         output["login"] = loginName;
         output["password"] = password;
+        if (!profileChoice.isEmpty()) {
+            output["profile-choice"] = profileChoice;
+        }
     }
 
     tokenToJSONV3(output, yggdrasilToken, "ygg");

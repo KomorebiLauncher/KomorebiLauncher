@@ -13,7 +13,7 @@ bool getBool(QJsonValue value, bool& out);
 bool parseXTokenResponse(const QByteArray& data, Token& output, QString name);
 bool parseMojangResponse(const QByteArray& data, Token& output);
 
-bool parseYggdrasilResponse(const QByteArray& data, Token& token, MinecraftProfile& profile);
+bool parseYggdrasilResponse(const QByteArray& data, Token& token, MinecraftProfile& profile, QList<YggdrasilProfile>& profiles);
 QString parseYggdrasilError(const QByteArray& data);
 
 bool parseMinecraftProfile(const QByteArray& data, MinecraftProfile& output);

@@ -43,7 +43,8 @@ class YggdrasilAuthTest : public QObject {
 
         Token token;
         MinecraftProfile profile;
-        QVERIFY(Parsers::parseYggdrasilResponse(jsonOf(answer), token, profile));
+        QList<YggdrasilProfile> profiles;
+        QVERIFY(Parsers::parseYggdrasilResponse(jsonOf(answer), token, profile, profiles));
 
         QCOMPARE(token.token, QStringLiteral("a-token"));
         QVERIFY(token.validity == Validity::Certain);
@@ -55,6 +56,41 @@ class YggdrasilAuthTest : public QObject {
         QVERIFY(profile.validity == Validity::Certain);
     }
 
+    /** A server that lets one login hold several characters says so in the same answer, and the launcher has to hear it. */
+    void test_ReadsTheCharactersOnOffer()
+    {
+        auto answer = QJsonObject{ { QStringLiteral("accessToken"), QStringLiteral("a-token") },
+                                   { QStringLiteral("selectedProfile"), character(QStringLiteral("beefcafe"), QStringLiteral("Shiori")) },
+                                   { QStringLiteral("availableProfiles"),
+                                     QJsonArray{ character(QStringLiteral("beefcafe"), QStringLiteral("Shiori")),
+                                                 character(QStringLiteral("deadbeef"), QStringLiteral("Kujou")),
+                                                 QJsonObject{ { QStringLiteral("name"), QStringLiteral("Ghost") } } } } };
+
+        Token token;
+        MinecraftProfile profile;
+        QList<YggdrasilProfile> profiles;
+        QVERIFY(Parsers::parseYggdrasilResponse(jsonOf(answer), token, profile, profiles));
+
+        // A character with no id cannot be asked for, so it is not offered even though the rest of the answer is fine.
+        QCOMPARE(profiles.size(), 2);
+        QCOMPARE(profiles.at(0).id, QStringLiteral("beefcafe"));
+        QCOMPARE(profiles.at(1).name, QStringLiteral("Kujou"));
+    }
+
+    /** An answer that offers nothing leaves nothing to choose from. */
+    void test_NoCharactersOffered()
+    {
+        auto answer = QJsonObject{ { QStringLiteral("accessToken"), QStringLiteral("a-token") },
+                                   { QStringLiteral("selectedProfile"), character(QStringLiteral("deadbeef"), QStringLiteral("Kujou")) },
+                                   { QStringLiteral("availableProfiles"), QJsonArray() } };
+
+        Token token;
+        MinecraftProfile profile;
+        QList<YggdrasilProfile> profiles{ YggdrasilProfile{ QStringLiteral("old"), QStringLiteral("Stale") } };
+        QVERIFY(Parsers::parseYggdrasilResponse(jsonOf(answer), token, profile, profiles));
+        QCOMPARE(profiles.size(), 0);
+    }
+
     /** A refresh that names no character still renews the token - the account keeps who it already is. */
     void test_ParseRefreshWithoutProfile()
     {
@@ -63,9 +99,10 @@ class YggdrasilAuthTest : public QObject {
 
         Token token;
         MinecraftProfile profile;
+        QList<YggdrasilProfile> profiles;
         profile.id = QStringLiteral("deadbeef");
         profile.name = QStringLiteral("Kujou");
-        QVERIFY(Parsers::parseYggdrasilResponse(body, token, profile));
+        QVERIFY(Parsers::parseYggdrasilResponse(body, token, profile, profiles));
 
         QCOMPARE(token.token, QStringLiteral("new-token"));
         QCOMPARE(profile.name, QStringLiteral("Kujou"));
@@ -76,15 +113,16 @@ class YggdrasilAuthTest : public QObject {
     {
         Token token;
         MinecraftProfile profile;
+        QList<YggdrasilProfile> profiles;
 
         auto noToken = jsonOf(QJsonObject{ { QStringLiteral("clientToken"), QStringLiteral("a-client") } });
-        QVERIFY(!Parsers::parseYggdrasilResponse(noToken, token, profile));
+        QVERIFY(!Parsers::parseYggdrasilResponse(noToken, token, profile, profiles));
 
         auto brokenProfile = jsonOf(QJsonObject{ { QStringLiteral("accessToken"), QStringLiteral("a-token") },
                                                  { QStringLiteral("selectedProfile"), character(QStringLiteral("deadbeef"), QString()) } });
-        QVERIFY(!Parsers::parseYggdrasilResponse(brokenProfile, token, profile));
+        QVERIFY(!Parsers::parseYggdrasilResponse(brokenProfile, token, profile, profiles));
 
-        QVERIFY(!Parsers::parseYggdrasilResponse("not json", token, profile));
+        QVERIFY(!Parsers::parseYggdrasilResponse("not json", token, profile, profiles));
     }
 
     /** The reason a server refuses a login is only in the body of the error answer. */
@@ -105,6 +143,7 @@ class YggdrasilAuthTest : public QObject {
         source.authServerUrl = QStringLiteral("https://auth.example.com");
         source.loginName = QStringLiteral("kujou");
         source.password = QStringLiteral("hunter2");
+        source.profileChoice = QStringLiteral("deadbeef");
         source.yggdrasilToken.token = QStringLiteral("a-token");
         source.yggdrasilToken.extra[QStringLiteral("clientToken")] = QStringLiteral("a-client");
         source.minecraftProfile.id = QStringLiteral("deadbeef");
@@ -118,6 +157,7 @@ class YggdrasilAuthTest : public QObject {
         QCOMPARE(restored.authServerUrl, QStringLiteral("https://auth.example.com"));
         QCOMPARE(restored.loginName, QStringLiteral("kujou"));
         QCOMPARE(restored.password, QStringLiteral("hunter2"));
+        QCOMPARE(restored.profileChoice, QStringLiteral("deadbeef"));
         QCOMPARE(restored.accessToken(), QStringLiteral("a-token"));
         QCOMPARE(restored.profileId(), QStringLiteral("deadbeef"));
         QCOMPARE(restored.profileName(), QStringLiteral("Kujou"));

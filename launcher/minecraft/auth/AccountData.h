@@ -90,6 +90,12 @@ struct MinecraftProfile {
 
 enum class AccountType { MSA, Offline, Yggdrasil };
 
+/** One of the characters a third-party server lets this account play as. */
+struct YggdrasilProfile {
+    QString id;
+    QString name;
+};
+
 enum class AccountState { Unchecked, Offline, Working, Online, Disabled, Errored, Expired, Gone };
 
 struct AccountData {
@@ -110,6 +116,8 @@ struct AccountData {
     QString authServerUrl;
     QString loginName;
     QString password;
+    /** The character to ask for, by id. Empty lets the server pick one. */
+    QString profileChoice;
 
     QString msaClientID;
     Token msaToken;
@@ -126,4 +134,7 @@ struct AccountData {
     QString errorString;
     QNetworkReply::NetworkError networkError = QNetworkReply::NoError;
     AccountState accountState = AccountState::Unchecked;
+
+    /** Filled in by a sign-in, which is the only moment the server tells us what the account may play as. */
+    QList<YggdrasilProfile> availableProfiles;
 };
