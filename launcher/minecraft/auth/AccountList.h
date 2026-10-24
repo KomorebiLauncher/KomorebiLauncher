@@ -105,6 +105,10 @@ class AccountList : public QAbstractListModel {
     void setDefaultAccount(MinecraftAccountPtr profileId);
     bool anyAccountIsValid();
 
+    /// Whether a Microsoft account that owns Minecraft is present. Third-party accounts do not count: their
+    /// own server marks them as owning, which is not the ownership the offline-profile gate asks for.
+    bool anyMicrosoftAccountOwnsMinecraft();
+
     /// Whether at least one account can produce a session: an account that owns Minecraft, or one on a
     /// third-party authentication server. Offline profiles are local names only, so they do not count.
     bool anyAccountUsable();
