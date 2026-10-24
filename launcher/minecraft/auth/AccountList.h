@@ -105,7 +105,8 @@ class AccountList : public QAbstractListModel {
     void setDefaultAccount(MinecraftAccountPtr profileId);
     bool anyAccountIsValid();
 
-    /// Whether at least one account can produce a session, offline accounts included.
+    /// Whether at least one account can produce a session: an account that owns Minecraft, or one on a
+    /// third-party authentication server. Offline profiles are local names only, so they do not count.
     bool anyAccountUsable();
 
     bool isActive() const;

@@ -598,7 +598,7 @@ bool AccountList::anyAccountIsValid()
 bool AccountList::anyAccountUsable()
 {
     for (auto account : m_accounts) {
-        if (account->ownsMinecraft() || account->accountType() == AccountType::Offline) {
+        if (account->ownsMinecraft() || account->accountType() == AccountType::Yggdrasil) {
             return true;
         }
     }

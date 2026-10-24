@@ -30,7 +30,7 @@
    <item>
     <widget class="QLabel" name="label_2">
      <property name="text">
-      <string>Add a Microsoft account here, or skip this step and add an offline account later under Settings - Accounts.</string>
+      <string>Add a Microsoft account here, or skip this step and add an account later under Settings - Accounts.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
