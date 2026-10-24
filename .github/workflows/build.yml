@@ -101,6 +101,9 @@ jobs:
 
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx-deployment-target }}
 
+      # Without this sccache refuses every compile of the universal macOS build (multiple -arch flags).
+      SCCACHE_CACHE_MULTIARCH: 1
+
     steps:
       ##
       # SETUP
