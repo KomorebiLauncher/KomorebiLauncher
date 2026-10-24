@@ -101,6 +101,9 @@ jobs:
 
       MACOSX_DEPLOYMENT_TARGET: ${{ matrix.macosx-deployment-target }}
 
+      # Without this sccache refuses every compile of the universal macOS build (multiple -arch flags).
+      SCCACHE_CACHE_MULTIARCH: 1
+
     steps:
       ##
       # SETUP
@@ -126,9 +129,12 @@ jobs:
       ##
 
       - name: Configure project
+        env:
+          # The universal build's PCH commands collide with sccache's multi-arch rewrite.
+          DISABLE_PCH: ${{ runner.os == 'macOS' && 'ON' || 'OFF' }}
         run: |
           cmake --preset "$CMAKE_PRESET" -D VCPKG_HOST_TRIPLET="$VCPKG_TRIPLET" -D VCPKG_TARGET_TRIPLET="$VCPKG_TRIPLET" \
-            -D Launcher_CURSEFORGE_API_KEY="$CURSEFORGE_API_KEY"
+            -D Launcher_CURSEFORGE_API_KEY="$CURSEFORGE_API_KEY" -D CMAKE_DISABLE_PRECOMPILE_HEADERS="$DISABLE_PCH"
 
       - name: Run build
         run: |
