@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include <QJsonObject>
 #include <QList>
 #include <QString>
 #include <QUrl>
