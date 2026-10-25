@@ -783,3 +783,23 @@ Error code: 1314
 - §7 的测试仍未补，因此 H2（按身份回填）、H4（超时/取消）、M3/M4（`ASSERT_NEVER`）、M5（缺 jar 不终态）、M13/M14 这些**只靠手测**的路径依然没有自动覆盖——Debug 构建下真实触发一次 `Task` 断言，仍是 §9.7 手工清单里的第一项。
 - 建议把 10.3 的三条写进 CI 或测试文档，否则同样的假失败会反复出现。
 
+### 10.5 CI 结果（run 40169352214）
+
+代码提交 `013edf1` 推到 `ci/macos-cache-release` 后手动触发 `Build`（`workflow_dispatch`，Debug），**6/6 平台全部成功**，总耗时 21 分钟：
+
+| 平台 | 耗时 | `ctest` |
+| --- | --- | --- |
+| Build (Windows-MSVC) | 10m59s | 34/34 通过 |
+| Build (Linux) | 15m21s | 通过 |
+| Build (Linux-aarch64) | 14m26s | 通过 |
+| Build (Windows-MSVC-arm64) | 17m59s | 通过 |
+| Build (Windows-MinGW-w64) | 20m9s | 通过 |
+| Build (macOS) | 20m43s | 34/34 通过 |
+
+意义有两点：
+
+1. **MSVC 之外的编译器也没问题**：MinGW-w64、arm64 交叉编译、macOS / aarch64 的 Clang 都是第一次编这套改动，`/WX` 同级或更严的警告设置下没有报错。
+2. **本地那 6 个符号链接失败确认是机器环境**：GitHub 的 Windows runner 具备 `SeCreateSymbolicLinkPrivilege`，同一份代码跑出 `100% tests passed, 0 tests failed out of 34`。因此 §10.2 的"33/34"只反映本机权限，不是代码缺陷。
+
+> 注：这次只跑了 `Build`。`CodeQL`、`Clang-Tidy Code Scanning`、`Nix`、`Development Container` 由 PR 或 main 推送触发，未在本轮范围内。
+
