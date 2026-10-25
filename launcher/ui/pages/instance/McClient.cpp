@@ -8,30 +8,13 @@
 #include <utility>
 
 #include "Json.h"
+#include "McProtocol.h"
 #include "Result.h"
 
 namespace {
 
-// From https://wiki.vg/Protocol#VarInt_and_VarLong
-constexpr auto g_varIntValueMask = 0x7F;
-constexpr auto g_varIntContinue = 0x80;
-
 /** A status answer is a few kilobytes; anything past this is a broken or hostile length field. */
 constexpr int maxResponseBytes = 2 * 1024 * 1024;
-
-void writeVarInt(QByteArray& data, int value)
-{
-    while ((value & ~g_varIntValueMask) != 0) {  // check if the value is too big to fit in 7 bits
-        // Write the low 7 bits with the continuation bit set. Masking with ~g_varIntValueMask here
-        // would write the *high* bits instead, which no decoder can read back.
-        data.append(static_cast<uint8_t>((value & g_varIntValueMask) | g_varIntContinue));
-
-        // Erase theses 7 bits from the value to write
-        // Note: >>> means that the sign bit is shifted with the rest of the number rather than being left alone
-        value >>= 7;
-    }
-    data.append(static_cast<uint8_t>(value));
-}
 
 Result<uint8_t> readByte(QByteArray& data)
 {
@@ -52,9 +35,9 @@ Result<int> readVarInt(QByteArray& data)
 
     while (position < 32) {
         TRY_INTO(const auto& currentByte, readByte(data))
-        value |= (currentByte & g_varIntValueMask) << position;
+        value |= (currentByte & McProtocol::varIntValueMask) << position;
 
-        if ((currentByte & g_varIntContinue) == 0) {
+        if ((currentByte & McProtocol::varIntContinueBit) == 0) {
             break;
         }
 
@@ -73,14 +56,6 @@ void writeUInt16(QByteArray& data, const uint16_t value)
     QDataStream stream(&data, QIODeviceBase::Append);
     stream.setByteOrder(QDataStream::BigEndian);
     stream << value;
-}
-
-void writeString(QByteArray& data, const QString& value)
-{
-    // The length prefix counts the bytes on the wire, not the UTF-16 code units of the QString.
-    const auto bytes = value.toUtf8();
-    writeVarInt(data, static_cast<int32_t>(bytes.size()));
-    data.append(bytes);
 }
 
 }  // namespace
@@ -108,15 +83,15 @@ void McClient::getStatusData()
 void McClient::sendRequest()
 {
     QByteArray data;
-    writeVarInt(data, 0x00);      // packet ID
-    writeVarInt(data, 763);       // hardcoded protocol version (763 = 1.20.1)
-    writeString(data, m_domain);  // server address
-    writeUInt16(data, m_port);    // server port
-    writeVarInt(data, 0x01);      // next state
-    writePacketToSocket(data);    // send handshake packet
+    McProtocol::writeVarInt(data, 0x00);      // packet ID
+    McProtocol::writeVarInt(data, 763);       // hardcoded protocol version (763 = 1.20.1)
+    McProtocol::writeString(data, m_domain);  // server address
+    writeUInt16(data, m_port);                // server port
+    McProtocol::writeVarInt(data, 0x01);      // next state
+    writePacketToSocket(data);                // send handshake packet
 
-    writeVarInt(data, 0x00);    // packet ID
-    writePacketToSocket(data);  // send status packet
+    McProtocol::writeVarInt(data, 0x00);  // packet ID
+    writePacketToSocket(data);            // send status packet
 }
 
 void McClient::readRawResponse()
@@ -190,7 +165,7 @@ void McClient::writePacketToSocket(QByteArray& data)
 {
     // we prefix the packet with its length
     QByteArray dataWithSize;
-    writeVarInt(dataWithSize, static_cast<int32_t>(data.size()));
+    McProtocol::writeVarInt(dataWithSize, static_cast<int>(data.size()));
     dataWithSize.append(data);
 
     // write it to the socket

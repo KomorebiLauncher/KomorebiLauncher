@@ -205,6 +205,46 @@ class YggdrasilAuthTest : public QObject {
         QCOMPARE(restored.profileName(), QStringLiteral("Kujou"));
         QCOMPARE(restored.yggdrasilToken.extra.value(QStringLiteral("clientToken")).toString(), QStringLiteral("a-client"));
     }
+
+    /**
+     * The account list is a plain file that ends up in sync folders, backups and bug reports, so
+     * what it may contain is a fixed list. A password is the one field whose disclosure cannot be
+     * undone by revoking a token, and it is not needed to launch: assert it never reaches the file,
+     * not even as text inside another value.
+     */
+    void test_SavedYggdrasilAccountCarriesNoPassword()
+    {
+        AccountData source;
+        source.type = AccountType::Yggdrasil;
+        source.authServerUrl = QStringLiteral("https://auth.example.com");
+        source.loginName = QStringLiteral("kujou");
+        source.password = QStringLiteral("hunter2");
+        source.profileChoice = QStringLiteral("deadbeef");
+        source.yggdrasilToken.token = QStringLiteral("a-token");
+
+        const auto saved = source.saveState();
+
+        QVERIFY(!saved.contains(QStringLiteral("password")));
+        QVERIFY(!jsonOf(saved).contains("hunter2"));
+
+        // Everything the launcher needs to renew and use the token is still there.
+        QCOMPARE(saved.value(QStringLiteral("type")).toString(), QStringLiteral("Yggdrasil"));
+        QCOMPARE(saved.value(QStringLiteral("auth-server")).toString(), source.authServerUrl);
+        QCOMPARE(saved.value(QStringLiteral("login")).toString(), source.loginName);
+        QCOMPARE(saved.value(QStringLiteral("profile-choice")).toString(), source.profileChoice);
+        QVERIFY(saved.contains(QStringLiteral("ygg")));
+    }
+
+    /** A Microsoft account has no password to keep in the first place, but the key must stay absent. */
+    void test_SavedMicrosoftAccountCarriesNoPassword()
+    {
+        AccountData source;
+        source.type = AccountType::MSA;
+        source.msaClientID = QStringLiteral("00000000-0000-0000-0000-000000000000");
+        source.password = QStringLiteral("hunter2");
+
+        QVERIFY(!source.saveState().contains(QStringLiteral("password")));
+    }
     /** A pasted sentence must not become part of the address, because no server can read it back. */
     void test_RejectsAnAddressWithOtherTextInIt()
     {
