@@ -40,6 +40,13 @@ void ListTask::executeTask()
     while (base.endsWith(QLatin1Char('/'))) {
         base.chop(1);
     }
+    if (base.isEmpty()) {
+        // The build list only exists on a mirror. An empty address means "no mirror" for every
+        // other download, so report that rather than quietly using an address the player removed.
+        emitFailed(tr("OptiFine's builds are only published on the download mirror, but no mirror address is set. "
+                      "Add one in Settings > APIs, or restore the default."));
+        return;
+    }
     auto [request, body] = Net::Request::makeByteArray(QUrl(base + QStringLiteral("/optifine/versionList")));
     request->setNetwork(APPLICATION->network());
     m_current = request;

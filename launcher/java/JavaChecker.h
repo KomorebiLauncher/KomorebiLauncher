@@ -29,6 +29,9 @@ class JavaChecker : public Task {
     explicit JavaChecker(QString path, QString args, int minMem = 0, int maxMem = 0, int permGen = 0, int id = 0);
     ~JavaChecker() override = default;
 
+    bool canAbort() const override { return true; }
+    bool abort() override;
+
    signals:
     void checkFinished(const Result& result);
 

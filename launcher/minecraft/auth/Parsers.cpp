@@ -442,8 +442,12 @@ bool parseYggdrasilResponse(const QByteArray& data, Token& outputToken, Minecraf
         qWarning() << "accessToken is not valid";
         return false;
     }
-    outputToken.issueInstant = QDateTime::currentDateTimeUtc();
-    // These servers do not report an expiry, so the token is treated as a day-old one from now on.
+    /*
+     * These servers do not report an expiry, so the token is treated as a day-old one: with no
+     * notAfter, shouldRefresh() assumes 24 hours from issueInstant, which makes the next launch
+     * renew the token instead of starting the game with one the server may already have dropped.
+     */
+    outputToken.issueInstant = QDateTime::currentDateTimeUtc().addDays(-1);
     outputToken.notAfter = QDateTime();
     outputToken.token = accessToken;
     outputToken.validity = Validity::Certain;

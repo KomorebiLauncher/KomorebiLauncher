@@ -375,6 +375,13 @@ void JavaSettingsWidget::updateMemorySuggestion()
         tr("%1 Both limits are the same number, so the heap does not have to grow while you play.").arg(reason));
 }
 
+void JavaSettingsWidget::showEvent(QShowEvent* event)
+{
+    QWidget::showEvent(event);
+    // The instance may have gained or lost mods while the page was not shown.
+    updateMemorySuggestion();
+}
+
 void JavaSettingsWidget::updateThresholds()
 {
     auto sysMiB = HardwareInfo::totalRamMiB();
@@ -383,15 +390,19 @@ void JavaSettingsWidget::updateThresholds()
 
     const QString warningColour(QStringLiteral("<span style='color:#f5c211'>%1</span>"));
 
-    if (maxMem >= sysMiB) {
+    /*
+     * Reported first because it makes the pair meaningless: the two other messages describe a heap
+     * that is merely too large for the machine, which is a judgement the numbers below contradict.
+     */
+    if (maxMem < minMem) {
+        m_ui->labelMaxMemNotice->setText(warningColour.arg(tr("Your maximum memory allocation is below the minimum memory allocation.")));
+        m_ui->labelMaxMemNotice->show();
+    } else if (maxMem >= sysMiB) {
         m_ui->labelMaxMemNotice->setText(
             QString("<span style='color:red'>%1</span>").arg(tr("Your maximum memory allocation exceeds your system memory capacity.")));
         m_ui->labelMaxMemNotice->show();
     } else if (static_cast<uint64_t>(maxMem) * 10 > sysMiB * 9) {
         m_ui->labelMaxMemNotice->setText(warningColour.arg(tr("Your maximum memory allocation is close to your system memory capacity.")));
-        m_ui->labelMaxMemNotice->show();
-    } else if (maxMem < minMem) {
-        m_ui->labelMaxMemNotice->setText(warningColour.arg(tr("Your maximum memory allocation is below the minimum memory allocation.")));
         m_ui->labelMaxMemNotice->show();
     } else {
         m_ui->labelMaxMemNotice->hide();

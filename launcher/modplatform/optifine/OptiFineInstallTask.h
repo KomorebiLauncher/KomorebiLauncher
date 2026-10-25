@@ -50,7 +50,7 @@ class InstallTask : public Task {
    private:
     void fetchManifest();
     void fetchVersionJson(QUrl url);
-    void fetchClientJar(QUrl url);
+    void fetchClientJar(QUrl url, const QString& sha1);
     void fetchOptiFineJar();
     void resolveJava();
     void runInstaller();
@@ -58,8 +58,13 @@ class InstallTask : public Task {
 
     /** Downloads into memory; the body is only valid while the callback runs. */
     void fetch(QUrl url, std::function<void(const QByteArray&)> ok, const QString& what, int attemptsLeft = downloadRetries);
-    /** Downloads straight to disk. */
-    void fetchToFile(QUrl url, QString path, std::function<void()> ok, const QString& what, int attemptsLeft = downloadRetries);
+    /** Downloads straight to disk, optionally verifying the sha1 the manifest published. */
+    void fetchToFile(QUrl url,
+                     QString path,
+                     std::function<void()> ok,
+                     const QString& what,
+                     int attemptsLeft = downloadRetries,
+                     const QString& sha1 = QString());
 
     /** Waits a moment and asks for the same file again, which is what a mirror node that hung up needs. */
     auto retryLater(std::function<void()> again, const QString& what, int attemptsLeft, const QString& reason) -> bool;
@@ -81,6 +86,10 @@ class InstallTask : public Task {
 
     Task::Ptr m_current;
     QProcess* m_process = nullptr;
+    /** The installer's output is harvested exactly once, whichever way the process ends. */
+    bool m_harvested = false;
+    /** Set when the player cancelled: a killed installer must not install anything afterwards. */
+    bool m_aborted = false;
 };
 
 }  // namespace OptiFine

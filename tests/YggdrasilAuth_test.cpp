@@ -175,7 +175,7 @@ class YggdrasilAuthTest : public QObject {
         QCOMPARE(chosen.value(QStringLiteral("agent")).toObject().value(QStringLiteral("id")).toString(), QStringLiteral("deadbeef"));
     }
 
-    /** Whatever the server says, the account has to survive a restart with its credentials. */
+    /** Whatever the server says, the account has to survive a restart with what launching needs. */
     void test_AccountRoundTrip()
     {
         AccountData source;
@@ -196,7 +196,9 @@ class YggdrasilAuthTest : public QObject {
         QVERIFY(restored.type == AccountType::Yggdrasil);
         QCOMPARE(restored.authServerUrl, QStringLiteral("https://auth.example.com"));
         QCOMPARE(restored.loginName, QStringLiteral("kujou"));
-        QCOMPARE(restored.password, QStringLiteral("hunter2"));
+        // A password is a credential that cannot be revoked, so it is deliberately not persisted;
+        // it is asked for again when the token has to be renewed by signing in.
+        QVERIFY(restored.password.isEmpty());
         QCOMPARE(restored.profileChoice, QStringLiteral("deadbeef"));
         QCOMPARE(restored.accessToken(), QStringLiteral("a-token"));
         QCOMPARE(restored.profileId(), QStringLiteral("deadbeef"));

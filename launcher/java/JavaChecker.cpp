@@ -84,6 +84,16 @@ void JavaChecker::executeTask()
 
     if (checkerJar.isEmpty()) {
         qDebug() << "Java checker library could not be found. Please check your installation.";
+        // Without a terminal state this task would never end, and whatever waits for it (a Java
+        // list load, or a launch that looks for a runtime inside the instance) would wait for good.
+        Result result{
+            .path = m_path,
+            .id = m_id,
+        };
+        result.errorLog = tr("The Java checker library (JavaCheck.jar) could not be found.");
+        result.validity = Result::Validity::Errored;
+        emit checkFinished(result);
+        emitFailed(result.errorLog);
         return;
     }
 #ifdef Q_OS_WIN
@@ -128,6 +138,25 @@ void JavaChecker::executeTask()
     m_process->start();
 }
 
+bool JavaChecker::abort()
+{
+    if (!isRunning()) {
+        return true;
+    }
+
+    m_killTimer.stop();
+    if (m_process) {
+        // Whatever the process was about to print is no longer wanted, and killing it must not be
+        // reported as a crash of the runtime that was being checked.
+        disconnect(m_process.get(), nullptr, this, nullptr);
+        m_process->kill();
+        m_process.reset();
+    }
+
+    emitAborted();
+    return true;
+}
+
 void JavaChecker::stdoutReady()
 {
     QByteArray data = m_process->readAllStandardOutput();
@@ -159,7 +188,9 @@ void JavaChecker::finished(int exitcode, QProcess::ExitStatus status)
     qWarning() << "STDERR" << m_stderr;
     qDebug() << "Java checker finished with status" << status << "exit code" << exitcode;
 
-    if (status == QProcess::CrashExit || exitcode == 1) {
+    // Any non-zero exit means the checker did not run to completion; only reading its output when
+    // it did keeps a half-printed answer from being taken for a valid runtime.
+    if (status == QProcess::CrashExit || exitcode != 0) {
         result.validity = Result::Validity::Errored;
         emit checkFinished(result);
         emitSucceeded();

@@ -71,6 +71,8 @@ auto stripFormatCodes(const QString& text) -> QString
 auto readServerStatus(const QJsonObject& data) -> ServerStatus
 {
     ServerStatus status;
+    // Getting here at all means the server answered; what it left out is unknown, not offline.
+    status.answered = true;
 
     auto players = data.value("players").toObject();
     if (!players.isEmpty()) {

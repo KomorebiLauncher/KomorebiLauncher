@@ -83,8 +83,8 @@ public:
     explicit SourceSequence(std::vector<QUrl> candidates) : m_urls(std::move(candidates)) {}
 
     auto isEmpty() const -> bool { return m_urls.empty(); }
-    auto current() const -> QUrl { return m_urls.at(m_index); }
-    auto remaining() const -> size_t { return m_urls.size() - m_index - 1; }
+    auto current() const -> QUrl { return m_index < m_urls.size() ? m_urls.at(m_index) : QUrl(); }
+    auto remaining() const -> size_t { return m_index < m_urls.size() ? m_urls.size() - m_index - 1 : 0; }
 
     /** Moves to the next source. Returns false when there is none left, leaving the index alone. */
     auto advance() -> bool
@@ -94,6 +94,9 @@ public:
         ++m_index;
         return true;
     }
+
+    /** Starts over from the first source, which is what retrying the whole request needs. */
+    void rewind() { m_index = 0; }
 
     [[nodiscard]] const std::vector<QUrl>& urls() const { return m_urls; }
 

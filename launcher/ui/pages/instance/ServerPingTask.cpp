@@ -1,41 +1,113 @@
-#include <QElapsedTimer>
-#include <QFutureWatcher>
+#include "ServerPingTask.h"
 
-#include <Json.h>
+#include <QDebug>
+#include <QElapsedTimer>
+#include <memory>
+#include <utility>
+
 #include "McClient.h"
 #include "McResolver.h"
-#include "Result.h"
-#include "ServerPingTask.h"
+
+ServerPingTask::ServerPingTask(QString domain, int port) : Task(), m_domain(std::move(domain)), m_port(port)
+{
+    m_timeout.setSingleShot(true);
+    m_timeout.setInterval(pingTimeoutMs);
+    connect(&m_timeout, &QTimer::timeout, this, [this] { fail(tr("The server did not answer within %1 seconds").arg(pingTimeoutMs / 1000)); });
+}
 
 void ServerPingTask::executeTask()
 {
     qDebug() << "Querying status of" << QString("%1:%2").arg(m_domain).arg(m_port);
 
-    // Resolve the actual IP and port for the server
-    McResolver* resolver = new McResolver(nullptr, m_domain, m_port);
-    connect(resolver, &McResolver::succeeded, this, [this](QString ip, int port) {
+    // Task::start() may run a finished task again; the outcome flags belong to this attempt.
+    m_finished = false;
+    m_timeout.start();
+
+    // Both are children, so dropping this task takes the open socket and the pending lookup with it.
+    m_resolver = new McResolver(this, m_domain, m_port);
+    connect(m_resolver, &McResolver::succeeded, this, [this](QString ip, int port) {
+        if (m_finished) {
+            return;
+        }
+
         qDebug().nospace().noquote() << "Resolved address for " << m_domain << ": " << ip << ":" << port;
 
-        // Now that we have the IP and port, query the server
-        McClient* client = new McClient(nullptr, m_domain, ip, port);
+        m_client = new McClient(this, m_domain, ip, static_cast<uint16_t>(port));
         auto started = std::make_shared<QElapsedTimer>();
         started->start();
 
-        connect(client, &McClient::succeeded, this, [this, started](QJsonObject data) {
+        connect(m_client, &McClient::succeeded, this, [this, started](QJsonObject data) {
+            if (m_finished) {
+                return;
+            }
             m_outputStatus = readServerStatus(data);
             m_outputStatus.latencyMs = static_cast<int>(started->elapsed());
-            qDebug() << "Server status:" << m_outputStatus.online << "of" << m_outputStatus.max << "in" << m_outputStatus.latencyMs << "ms";
-            emitSucceeded();
+            succeed();
         });
-        connect(client, &McClient::failed, this, [this](QString error) { emitFailed(error); });
-
-        // Delete McClient object when done
-        connect(client, &McClient::finished, this, [client]() { client->deleteLater(); });
-        client->getStatusData();
+        connect(m_client, &McClient::failed, this, [this](QString error) { fail(error); });
+        connect(m_client, &McClient::finished, this, [this] {
+            if (m_client) {
+                m_client->deleteLater();
+                m_client = nullptr;
+            }
+        });
+        m_client->getStatusData();
     });
-    connect(resolver, &McResolver::failed, this, [this](QString error) { emitFailed(error); });
+    connect(m_resolver, &McResolver::failed, this, [this](QString error) { fail(error); });
+    connect(m_resolver, &McResolver::finished, this, [this] {
+        if (m_resolver) {
+            m_resolver->deleteLater();
+            m_resolver = nullptr;
+        }
+    });
+    m_resolver->ping();
+}
 
-    // Delete McResolver object when done
-    connect(resolver, &McResolver::finished, resolver, &McResolver::deleteLater);
-    resolver->ping();
+void ServerPingTask::stopPeers()
+{
+    if (m_client) {
+        m_client->deleteLater();
+        m_client = nullptr;
+    }
+    if (m_resolver) {
+        m_resolver->deleteLater();
+        m_resolver = nullptr;
+    }
+}
+
+void ServerPingTask::fail(const QString& error)
+{
+    if (m_finished) {
+        return;
+    }
+    m_finished = true;
+    m_timeout.stop();
+    stopPeers();
+    m_outputStatus = {};
+    emitFailed(error);
+}
+
+void ServerPingTask::succeed()
+{
+    if (m_finished) {
+        return;
+    }
+    m_finished = true;
+    m_timeout.stop();
+    stopPeers();
+    emitSucceeded();
+}
+
+bool ServerPingTask::abort()
+{
+    if (m_finished) {
+        return true;
+    }
+    m_finished = true;
+    m_timeout.stop();
+    stopPeers();
+    if (isRunning()) {
+        emitAborted();
+    }
+    return true;
 }

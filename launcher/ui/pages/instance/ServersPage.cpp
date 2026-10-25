@@ -113,6 +113,9 @@ struct Server {
 
     // Data - temporary
     std::optional<ServerStatus> m_status;  // empty until the server has answered a ping
+
+    /** Identity of this entry, so a ping result can be written back to the server it belongs to. */
+    quint64 m_id = 0;
 };
 
 static std::unique_ptr<nbt::tag_compound> parseServersDat(const QString& filename)
@@ -228,7 +231,9 @@ class ServersModel : public QAbstractListModel {
             position = rowCount();
         }
         beginInsertRows(QModelIndex(), position, position);
-        m_servers.insert(position, Server());
+        Server server;
+        server.m_id = m_nextId++;
+        m_servers.insert(position, server);
         endInsertRows();
         scheduleSave();
         return position;
@@ -349,12 +354,17 @@ class ServersModel : public QAbstractListModel {
                             return QStringLiteral("...");
                         }
                         if (!status->isOnline()) {
-                            return tr("Offline");
+                            // Answered, but without a players block: the server is up and only its
+                            // player count is unknown, which is not the same as being offline.
+                            return status->answered ? QStringLiteral("?") : tr("Offline");
                         }
-                        if (status->max >= 0) {
+                        if (status->max >= 0 && status->online >= 0) {
                             return QStringLiteral("%1/%2").arg(status->online).arg(status->max);
                         }
-                        return QString::number(status->online);
+                        if (status->online >= 0) {
+                            return QString::number(status->online);
+                        }
+                        return QStringLiteral("?");
                     case 3:
                         return status ? status->versionName : QVariant();
                     case 4:
@@ -392,6 +402,17 @@ class ServersModel : public QAbstractListModel {
             return nullptr;
         }
         return &m_servers[index];
+    }
+
+    /** Row of the server with this identity, or -1 when it is no longer in the list. */
+    auto indexOfServer(quint64 id) const -> int
+    {
+        for (int i = 0; i < m_servers.size(); i++) {
+            if (m_servers.at(i).m_id == id) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     void setName(int row, const QString& name)
@@ -439,6 +460,8 @@ class ServersModel : public QAbstractListModel {
     void load()
     {
         cancelSave();
+        // Whatever ping is in flight describes rows that are about to be replaced.
+        ++m_queryGeneration;
         beginResetModel();
         try {
             QList<Server> servers;
@@ -448,6 +471,7 @@ class ServersModel : public QAbstractListModel {
                 for (auto& iter : serversList) {
                     auto& serverTag = iter.as<nbt::tag_compound>();
                     Server s(serverTag);
+                    s.m_id = m_nextId++;
                     servers.append(s);
                 }
             }
@@ -470,6 +494,9 @@ class ServersModel : public QAbstractListModel {
 
     void queryServersStatus()
     {
+        // Everything already in flight belongs to the previous generation and is about to be replaced.
+        const auto generation = ++m_queryGeneration;
+
         // Abort the currently running task if present
         if (m_currentQueryTask != nullptr) {
             m_currentQueryTask->abort();
@@ -489,13 +516,22 @@ class ServersModel : public QAbstractListModel {
             auto* task = new ServerPingTask(target.address, target.port);
             m_currentQueryTask->addTask(Task::Ptr(task));
 
-            // Update the model when the task is done
-            connect(task, &Task::finished, this, [this, task, row]() {
-                if (row >= m_servers.size()) {
+            /*
+             * The row a ping belongs to is looked up again when the answer arrives. The list can be
+             * added to, reordered or reloaded while the pings are in flight, so the row number
+             * captured here could put one server's status on another.
+             */
+            const auto id = server.m_id;
+            connect(task, &Task::finished, this, [this, task, id, generation]() {
+                if (generation != m_queryGeneration) {
                     return;
                 }
-                m_servers[row].m_status = task->m_outputStatus;
-                emit dataChanged(index(row, 0), index(row, COLUMN_COUNT - 1));
+                const auto resultRow = indexOfServer(id);
+                if (resultRow < 0) {
+                    return;
+                }
+                m_servers[resultRow].m_status = task->m_outputStatus;
+                emit dataChanged(index(resultRow, 0), index(resultRow, COLUMN_COUNT - 1));
             });
             row++;
         }
@@ -591,6 +627,10 @@ class ServersModel : public QAbstractListModel {
     QFileSystemWatcher* m_watcher = nullptr;
     QTimer m_saveTimer;
     ConcurrentTask::Ptr m_currentQueryTask = nullptr;
+    /** Source of the identities above; never reused, so a stale answer cannot match a new row. */
+    quint64 m_nextId = 1;
+    /** Bumped whenever the rows a ping was started for stop being current. */
+    quint64 m_queryGeneration = 0;
 };
 
 ServersPage::ServersPage(MinecraftInstance* inst, QWidget* parent) : QMainWindow(parent), ui(new Ui::ServersPage), m_inst(inst)
@@ -803,8 +843,11 @@ void ServersPage::on_actionMove_Down_triggered()
 
 void ServersPage::on_actionJoin_triggered()
 {
-    const auto& address = m_model->at(currentServer)->m_address;
-    APPLICATION->launch(m_inst, LaunchMode::Normal, std::make_shared<MinecraftTarget>(MinecraftTarget::parse(address, false)));
+    auto* server = m_model->at(currentServer);
+    if (!server) {
+        return;
+    }
+    APPLICATION->launch(m_inst, LaunchMode::Normal, std::make_shared<MinecraftTarget>(MinecraftTarget::parse(server->m_address, false)));
 }
 
 void ServersPage::on_actionRefresh_triggered()

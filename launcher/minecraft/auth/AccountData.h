@@ -112,9 +112,14 @@ struct AccountData {
 
     AccountType type = AccountType::MSA;
 
-    // Third-party servers only trade an access token for the login itself, so the credentials outlive the token.
+    // Third-party servers only trade an access token for the login itself, so the credentials are
+    // needed whenever the token has to be renewed by signing in again.
     QString authServerUrl;
     QString loginName;
+    /**
+     * Kept in memory for the sign-in that is being made, never written to the account list.
+     * Saving it would leave a credential that cannot be revoked on disk; see AccountData::saveState().
+     */
     QString password;
     /** The character to ask for, by id. Empty lets the server pick one. */
     QString profileChoice;

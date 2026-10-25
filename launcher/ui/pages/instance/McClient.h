@@ -40,4 +40,6 @@ class McClient : public QObject {
     ResponseReadState m_responseReadState = ResponseReadState::Waiting;
     int32_t m_wantedRespLength = 0;
     QByteArray m_resp;
+    /** Set once the outcome has been reported, so a late socket event cannot report a second one. */
+    bool m_finished = false;
 };

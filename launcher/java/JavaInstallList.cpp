@@ -95,7 +95,7 @@ QVariant JavaInstallList::data(const QModelIndex& index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    if (index.row() > count())
+    if (index.row() < 0 || index.row() >= count())
         return QVariant();
 
     auto version = std::dynamic_pointer_cast<JavaInstall>(m_vlist[index.row()]);
@@ -190,6 +190,11 @@ void JavaListLoadTask::executeTask()
 
 void JavaListLoadTask::javaCheckerFinished()
 {
+    // The checks can be aborted now that they are killable; a cancelled load reports nothing.
+    if (!isRunning()) {
+        return;
+    }
+
     QList<JavaInstallPtr> candidates;
     std::sort(m_results.begin(), m_results.end(), [](const JavaChecker::Result& a, const JavaChecker::Result& b) { return a.id < b.id; });
 

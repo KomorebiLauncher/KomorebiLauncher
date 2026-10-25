@@ -236,7 +236,7 @@ uint64_t readMemInfo(const QString& searchTarget)
         // MemTotal:       16287480 kB
         if (const QString str = QString::fromStdString(line); str.startsWith(searchTarget)) {
             bool ok = false;
-            const uint total = str.simplified().section(' ', 1, 1).toUInt(&ok);
+            const uint64_t total = str.simplified().section(' ', 1, 1).toULongLong(&ok);
             if (!ok) {
                 qWarning() << "Could not read /proc/meminfo: failed to parse string:" << str;
                 return 0;
@@ -325,10 +325,10 @@ uint64_t HardwareInfo::totalRamMiB()
     uint64_t out = 0;
 
     const bool success = readFromOutput("sysctl hw.physmem", [&](const QString& str) {
-        const uint64_t mem = str.mid(12).toULong();
+        const uint64_t bytes = str.mid(12).toULong();
 
-        // transforming kib -> mib
-        out = mem / 1024;
+        // hw.physmem is reported in bytes; everything above this call works in MiB.
+        out = bytes / 1024 / 1024;
     });
     if (!success) {
         qWarning() << "Could not get total RAM: could not read from sysctl";

@@ -117,6 +117,24 @@ Request::Request(const Spec& spec) : m_options(spec.options), m_url(spec.url), m
 #endif
 }
 
+void Request::start()
+{
+    /*
+     * NetJob re-queues requests that failed, and the source sequence only ever moves forward. A
+     * retry therefore has to walk the mirror chain from the beginning again, or it keeps hitting
+     * the source that failed last and never goes back to the official host.
+     */
+    if (getState() == State::Failed || getState() == State::AbortedByUser) {
+        m_sources.rewind();
+        if (!m_sources.isEmpty())
+            m_url = m_sources.current();
+        m_redirectCount = 0;
+        m_retryCount = 0;
+        m_errorResponse.clear();
+    }
+    Task::start();
+}
+
 void Request::addValidator(Validator* v)
 {
     m_sink->addValidator(v);
@@ -364,6 +382,8 @@ auto Request::tryNextSource() -> bool
         return false;
 
     m_url = m_sources.current();
+    // What the previous source answered must not be reported as this one's refusals.
+    m_errorResponse.clear();
     m_state = State::Running;
     qCWarning(m_logCat) << getUid().toString() << "Switching source from" << failedUrl.toString() << "to" << m_url.toString()
                        << "for" << m_originalUrl.toString() << "-" << m_sources.remaining() << "source(s) left";

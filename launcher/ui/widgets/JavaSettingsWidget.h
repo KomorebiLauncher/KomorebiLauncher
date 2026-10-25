@@ -40,6 +40,7 @@
 #include "JavaCommon.h"
 
 class MinecraftInstance;
+class QShowEvent;
 
 namespace Ui {
 class JavaSettingsWidget;
@@ -55,6 +56,10 @@ class JavaSettingsWidget : public QWidget {
 
     void loadSettings();
     void saveSettings();
+
+   protected:
+    /** The mods an instance holds only change while the page is closed, so the advice is refreshed here. */
+    void showEvent(QShowEvent* event) override;
 
    private slots:
     void onJavaBrowse();

@@ -45,6 +45,10 @@ void EnsureAvailableMemory::executeTask()
                    "It is recommended to close other applications or restart your system.\n\n"
                    "Launch anyway?");
             break;
+        default:
+            // A level this build does not know is no reason to hold up an otherwise fine launch.
+            emitSucceeded();
+            return;
     }
 
     bool shouldAbort = false;
