@@ -20,6 +20,35 @@
 
 namespace Java {
 
+namespace {
+/** Deep enough for the official launcher's <component>/<platform>/<component>/bin layout. */
+constexpr int maxScanDepth = 4;
+
+/**
+ * Collects <dir>/bin/<javaExecutable> and descends into the subdirectories, up to maxScanDepth.
+ *
+ * The official launcher nests its runtimes four levels below the runtime root, so looking only at
+ * the direct children finds nothing on a machine that has never used this launcher's own downloader.
+ */
+void scanForRuntimes(const QDir& dir, int depth, QStringList& found)
+{
+    auto appendIfPresent = [&found](const QDir& candidate) {
+        auto executable = FS::PathCombine(candidate.absolutePath(), QStringLiteral("bin"), JavaUtils::javaExecutable);
+        if (QFileInfo::exists(executable))
+            found.append(QDir::cleanPath(executable));
+    };
+
+    appendIfPresent(dir);
+    if (depth >= maxScanDepth)
+        return;
+
+    const auto children = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    for (const auto& child : children) {
+        scanForRuntimes(QDir(dir.absoluteFilePath(child)), depth + 1, found);
+    }
+}
+}  // namespace
+
 LocalJavaScanTask::LocalJavaScanTask(QString instanceRoot, QObject* parent)
     : Task(parent), m_root(std::move(instanceRoot))
 {}
@@ -37,17 +66,7 @@ auto LocalJavaScanTask::findCandidates(const QString& instanceRoot) -> QStringLi
         if (!root.exists())
             continue;
 
-        auto appendIfPresent = [&found](const QString& dir) {
-            auto executable = FS::PathCombine(dir, QStringLiteral("bin"), JavaUtils::javaExecutable);
-            if (QFileInfo::exists(executable))
-                found.append(QDir::cleanPath(executable));
-        };
-
-        appendIfPresent(root.absolutePath());
-        const auto children = root.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
-        for (const auto& child : children) {
-            appendIfPresent(root.absoluteFilePath(child));
-        }
+        scanForRuntimes(root, 0, found);
     }
 
     found.removeDuplicates();
@@ -58,6 +77,11 @@ auto LocalJavaScanTask::findCandidates(const QString& instanceRoot) -> QStringLi
 void LocalJavaScanTask::executeTask()
 {
     setStatus(tr("Looking for Java inside the instance"));
+
+    // A restarted task must not report the runtimes of the previous run as well.
+    m_results.clear();
+    m_installs.clear();
+    setAbortable(true);
 
     auto candidates = findCandidates(m_root);
     if (candidates.isEmpty()) {
@@ -87,6 +111,13 @@ void LocalJavaScanTask::executeTask()
 void LocalJavaScanTask::scanFinished()
 {
     m_job.reset();
+
+    // Aborted while the checks were running: their results are not wanted.
+    if (!isRunning()) {
+        m_results.clear();
+        return;
+    }
+
     std::sort(m_results.begin(), m_results.end(), [](const JavaChecker::Result& a, const JavaChecker::Result& b) { return a.id < b.id; });
 
     for (const auto& result : m_results) {
@@ -101,12 +132,39 @@ void LocalJavaScanTask::scanFinished()
         m_installs.append(install);
     }
 
-    // Newest first: an instance folder may hold several runtimes and the highest usable one is
-    // the better default.
-    std::sort(m_installs.begin(), m_installs.end(), [](const JavaInstallPtr& a, const JavaInstallPtr& b) { return *a > *b; });
+    /*
+     * Newest first: an instance folder may hold several runtimes and the highest usable one is the
+     * better default. JavaInstall's own ordering leads with the architecture name, which would rank
+     * a 32-bit runtime above a 64-bit one, so the keys are spelled out here.
+     */
+    std::sort(m_installs.begin(), m_installs.end(), [](const JavaInstallPtr& a, const JavaInstallPtr& b) {
+        if (a->id == b->id) {
+            if (a->is_64bit != b->is_64bit)
+                return a->is_64bit;
+            return a->path < b->path;
+        }
+        return b->id < a->id;
+    });
 
     m_results.clear();
     emitSucceeded();
+}
+
+bool LocalJavaScanTask::abort()
+{
+    if (!isRunning()) {
+        return true;
+    }
+
+    /*
+     * This task is marked aborted before the job is cancelled: cancelling it can make it report an
+     * outcome synchronously, and a cancelled scan must not also report success.
+     */
+    emitAborted();
+    if (m_job) {
+        m_job->abort();
+    }
+    return true;
 }
 
 }  // namespace Java

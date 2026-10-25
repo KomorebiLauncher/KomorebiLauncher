@@ -29,6 +29,7 @@
 #include "java/JavaUtils.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
+#include "net/ChecksumValidator.h"
 #include "net/Request.h"
 #include "settings/SettingsObject.h"
 
@@ -45,19 +46,27 @@ InstallTask::~InstallTask()
 
 bool InstallTask::abort()
 {
+    m_aborted = true;
     if (m_process && m_process->state() != QProcess::NotRunning) {
         m_process->kill();
     }
     if (m_current) {
         m_current->abort();
     }
-    emitAborted();
+    if (isRunning()) {
+        emitAborted();
+    }
     return true;
 }
 
 void InstallTask::failWith(const QString& message)
 {
     m_current.reset();
+    // A cancelled task must not report a second outcome: the failure of a download that was
+    // already given up is expected, not news.
+    if (!isRunning()) {
+        return;
+    }
     emitFailed(message);
 }
 
@@ -111,15 +120,18 @@ void InstallTask::fetch(QUrl url, std::function<void(const QByteArray&)> ok, con
     request->start();
 }
 
-void InstallTask::fetchToFile(QUrl url, QString path, std::function<void()> ok, const QString& what, int attemptsLeft)
+void InstallTask::fetchToFile(QUrl url, QString path, std::function<void()> ok, const QString& what, int attemptsLeft, const QString& sha1)
 {
     FS::ensureFolderPathExists(QFileInfo(path).absolutePath());
     auto request = Net::Request::makeFile(url, path);
     request->setNetwork(APPLICATION->network());
+    if (!sha1.isEmpty()) {
+        request->addValidator(new Net::ChecksumValidator(QCryptographicHash::Sha1, sha1));
+    }
     m_current = request;
-    connect(request.get(), &Task::failed, this, [this, url, path, ok, what, attemptsLeft](const QString& reason) {
-        if (retryLater([this, url, path, ok, what, attemptsLeft] { fetchToFile(url, path, ok, what, attemptsLeft - 1); }, what, attemptsLeft,
-                       reason)) {
+    connect(request.get(), &Task::failed, this, [this, url, path, ok, what, attemptsLeft, sha1](const QString& reason) {
+        if (retryLater([this, url, path, ok, what, attemptsLeft, sha1] { fetchToFile(url, path, ok, what, attemptsLeft - 1, sha1); }, what,
+                       attemptsLeft, reason)) {
             return;
         }
         failWith(tr("Could not download %1: %2").arg(what, reason));
@@ -180,31 +192,36 @@ void InstallTask::fetchVersionJson(QUrl url)
                   return;
               }
               QString jarUrl;
+              QString jarSha1;
               if (auto doc = QJsonDocument::fromJson(json); doc.isObject()) {
-                  jarUrl = doc.object().value("downloads").toObject().value("client").toObject().value("url").toString();
+                  auto client = doc.object().value("downloads").toObject().value("client").toObject();
+                  jarUrl = client.value("url").toString();
+                  jarSha1 = client.value("sha1").toString();
               }
               if (jarUrl.isEmpty()) {
                   failWith(tr("The version metadata has no client download."));
                   return;
               }
-              fetchClientJar(QUrl(jarUrl));
+              fetchClientJar(QUrl(jarUrl), jarSha1);
           },
           tr("the version metadata"));
 }
 
-void InstallTask::fetchClientJar(QUrl url)
+void InstallTask::fetchClientJar(QUrl url, const QString& sha1)
 {
     setStatus(tr("Downloading the Minecraft %1 client", "The version OptiFine patches").arg(m_build.mcVersion));
     auto dir = FS::PathCombine(m_scratchRoot, "versions", m_build.mcVersion);
-    fetchToFile(url, FS::PathCombine(dir, m_build.mcVersion + ".jar"), [this] { fetchOptiFineJar(); }, tr("the client jar"));
+    fetchToFile(url, FS::PathCombine(dir, m_build.mcVersion + ".jar"), [this] { fetchOptiFineJar(); }, tr("the client jar"), downloadRetries,
+               sha1);
 }
 
 void InstallTask::fetchOptiFineJar()
 {
     setStatus(tr("Downloading OptiFine %1", "The build being installed").arg(m_build.patch));
-    auto filename = m_build.filename.isEmpty() ? QStringLiteral("OptiFine_%1_%2_%3.jar")
-                                                      .arg(m_build.mcVersion, m_build.type, m_build.patch)
-                                                : m_build.filename;
+    // The name comes from the mirror's listing; keeping only the file name stops a path in it from
+    // writing outside the scratch directory.
+    auto filename = m_build.filename.isEmpty() ? QStringLiteral("OptiFine_%1_%2_%3.jar").arg(m_build.mcVersion, m_build.type, m_build.patch)
+                                               : QFileInfo(m_build.filename).fileName();
     fetchToFile(downloadUrl(m_mirrorBase, m_build), FS::PathCombine(m_scratchRoot, filename), [this, filename] {
         m_optiFineJar = FS::PathCombine(m_scratchRoot, filename);
         resolveJava();
@@ -227,9 +244,19 @@ void InstallTask::resolveJava()
 
     setStatus(tr("Looking for a Java runtime to run the installer with"));
     auto javas = APPLICATION->javalist();
+    // getLoadTask() has already started the load; starting it again trips Task::start()'s assertion.
     m_current = javas->getLoadTask();
+    if (!m_current) {
+        failWith(tr("Could not start looking for a Java runtime to run the installer with."));
+        return;
+    }
     connect(m_current.get(), &Task::finished, this, [this, javas] {
         m_current.reset();
+
+        // The java list load can finish after the player cancelled; nothing may be installed then.
+        if (m_aborted) {
+            return;
+        }
 
         // Any runtime from 8 up can run an OptiFine installer, so take the newest one found.
         int newest = 0;
@@ -262,11 +289,13 @@ void InstallTask::resolveJava()
         m_javaPath = found;
         runInstaller();
     });
-    m_current->start();
 }
 
 void InstallTask::runInstaller()
 {
+    if (m_aborted) {
+        return;
+    }
     setStatus(tr("Running the OptiFine installer"));
 
     auto runner = APPLICATION->getJarPath("OptiFineRunner.jar");
@@ -306,8 +335,23 @@ void InstallTask::runInstaller()
 
 void InstallTask::harvest()
 {
-    delete m_process;
-    m_process = nullptr;
+    /*
+     * A crashing process reports errorOccurred() and finished(), so this is reached twice; the
+     * output may only be collected once. After a cancellation nothing may be installed at all.
+     */
+    if (m_harvested || m_aborted) {
+        return;
+    }
+    m_harvested = true;
+
+    /*
+     * This runs inside the process's own finished()/errorOccurred() handler. Deleting it here would
+     * destroy the sender while Qt is still walking its signal connections, so it goes away later.
+     */
+    if (m_process) {
+        m_process->deleteLater();
+        m_process = nullptr;
+    }
 
     auto id = versionId(m_build);
     auto producedPath = FS::PathCombine(m_scratchRoot, "versions", id, id + ".json");

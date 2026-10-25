@@ -21,6 +21,8 @@ struct ServerStatus {
     QString versionName;
     QString motd;
     int latencyMs = -1;
+    /** Whether the server answered at all: a full answer may legitimately omit the players block. */
+    bool answered = false;
 
     bool isOnline() const { return online >= 0; }
 };

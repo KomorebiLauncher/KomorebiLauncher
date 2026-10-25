@@ -132,6 +132,8 @@ class Request : public Task {
 
    public:
     ~Request() override = default;
+    /** Starts the task; a request that failed before walks its mirror chain again. */
+    void start() override;
     void addValidator(Validator* v);
     auto abort() -> bool override;
     auto canAbort() const -> bool override { return true; }
@@ -153,7 +155,19 @@ class Request : public Task {
     void enableAutoRetry(bool enable);
 
     QUrl url() const;
-    void setUrl(QUrl url) { m_url = std::move(url); }
+    /**
+     * Replaces the address after construction.
+     *
+     * The attempt order is rebuilt with it: the sequence the request was built with belongs to the
+     * old address, and a fallback would otherwise fetch the old host's mirror into this request's
+     * sink.
+     */
+    void setUrl(QUrl url)
+    {
+        m_originalUrl = url;
+        m_sources = SourceSequence(MirrorPolicy::candidates(url));
+        m_url = m_sources.isEmpty() ? url : m_sources.current();
+    }
     int replyStatusCode() const;
     QNetworkReply::NetworkError error() const;
     QString errorString() const;

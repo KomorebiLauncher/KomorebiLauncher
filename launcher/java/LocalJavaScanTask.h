@@ -37,10 +37,14 @@ class LocalJavaScanTask : public Task {
     auto installs() const -> const QList<JavaInstallPtr>& { return m_installs; }
 
     /**
-     * Java executables under <root>/runtime and <root>/.minecraft/runtime, one directory level
-     * deep, which is where instance-local runtimes are unpacked.
+     * Java executables under <root>/runtime and <root>/.minecraft/runtime, searched a few
+     * directory levels deep: the launcher's own runtimes sit at <root>/<name>/bin, while the
+     * official launcher unpacks them at <root>/<component>/<platform>/<component>/bin.
      */
     static auto findCandidates(const QString& instanceRoot) -> QStringList;
+
+    bool canAbort() const override { return true; }
+    bool abort() override;
 
    protected:
     void executeTask() override;

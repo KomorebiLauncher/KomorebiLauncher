@@ -53,6 +53,7 @@
 
 #include <QCheckBox>
 #include <QInputDialog>
+#include <QLineEdit>
 #include <QList>
 #include <QPushButton>
 #include <utility>
@@ -370,7 +371,17 @@ bool LaunchController::reauthenticateAccount(const MinecraftAccountPtr& account,
                 return true;
             }
         } else if (account->accountType() == AccountType::Yggdrasil) {
-            // The login is stored, so signing in again is all the recovery there is.
+            // The password is not stored, so a sign-in that the token cannot carry has to ask for it.
+            if (account->accountData()->password.isEmpty()) {
+                bool ok = false;
+                auto password = QInputDialog::getText(m_parentWidget, tr("Sign in to '%1'").arg(account->profileName()),
+                                                      tr("Enter the password for '%1'.").arg(account->profileName()),
+                                                      QLineEdit::Password, QString(), &ok);
+                if (!ok || password.isEmpty()) {
+                    return false;
+                }
+                account->accountData()->password = password;
+            }
             auto flow = account->login();
             ProgressDialog progress(m_parentWidget);
             if (progress.execWithTask(flow.get()) == QDialog::Accepted) {

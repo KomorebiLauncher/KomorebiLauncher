@@ -56,6 +56,37 @@
 
 enum AccountListVersion { MojangMSA = 3 };
 
+namespace {
+/**
+ * Whether two entries describe the same account.
+ *
+ * A Microsoft profile id is unique across Mojang, so the id alone identifies that account. A
+ * third-party server assigns the id itself - many derive it from the player name - so the same id
+ * from two servers names two different characters. Treating those as one account would silently
+ * replace the first with the second, losing its server, login and token.
+ */
+auto sameAccount(const MinecraftAccountPtr& left, const MinecraftAccountPtr& right) -> bool
+{
+    if (left->profileId().isEmpty() || left->profileId() != right->profileId())
+        return false;
+    if (left->accountType() != right->accountType())
+        return false;
+    if (left->accountType() == AccountType::Yggdrasil) {
+        return left->accountData()->authServerUrl.compare(right->accountData()->authServerUrl, Qt::CaseInsensitive) == 0;
+    }
+    return true;
+}
+
+auto indexOfSameAccount(const QList<MinecraftAccountPtr>& accounts, const MinecraftAccountPtr& account) -> int
+{
+    for (int i = 0; i < accounts.size(); i++) {
+        if (sameAccount(accounts.at(i), account))
+            return i;
+    }
+    return -1;
+}
+}  // namespace
+
 AccountList::AccountList(QObject* parent) : QAbstractListModel(parent)
 {
     m_refreshTimer = new QTimer(this);
@@ -121,10 +152,10 @@ void AccountList::addAccount(const MinecraftAccountPtr account)
     connect(account.get(), &MinecraftAccount::changed, this, &AccountList::accountChanged);
     connect(account.get(), &MinecraftAccount::activityChanged, this, &AccountList::accountActivityChanged);
 
-    // override/replace existing account with the same profileId
+    // override/replace existing account with the same identity (profile id, and the server for third-party accounts)
     auto profileId = account->profileId();
     if (profileId.size()) {
-        auto existingAccount = findAccountByProfileId(profileId);
+        auto existingAccount = indexOfSameAccount(m_accounts, account);
         if (existingAccount != -1) {
             qDebug() << "Replacing old account with a new one with the same profile ID!";
 
@@ -311,7 +342,7 @@ QVariant AccountList::data(const QModelIndex& index, int role) const
     if (!index.isValid())
         return QVariant();
 
-    if (index.row() > count())
+    if (index.row() < 0 || index.row() >= count())
         return QVariant();
 
     MinecraftAccountPtr account = at(index.row());
@@ -489,15 +520,16 @@ bool AccountList::loadV3(QJsonObject& root)
 {
     beginResetModel();
     QJsonArray accounts = root.value("accounts").toArray();
+    // Older versions of this launcher wrote the third-party password into the account list. It is
+    // not read back any more, and the file is rewritten below so the credential does not stay on disk.
+    bool scrubbedPassword = false;
     for (QJsonValue accountVal : accounts) {
         QJsonObject accountObj = accountVal.toObject();
         MinecraftAccountPtr account = MinecraftAccount::loadFromJsonV3(accountObj);
         if (account.get() != nullptr) {
-            auto profileId = account->profileId();
-            if (profileId.size()) {
-                if (findAccountByProfileId(profileId) != -1) {
-                    continue;
-                }
+            scrubbedPassword = scrubbedPassword || accountObj.contains("password");
+            if (indexOfSameAccount(m_accounts, account) != -1) {
+                continue;
             }
             connect(account.get(), &MinecraftAccount::changed, this, &AccountList::accountChanged);
             connect(account.get(), &MinecraftAccount::activityChanged, this, &AccountList::accountActivityChanged);
@@ -510,6 +542,10 @@ bool AccountList::loadV3(QJsonObject& root)
         }
     }
     endResetModel();
+    if (scrubbedPassword) {
+        qWarning() << "Removing a stored third-party password from" << m_listFilePath;
+        saveList();
+    }
     return true;
 }
 

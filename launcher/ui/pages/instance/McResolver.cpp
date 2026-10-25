@@ -2,6 +2,7 @@
 #include <QDnsLookup>
 #include <QHostInfo>
 #include <QObject>
+#include <algorithm>
 
 #include "McResolver.h"
 
@@ -36,10 +37,25 @@ void McResolver::pingWithDomainSRV(QString domain, int port)
             return;
         }
 
-        const auto& firstRecord = records.at(0);
-        QString newDomain = firstRecord.target();
-        int newPort = firstRecord.port();
-        pingWithDomainA(newDomain, newPort);
+        /*
+         * RFC 2782: the lowest priority is preferred, and within one priority the weight decides.
+         * DNS returns the records in its own order, so taking the first can land on a backup node -
+         * or on ".", which means the service is not offered at all.
+         */
+        std::sort(records.begin(), records.end(), [](const QDnsServiceRecord& left, const QDnsServiceRecord& right) {
+            if (left.priority() != right.priority())
+                return left.priority() < right.priority();
+            return left.weight() > right.weight();
+        });
+
+        const auto& chosen = records.constFirst();
+        if (chosen.target().isEmpty() || chosen.target() == QLatin1String(".")) {
+            qDebug() << "Warning: the SRV record points nowhere, trying the domain itself";
+            pingWithDomainA(domain, port);
+            return;
+        }
+
+        pingWithDomainA(chosen.target(), chosen.port());
     });
 
     lookup->lookup();

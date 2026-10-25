@@ -25,10 +25,10 @@
 
 namespace {
 
-auto clientTokenOf(const AccountData* data) -> QString
+/** The client token the server bound this account to, or empty when it never gave one. */
+auto storedClientTokenOf(const AccountData* data) -> QString
 {
-    auto stored = data->yggdrasilToken.extra.value(QStringLiteral("clientToken")).toString();
-    return stored.isEmpty() ? QUuid::createUuid().toString(QUuid::Id128) : stored;
+    return data->yggdrasilToken.extra.value(QStringLiteral("clientToken")).toString();
 }
 
 }  // namespace
@@ -45,12 +45,20 @@ auto YggdrasilStep::endpoint(const QString& serverUrl, const QString& operation)
     /*
      * The address a server hands its players is the root of both APIs it hosts, because the session lookups live
      * under sessionserver next to authserver. So the operation goes below authserver, and nothing else is invented.
+     *
+     * Parsed rather than concatenated: an address pasted with a query or a fragment on the end would otherwise
+     * swallow the operation, sending the sign-in to a path that does not exist.
      */
-    auto base = serverUrl.trimmed();
-    while (base.endsWith('/')) {
-        base.chop(1);
+    QUrl base(serverUrl.trimmed(), QUrl::TolerantMode);
+    base.setQuery(QString());
+    base.setFragment(QString());
+
+    auto path = base.path();
+    while (path.endsWith(QLatin1Char('/'))) {
+        path.chop(1);
     }
-    return QUrl(base + QLatin1String("/authserver/") + operation, QUrl::TolerantMode);
+    base.setPath(path + QLatin1String("/authserver/") + operation);
+    return base;
 }
 
 auto YggdrasilStep::requestBody(const AccountData& data, bool interactive) -> QJsonObject
@@ -69,7 +77,17 @@ auto YggdrasilStep::requestBody(const AccountData& data, bool interactive) -> QJ
     } else {
         body[QStringLiteral("accessToken")] = data.yggdrasilToken.token;
     }
-    body[QStringLiteral("clientToken")] = clientTokenOf(&data);
+    /*
+     * A refresh has to present the client token the sign-in was made with; inventing a new one is
+     * exactly what makes a strict server refuse it. Only a fresh sign-in establishes one.
+     */
+    auto clientToken = storedClientTokenOf(&data);
+    if (clientToken.isEmpty() && interactive) {
+        clientToken = QUuid::createUuid().toString(QUuid::Id128);
+    }
+    if (!clientToken.isEmpty()) {
+        body[QStringLiteral("clientToken")] = clientToken;
+    }
     return body;
 }
 

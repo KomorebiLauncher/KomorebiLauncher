@@ -311,7 +311,8 @@ bool AccountData::resumeStateFromV3(QJsonObject data)
     if (type == AccountType::Yggdrasil) {
         authServerUrl = data.value("auth-server").toString();
         loginName = data.value("login").toString();
-        password = data.value("password").toString();
+        // The password is never read back: it is not written any more (see saveState), and an old
+        // file that still holds one is scrubbed by AccountList once it has been loaded.
         profileChoice = data.value("profile-choice").toString();
     }
 
@@ -348,7 +349,12 @@ QJsonObject AccountData::saveState() const
         output["type"] = "Yggdrasil";
         output["auth-server"] = authServerUrl;
         output["login"] = loginName;
-        output["password"] = password;
+        /*
+         * Deliberately not saved: an access token can be revoked, a password cannot, and the file
+         * this lands in is synced, backed up and pasted into bug reports. The token below is what
+         * launching needs; a password is only used for the one sign-in the player makes, and is
+         * asked for again when the token can no longer be renewed.
+         */
         if (!profileChoice.isEmpty()) {
             output["profile-choice"] = profileChoice;
         }

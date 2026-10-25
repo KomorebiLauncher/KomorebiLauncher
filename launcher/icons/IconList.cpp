@@ -83,8 +83,9 @@ void IconList::sortIconList()
 {
     qDebug() << "Sorting icon list...";
     std::sort(m_icons.begin(), m_icons.end(), [](const MMCIcon& a, const MMCIcon& b) {
-        bool aIsSubdir = a.m_key.contains(QDir::separator());
-        bool bIsSubdir = b.m_key.contains(QDir::separator());
+        // Keys are relative paths with '/' separators, whatever the platform's separator is.
+        bool aIsSubdir = a.m_key.contains(QLatin1Char('/'));
+        bool bIsSubdir = b.m_key.contains(QLatin1Char('/'));
         if (aIsSubdir != bIsSubdir) {
             return !aIsSubdir;  // root-level icons come first
         }
@@ -138,6 +139,22 @@ QString formatName(const QDir& iconsDir, const QFileInfo& iconFile)
     return relativePathWithoutExtension.replace(QDir::separator(), delimiter);
 }
 
+/**
+ * Key of an icon file: its path inside the icons directory, without the extension.
+ *
+ * The subdirectory has to be part of it, because two folders may hold a file of the same name; the
+ * sort order and the icon an instance stores both work on this key, not on the display name.
+ */
+static auto iconKeyFor(const QDir& iconsDir, const QString& absolutePath) -> QString
+{
+    const auto relative = QFileInfo(iconsDir.relativeFilePath(absolutePath));
+    const auto folder = relative.path();
+    const auto base = relative.completeBaseName();
+    if (folder.isEmpty() || folder == QLatin1String("."))
+        return base;
+    return folder + QLatin1Char('/') + base;
+}
+
 /// Split into a separate function because the preprocessing impedes readability
 QSet<QString> toStringSet(const QList<QString>& list)
 {
@@ -173,8 +190,7 @@ void IconList::directoryChanged(const QString& path)
     for (const QString& removedPath : toRemove) {
         qDebug() << "Removing icon" << removedPath;
         QFileInfo removedFile(removedPath);
-        QString relativePath = m_dir.relativeFilePath(removedFile.absoluteFilePath());
-        QString key = QFileInfo(relativePath).completeBaseName();
+        QString key = iconKeyFor(m_dir, removedFile.absoluteFilePath());
 
         int idx = getIconIndex(key);
         if (idx == -1)
@@ -196,8 +212,7 @@ void IconList::directoryChanged(const QString& path)
         qDebug() << "Adding icon" << addedPath;
 
         QFileInfo addfile(addedPath);
-        QString relativePath = m_dir.relativeFilePath(addfile.absoluteFilePath());
-        QString key = QFileInfo(relativePath).completeBaseName();
+        QString key = iconKeyFor(m_dir, addfile.absoluteFilePath());
         QString name = formatName(m_dir, addfile);
 
         if (addIcon(key, name, addfile.filePath(), IconType::FileBased)) {
@@ -215,7 +230,7 @@ void IconList::fileChanged(const QString& path)
     QFileInfo checkfile(path);
     if (!checkfile.exists())
         return;
-    QString key = m_dir.relativeFilePath(checkfile.absoluteFilePath());
+    QString key = iconKeyFor(m_dir, checkfile.absoluteFilePath());
     int idx = getIconIndex(key);
     if (idx == -1)
         return;
@@ -462,6 +477,25 @@ int IconList::getIconIndex(const QString& key) const
     auto iter = m_nameIndex.find(key == "default" ? "wtflauncher" : key);
     if (iter != m_nameIndex.end())
         return *iter;
+
+    /*
+     * Icons in a subdirectory used to be indexed by their file name alone. An icon an instance
+     * saved back then still has to resolve, but only when exactly one icon answers to that name:
+     * guessing between two of them would show the wrong picture.
+     */
+    if (!key.contains(QLatin1Char('/'))) {
+        const auto suffix = QLatin1String("/") + key;
+        int found = -1;
+        for (auto it = m_nameIndex.begin(); it != m_nameIndex.end(); ++it) {
+            if (!it.key().endsWith(suffix))
+                continue;
+            if (found != -1)
+                return -1;
+            found = it.value();
+        }
+        if (found != -1)
+            return found;
+    }
 
     return -1;
 }

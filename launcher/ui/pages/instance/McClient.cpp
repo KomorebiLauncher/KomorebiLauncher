@@ -16,11 +16,15 @@ namespace {
 constexpr auto g_varIntValueMask = 0x7F;
 constexpr auto g_varIntContinue = 0x80;
 
+/** A status answer is a few kilobytes; anything past this is a broken or hostile length field. */
+constexpr int maxResponseBytes = 2 * 1024 * 1024;
+
 void writeVarInt(QByteArray& data, int value)
 {
     while ((value & ~g_varIntValueMask) != 0) {  // check if the value is too big to fit in 7 bits
-        // Write 7 bits
-        data.append(static_cast<uint8_t>((value & ~g_varIntValueMask) | g_varIntContinue));
+        // Write the low 7 bits with the continuation bit set. Masking with ~g_varIntValueMask here
+        // would write the *high* bits instead, which no decoder can read back.
+        data.append(static_cast<uint8_t>((value & g_varIntValueMask) | g_varIntContinue));
 
         // Erase theses 7 bits from the value to write
         // Note: >>> means that the sign bit is shifted with the rest of the number rather than being left alone
@@ -73,8 +77,10 @@ void writeUInt16(QByteArray& data, const uint16_t value)
 
 void writeString(QByteArray& data, const QString& value)
 {
-    writeVarInt(data, static_cast<int32_t>(value.size()));
-    data.append(value.toUtf8());
+    // The length prefix counts the bytes on the wire, not the UTF-16 code units of the QString.
+    const auto bytes = value.toUtf8();
+    writeVarInt(data, static_cast<int32_t>(bytes.size()));
+    data.append(bytes);
 }
 
 }  // namespace
@@ -115,7 +121,7 @@ void McClient::sendRequest()
 
 void McClient::readRawResponse()
 {
-    if (m_responseReadState == ResponseReadState::Finished) {
+    if (m_finished || m_responseReadState == ResponseReadState::Finished) {
         return;
     }
 
@@ -127,6 +133,13 @@ void McClient::readRawResponse()
             return;
         }
         m_wantedRespLength = *res;
+        // VarInts are decoded as signed, and nothing about the protocol guarantees the field is
+        // sane. A negative or absurd length would otherwise parse an empty buffer or grow without
+        // bound.
+        if (m_wantedRespLength < 0 || m_wantedRespLength > maxResponseBytes) {
+            emitFail(tr("The server announced an impossible status packet (%1 bytes)").arg(m_wantedRespLength));
+            return;
+        }
         m_responseReadState = ResponseReadState::GotLength;
     }
 
@@ -189,6 +202,11 @@ void McClient::writePacketToSocket(QByteArray& data)
 
 void McClient::emitFail(const QString& error)
 {
+    if (m_finished)
+        return;
+    m_finished = true;
+    // Stop reading: the answer is not going to be used, and a second error must not be reported.
+    m_socket.abort();
     qDebug() << "Minecraft server ping for status error:" << error;
     emit failed(error);
     emit finished();
@@ -196,6 +214,9 @@ void McClient::emitFail(const QString& error)
 
 void McClient::emitSucceed(QJsonObject data)
 {
+    if (m_finished)
+        return;
+    m_finished = true;
     emit succeeded(std::move(data));
     emit finished();
 }

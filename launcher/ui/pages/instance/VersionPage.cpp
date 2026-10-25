@@ -448,9 +448,10 @@ void VersionPage::on_actionInstall_OptiFine_triggered()
         return;
     }
 
-    QString mirrorBase = APPLICATION->settings()->get("MirrorBaseUrl").toString().trimmed();
-    if (mirrorBase.isEmpty())
-        mirrorBase = QStringLiteral("https://bmclapi2.bangbang93.com");
+    // No fallback here: an empty mirror address means "no mirror" everywhere else in the launcher,
+    // and the OptiFine list only exists on a mirror, so the task reports that instead of silently
+    // using an address the player removed.
+    const QString mirrorBase = APPLICATION->settings()->get("MirrorBaseUrl").toString().trimmed();
 
     auto listTask = makeShared<OptiFine::ListTask>(mirrorBase, minecraftVersion);
     ProgressDialog listDialog(this);

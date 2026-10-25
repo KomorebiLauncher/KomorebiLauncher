@@ -10,6 +10,7 @@
 
 #include "MirrorListEditor.h"
 
+#include <QBrush>
 #include <QHBoxLayout>
 #include <QLineEdit>
 #include <QListWidget>
@@ -93,7 +94,14 @@ void MirrorListEditor::setEntries(const QString& multiline)
         if (entry.isEmpty())
             continue;
         bool enabled = !entry.startsWith(QLatin1Char('#'));
-        makeItem(enabled ? entry : entry.mid(1).trimmed(), m_list, enabled);
+        auto item = makeItem(enabled ? entry : entry.mid(1).trimmed(), m_list, enabled);
+
+        // This value can be edited by hand in the configuration file, and an unusable entry is
+        // skipped at download time; showing it as a working one would hide why it does nothing.
+        if (!isUsablePrefix(item->text())) {
+            item->setForeground(QBrush(Qt::red));
+            item->setToolTip(tr("Not a usable http(s) address: this entry will be ignored."));
+        }
     }
     updateButtons();
 }

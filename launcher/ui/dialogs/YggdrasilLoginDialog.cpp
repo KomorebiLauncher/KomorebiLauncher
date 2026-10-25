@@ -30,6 +30,14 @@
 
 namespace {
 
+/** A server running on this machine, which is what a plain-http address is useful for. */
+auto isLoopbackHost(const QString& host) -> bool
+{
+    const auto lowered = host.toLower();
+    return lowered == QLatin1String("localhost") || lowered == QLatin1String("127.0.0.1") || lowered == QLatin1String("::1") ||
+           lowered.endsWith(QLatin1String(".localhost"));
+}
+
 auto isUsableServer(const QString& text) -> bool
 {
     return !text.trimmed().isEmpty() && YggdrasilLoginDialog::serverProblem(text).isEmpty();
@@ -126,6 +134,11 @@ auto YggdrasilLoginDialog::serverProblem(const QString& text) -> QString
     const auto scheme = url.scheme().toLower();
     if (!url.isValid() || url.host().isEmpty() || (scheme != QLatin1String("https") && scheme != QLatin1String("http"))) {
         return tr("The address has to start with http:// or https://");
+    }
+    // The password is sent over this connection when signing in, so plain http is only acceptable
+    // for a server on this machine; anything else has to be encrypted.
+    if (scheme == QLatin1String("http") && !isLoopbackHost(url.host())) {
+        return tr("Use https:// for a remote server: the password is sent to it when signing in.");
     }
     return QString();
 }

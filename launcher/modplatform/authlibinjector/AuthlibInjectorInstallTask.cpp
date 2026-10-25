@@ -16,6 +16,7 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QSaveFile>
+#include <QTemporaryDir>
 
 #include "Application.h"
 #include "FileSystem.h"
@@ -39,20 +40,31 @@ bool InstallTask::abort()
     if (m_current) {
         m_current->abort();
     }
-    emitAborted();
+    if (isRunning()) {
+        emitAborted();
+    }
     return true;
 }
 
 void InstallTask::failWith(const QString& message)
 {
     m_current.reset();
+    // The failure of a request that was cancelled along with the task is expected, not a second outcome.
+    if (!isRunning()) {
+        return;
+    }
     emitFailed(message);
 }
 
 void InstallTask::executeTask()
 {
-    if (m_mirrorBase.trimmed().isEmpty())
-        m_mirrorBase = QStringLiteral("https://bmclapi2.bangbang93.com");
+    if (m_mirrorBase.trimmed().isEmpty()) {
+        // Same rule as the rest of the launcher: an empty address means no mirror, and the release
+        // index only exists on one, so say so instead of quietly picking an address of our own.
+        failWith(tr("authlib-injector is only published on the download mirror, but no mirror address is set. "
+                    "Add one in Settings > APIs, or restore the default."));
+        return;
+    }
     fetchRelease();
 }
 
@@ -135,6 +147,10 @@ void InstallTask::fetchJar()
 
 void InstallTask::writeComponent()
 {
+    // The release index may have answered after the player cancelled; nothing may be installed then.
+    if (!isRunning()) {
+        return;
+    }
     QFile jar(m_jarPath);
     if (!jar.open(QIODevice::ReadOnly)) {
         failWith(tr("Could not read the downloaded authlib-injector jar."));
@@ -145,7 +161,15 @@ void InstallTask::writeComponent()
     auto profile = buildComponent(m_release, m_serverUrl, packProfile->getComponentVersion("net.minecraft"),
                                   QUrl::fromLocalFile(m_jarPath).toString(), digest, QFileInfo(m_jarPath).size());
 
-    auto staging = FS::PathCombine(QDir::tempPath(), QStringLiteral("wtf-authlib-injector-component.json"));
+    // One private directory per install. A fixed name in the shared temp directory would be
+    // overwritten by a second instance installing at the same time, and the component then copied
+    // into this instance would point the game at the other server.
+    QTemporaryDir stagingDir;
+    if (!stagingDir.isValid()) {
+        failWith(tr("Could not create a temporary directory for the authlib-injector component."));
+        return;
+    }
+    auto staging = FS::PathCombine(stagingDir.path(), QStringLiteral("authlib-injector-component.json"));
     QSaveFile out(staging);
     if (!out.open(QIODevice::WriteOnly) || out.write(QJsonDocument(profile).toJson(QJsonDocument::Indented)) < 0 || !out.commit()) {
         failWith(tr("Could not write the authlib-injector component file."));
@@ -160,7 +184,6 @@ void InstallTask::writeComponent()
         failWith(tr("Could not add the authlib-injector component to the instance."));
         return;
     }
-    QFile::remove(staging);
 
     m_current.reset();
     emitSucceeded();
