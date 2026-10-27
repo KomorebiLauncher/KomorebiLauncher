@@ -45,6 +45,7 @@
 #include "minecraft/auth/MSAErrors.h"
 
 #include <QApplication>
+#include <QMessageBox>
 #include <QClipboard>
 #include <QColor>
 #include <QPainter>
@@ -117,6 +118,24 @@ MSALoginDialog::MSALoginDialog(QWidget* parent) : QDialog(parent), ui(new Ui::MS
 
 int MSALoginDialog::exec()
 {
+    // While Mojang has not approved the application this build ships, the sign-in cannot finish:
+    // Microsoft and Xbox succeed, then Minecraft refuses the token. Every attempt is also a refused
+    // call to their API, so ask before starting one. An app id the player configured themselves is
+    // taken at face value.
+    if (APPLICATION->settings()->get("MSAClientIDOverride").toString().isEmpty()) {
+        QMessageBox box(this);
+        box.setWindowTitle(tr("Microsoft sign-in is not available"));
+        box.setText(tr("Mojang has not approved this build's application yet, so signing in cannot finish. "
+                       "Offline accounts and third-party servers are unaffected. Try anyway?"));
+        auto* tryButton = box.addButton(tr("Try anyway"), QMessageBox::AcceptRole);
+        auto* cancelButton = box.addButton(tr("Cancel"), QMessageBox::RejectRole);
+        box.setDefaultButton(cancelButton);
+        box.exec();
+        if (box.clickedButton() != tryButton) {
+            return QDialog::Rejected;
+        }
+    }
+
     // Setup the login task and start it
     m_account = MinecraftAccount::createBlankMSA();
     m_authflow_task.reset(new AuthFlow(m_account->accountData(), AuthFlow::Action::Login));
