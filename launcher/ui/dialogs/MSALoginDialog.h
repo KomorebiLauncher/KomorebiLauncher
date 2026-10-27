@@ -51,5 +51,8 @@ class MSALoginDialog : public QDialog {
     shared_qobject_ptr<AuthFlow> m_devicecode_task;
     shared_qobject_ptr<AuthFlow> m_authflow_task;
 
+    /** Formats a failure, and adds what the player can do when the application id was refused. */
+    auto describeFailure(const QString& reason) -> QString;
+
     QUrl m_url;
 };
