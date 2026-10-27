@@ -49,6 +49,26 @@ JDK 必须是 17 ： libraries/launcher 以 -source 7 编译，新版 JDK 已拒
 
 vcpkg 会在首次配置时从源码编译 libarchive 、 cmark 、 libqrencode 、 tomlplusplus 等依赖，需要十几分钟到几十分钟。
 
+### 本机构建失败的常见原因
+
+以下两类失败与代码无关，都是环境问题，已在 2026-10-27 的机器上复现并绕过：
+
+1. **vcpkg 重新安装依赖时 `cl` 报 `D8050`，或 `vcpkg has crashed ... pwsh.exe`**。诱因是 PATH 里 Windows Store 版 `pwsh` 的别名损坏（该路径一访问就报 "cannot be accessed by the system"），以及 PATH 过长。做法是给构建用一条精简 PATH，并让 vcpkg 只用系统工具、把临时目录放进仓库：
+
+       set PATH=C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Users\<你>\AppData\Local\Microsoft\WinGet\Links;C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.9.0_x64__8wekyb3d8bbwe
+       call "...\vcvars64.bat"
+       set VCPKG_FORCE_SYSTEM_BINARIES=1
+       set VCPKG_BINARY_SOURCES=clear
+       set TMP=D:\Project\Github\WTFLauncher\build\vtmp
+       set TEMP=%TMP%
+       cmake\vcpkg\vcpkg.exe install --triplet x64-windows --x-manifest-root=. --x-install-root=build\vcpkg_installed --x-buildtrees-root=build\vbt --x-packages-root=build\vpkg
+
+   一次性装完后，`cmake -B build` 会跳过安装步骤。
+
+2. **测试全部以 `0xC0000135` 失败，或 `QTemporaryDir::isValid()` 为 false**。前者是 Qt 的 `bin` 不在 PATH 上，后者是本机默认 `%TEMP%` 不可用；跑 `ctest` 时把 Qt `bin` 加进 PATH，并把 `TMP`/`TEMP` 指到仓库内目录即可。
+
+Windows Store 版的 `pwsh` 别名本身损坏时，`C:\Program Files\WindowsApps\Microsoft.PowerShell_*\pwsh.exe` 仍可直接执行，上面的 PATH 用的就是它。
+
 ## 仓库结构与上游同步
 
 默认分支 main 的历史是压缩后的快照，对应上游 Prism Launcher 的提交 77f2bee593eb9e0cdeef530e0e8686524b68d9d9 （2026-10-19）。完整上游历史与逐行 blame 由上游仓库自己维护，本仓库不保留副本。
