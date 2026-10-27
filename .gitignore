@@ -62,3 +62,6 @@ flatbuild
 
 # Snap
 *.snap
+
+# Installer produced by packaging
+/WTFLauncher-Setup.exe

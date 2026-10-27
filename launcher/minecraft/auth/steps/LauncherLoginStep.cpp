@@ -56,6 +56,17 @@ void LauncherLoginStep::onRequestDone(QByteArray* response)
     qCDebug(authCredentials()) << *response;
     if (m_request->error() != QNetworkReply::NoError) {
         qWarning() << "Reply error:" << m_request->error();
+
+        // Mojang refuses the whole request for an application id that is not on its allow list,
+        // which is where this build stands until the review passes. Say that, instead of leaving a
+        // bare 403 that reads like an account problem the player could fix.
+        if (m_request->replyStatusCode() == 403 && response->contains("Invalid app registration")) {
+            emit finished(AccountTaskState::STATE_FAILED_SOFT,
+                          tr("This build's application is not approved by Mojang yet, so it cannot sign in to Minecraft. "
+                             "Offline accounts and third-party servers still work."));
+            return;
+        }
+
         if (Net::isApplicationError(m_request->error()) && !Net::isServerError(m_request->error())) {
             emit finished(AccountTaskState::STATE_FAILED_SOFT,
                           tr("Failed to get Minecraft access token: %1").arg(m_request->errorString()));
