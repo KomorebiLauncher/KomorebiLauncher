@@ -42,6 +42,7 @@
 
 #include "DesktopServices.h"
 #include "minecraft/auth/AuthFlow.h"
+#include "minecraft/auth/MSAErrors.h"
 
 #include <QApplication>
 #include <QClipboard>
@@ -68,6 +69,24 @@ QString formatError(const QString& reason)
     return formatted;
 }
 }  // namespace
+
+auto MSALoginDialog::describeFailure(const QString& reason) -> QString
+{
+    auto text = formatError(reason);
+
+    if (!MSA::describesAppIdProblem(reason)) {
+        return text;
+    }
+
+    // The notice at the top of the dialog says the same thing, but it is easy to read past when the
+    // failure itself is a wall of AADSTS text, so repeat the conclusion next to it.
+    ui->approvalNotice->setVisible(true);
+    text += QStringLiteral("<p>%1</p>").arg(
+        tr("Microsoft refused the application ID this build uses, not your account. Offline accounts and third-party "
+           "servers are unaffected. Mojang has not approved this application yet, and an app ID registered by hand "
+           "would not be approved either; sign-in stays unavailable until the review passes."));
+    return text;
+}
 
 MSALoginDialog::MSALoginDialog(QWidget* parent) : QDialog(parent), ui(new Ui::MSALoginDialog)
 {
@@ -133,7 +152,7 @@ void MSALoginDialog::onAuthFlowTaskFailed(QString reason)
     // Set message
     m_authflow_task->disconnect();
     ui->stackedWidget2->setCurrentIndex(0);
-    ui->status2->setText(formatError(reason));
+    ui->status2->setText(describeFailure(reason));
     ui->loadingLabel2->setText(m_authflow_task->getStatus());
     disconnect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, m_authflow_task.get(), &Task::abort);
     if (m_devicecode_task->getState() == Task::State::Failed) {
@@ -148,7 +167,7 @@ void MSALoginDialog::onDeviceCodeTaskFailed(QString reason)
     // Set message
     m_devicecode_task->disconnect();
     ui->stackedWidget->setCurrentIndex(0);
-    ui->status->setText(formatError(reason));
+    ui->status->setText(describeFailure(reason));
     ui->loadingLabel->setText(m_devicecode_task->getStatus());
     disconnect(ui->buttonBox->button(QDialogButtonBox::Cancel), &QPushButton::clicked, m_devicecode_task.get(), &Task::abort);
     if (m_authflow_task->getState() == Task::State::Failed) {
@@ -208,10 +227,10 @@ void MSALoginDialog::authorizeWithBrowserWithExtra(QString url, QString code, [[
     ui->stackedWidget->updateGeometry();
     this->adjustSize();
 
+    // Open the page as-is and let the player type the code: Microsoft's link page does not take a
+    // pre-filled code for the device flow, and a URL that already carries one only makes the two
+    // sources of truth disagree.
     const auto displayUrl = url;
-    if (url == "https://www.microsoft.com/link" && !code.isEmpty()) {
-        url += QString("?otc=%1").arg(code);
-    }
     const auto linkString = QString("<a href=\"%1\">%2</a>").arg(url, displayUrl);
     ui->code->setText(code);
 

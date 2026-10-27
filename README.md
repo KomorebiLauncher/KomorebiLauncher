@@ -7,6 +7,9 @@ A Minecraft launcher forked from Prism Launcher, aimed at players who need China
 
 GPL-3.0-only，见 LICENSE 。
 
+> **NOT AN OFFICIAL MINECRAFT PRODUCT. NOT APPROVED BY OR ASSOCIATED WITH MOJANG OR MICROSOFT.**
+> 非 Minecraft 官方产品，与 Mojang 、 Microsoft 均无隶属关系，也未获其批准或背书。本仓库不分发任何游戏文件：版本、资源与库文件一律从 Mojang 或镜像源的官方地址下载。
+
 ## 当前能力
 
 - 实例隔离：每个实例独立的 .minecraft 目录、独立设置与独立图标
@@ -16,7 +19,7 @@ GPL-3.0-only，见 LICENSE 。
 - 模组、资源包、光影包、数据包、存档、截图在实例内直接管理，可从 Modrinth 搜索并安装
 - 皮肤上传与披风选择
 - Java 运行库自动检测与自动下载（按 Minecraft 与加载器的版本要求选择）
-- 账户：微软登录（使用本 fork 自己注册的应用）、第三方验证服务器账户；离线档案需先有一个拥有 Minecraft 的微软账户
+- 账户：微软登录（使用本 fork 自己注册的应用，提供浏览器跳转与设备码两种流程）、第三方验证服务器账户；离线档案需先有一个拥有 Minecraft 的微软账户
 - 界面语言：简体中文完成度 100% ，翻译由本组织自建（见下）
 - 自动更新：从本仓库的 GitHub Releases 检查并安装更新
 
@@ -25,6 +28,18 @@ GPL-3.0-only，见 LICENSE 。
 - CurseForge 的 API key 只属于原项目，衍生构建不得复用，因此本仓库不带 CurseForge API key 。在填入自己的 key 之前（设置 → API ），CurseForge 的模组与整合包来源不可用。另外自 2026-07-16 起，CurseForge 的文件下载域名 edge.forgecdn.net 本身也要求携带 x-api-key 。
 - 截图上传到 Imgur 同样未配置。
 - 国内镜像下载源与 Java 镜像正在开发中。
+
+## 微软登录与 AppID（当前状态：不可用）
+
+微软登录需要一个在 Microsoft 身份平台上注册、并且**被 Mojang 列入白名单**的应用（AppID）。本仓库内置的 AppID 由本组织自行注册，Mojang 的审核目前尚未通过，因此：
+
+- 微软账号可以完成 Microsoft 登录与 Xbox 授权，但换取 Minecraft 令牌时会被拒绝，服务端返回 `Invalid app registration`（`api.minecraftservices.com` 上的新旧两个端点都会被拒，与登录方式无关）；
+- **自己注册一个 AppID 没有用**：白名单是逐个应用审核的，个人注册的应用不会因此获批；
+- 离线档案与第三方验证服务器（authlib-injector）不经过这套流程，**不受影响**。
+
+审核进展记录在仓库的 issue 追踪里。通过之前，需要正版登录的用户请使用官方启动器；本启动器的其他功能不受影响。
+
+登录窗口同时提供浏览器跳转与设备码两种流程（界面中间以 or 分隔），它们共用同一个 AppID。
 
 ## 依赖的上游服务
 
