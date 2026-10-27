@@ -39,6 +39,14 @@ jobs:
           build-type: Debug
           qt-version: 6.8.3
 
+      # libraries/launcher is compiled with -source 7, which a JDK newer than 17 refuses. CodeQL
+      # brings its own runtime for the Java extractor, so pin the JDK the build itself needs.
+      - name: Select JDK 17 for the Java parts
+        uses: actions/setup-java@v6
+        with:
+          distribution: zulu
+          java-version: 17
+
       - name: Configure and Build
         run: |
           cmake --preset linux -DLauncher_USE_PCH=OFF
