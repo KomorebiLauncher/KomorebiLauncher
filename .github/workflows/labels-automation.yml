@@ -20,7 +20,7 @@ jobs:
   run-labels-script:
     name: Run script
     runs-on: ubuntu-slim
-    if: github.repository_owner == 'Komorebi'
+    if: github.repository_owner == 'KomorebiLauncher'
 
     steps:
       - name: Generate token

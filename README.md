@@ -75,7 +75,7 @@ vcpkg 会在首次配置时从源码编译 libarchive 、 cmark 、 libqrencode 
        call "...\vcvars64.bat"
        set VCPKG_FORCE_SYSTEM_BINARIES=1
        set VCPKG_BINARY_SOURCES=clear
-       set TMP=D:\Project\Github\Komorebi\build\vtmp
+       set TMP=D:\Project\Github\KomorebiLauncher\build\vtmp
        set TEMP=%TMP%
        cmake\vcpkg\vcpkg.exe install --triplet x64-windows --x-manifest-root=. --x-install-root=build\vcpkg_installed --x-buildtrees-root=build\vbt --x-packages-root=build\vpkg
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 /*
  *  Komorebi Launcher - Minecraft Launcher
- *  Copyright (C) 2026 Komorebi Contributors
+ *  Copyright (C) 2026 KomorebiLauncher Contributors
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -330,7 +330,7 @@ void InstallTask::runInstaller()
     });
 
     auto classPath = QStringList{ m_optiFineJar, runner }.join(QDir::listSeparator());
-    m_process->start(m_javaPath, { QStringLiteral("-cp"), classPath, QStringLiteral("komorebi.optifine.Runner"), m_scratchRoot });
+    m_process->start(m_javaPath, { QStringLiteral("-cp"), classPath, QStringLiteral("komorebilauncher.optifine.Runner"), m_scratchRoot });
 }
 
 void InstallTask::harvest()
