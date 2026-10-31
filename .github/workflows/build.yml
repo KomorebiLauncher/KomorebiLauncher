@@ -8,6 +8,10 @@ on:
   merge_group:
     types: [checks_requested]
   pull_request:
+    # Markdown and docs cannot break a build; a six-platform run of it costs about an hour.
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   # Upstream only validates pull requests; this fork pushes to main directly, so main needs its own
   # verification rather than being merged unverified. Documentation cannot break a build, and six
   # platforms of it costs about an hour of runner time.
@@ -48,18 +52,23 @@ jobs:
         id: pick
         shell: bash
         env:
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
           MATRIX: |
             [
-              {"os":"ubuntu-24.04","artifact-name":"Linux","cmake-preset":"linux","qt-version":"6.11.2","on-main":true},
+              {"os":"ubuntu-24.04","artifact-name":"Linux","cmake-preset":"linux","qt-version":"6.11.2","on-main":true,"on-pr":true},
               {"os":"ubuntu-24.04-arm","artifact-name":"Linux-aarch64","cmake-preset":"linux","qt-version":"6.11.2"},
               {"os":"windows-2022","artifact-name":"Windows-MinGW-w64","cmake-preset":"windows_mingw","msystem":"CLANG64","vcvars-arch":"amd64_x86","qt-version":"6.11.2"},
-              {"os":"windows-2022","artifact-name":"Windows-MSVC","cmake-preset":"windows_msvc","vcvars-arch":"amd64","qt-version":"6.11.2","on-main":true},
+              {"os":"windows-2022","artifact-name":"Windows-MSVC","cmake-preset":"windows_msvc","vcvars-arch":"amd64","qt-version":"6.11.2","on-main":true,"on-pr":true},
               {"os":"windows-11-arm","artifact-name":"Windows-MSVC-arm64","cmake-preset":"windows_msvc","vcvars-arch":"arm64","qt-version":"6.11.2"},
               {"os":"macos-26","artifact-name":"macOS","cmake-preset":"macos_universal","macosx-deployment-target":"13.0","qt-version":"6.11.2","on-main":true}
             ]
         run: |
           if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$GITHUB_REF_TYPE" = "branch" ]; then
             echo "include=$(printf '%s' "$MATRIX" | jq -c '[.[] | select(."on-main")]')" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_EVENT_NAME" = "pull_request" ] && ! printf '%s' "${PR_LABELS:-[]}" | jq -e 'index("full-ci")' > /dev/null; then
+            # Pull requests build the two platforms that catch ordinary breakage; add the full-ci label
+            # when a change touches platform-specific code.
+            echo "include=$(printf '%s' "$MATRIX" | jq -c '[.[] | select(."on-pr")]')" >> "$GITHUB_OUTPUT"
           else
             echo "include=$(printf '%s' "$MATRIX" | jq -c .)" >> "$GITHUB_OUTPUT"
           fi
@@ -68,6 +77,14 @@ jobs:
     name: Build (${{ matrix.artifact-name }})
 
     needs: pick-matrix
+
+    # Drafts and explicitly skipped pull requests should not burn an hour of runners.
+    if: >-
+      ${{
+        github.event_name != 'pull_request' ||
+        (!github.event.pull_request.draft &&
+         !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+      }}
 
     environment: ${{ inputs.environment || '' }}
 

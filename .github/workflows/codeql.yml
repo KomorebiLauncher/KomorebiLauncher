@@ -8,6 +8,10 @@ on:
   merge_group:
     types: [checks_requested]
   pull_request:
+    # Scanning markdown and docs is wasted time; the code is what gets analysed.
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   workflow_dispatch:
 
 permissions: {}
@@ -15,6 +19,14 @@ permissions: {}
 jobs:
   CodeQL:
     runs-on: ubuntu-latest
+
+    # Skip drafts and explicitly skipped pull requests; the analysis only means something for code.
+    if: >-
+      ${{
+        github.event_name != 'pull_request' ||
+        (!github.event.pull_request.draft &&
+         !contains(github.event.pull_request.labels.*.name, 'skip-ci'))
+      }}
 
     permissions:
       contents: read
