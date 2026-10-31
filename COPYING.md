@@ -1,7 +1,7 @@
-## WTF Launcher
+## Komorebi Launcher
 
-     WTF Launcher - Minecraft Launcher
-     Copyright (C) 2026 WTFLauncher Contributors
+     Komorebi Launcher - Minecraft Launcher
+     Copyright (C) 2026 Komorebi Contributors
 
      This program is free software: you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
      You should have received a copy of the GNU General Public License
      along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-    WTF Launcher is a derivative of Prism Launcher and keeps the notices
+    Komorebi Launcher is a derivative of Prism Launcher and keeps the notices
     below, including those of PolyMC and MultiMC.
 
 ## Prism Launcher

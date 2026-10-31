@@ -1,4 +1,4 @@
-"""Generate WTFLauncher branding artwork from one shared geometry spec.
+"""Generate Komorebi branding artwork from one shared geometry spec.
 
 Emits the SVG (used by the Qt resource), the 256px PNG (Linux icon) and the
 multi-size ICO (Windows exe icon) so all three can never drift apart.
@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 from PIL import Image, ImageChops, ImageDraw
 
-APPID = "io.github.kujoushiori.WTFLauncher"
-BINARY = "wtflauncher"
+APPID = "io.github.kujoushiori.Komorebi"
+BINARY = "komorebi"
 BG = (31, 36, 48)
 TOP = (87, 217, 163)
 LEFT = (47, 143, 168)
@@ -47,7 +47,7 @@ def write_svg(out: Path):
     pts = " ".join(f"{x},{y}" for x, y in CHEVRON)
     svg = f'''<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {S} {S}" width="{S}" height="{S}">
-  <!-- WTFLauncher mark, original work, SPDX-License-Identifier: CC0-1.0 -->
+  <!-- Komorebi mark, original work, SPDX-License-Identifier: CC0-1.0 -->
   <rect width="{S}" height="{S}" fill="#1f2430"/>
 {faces}
   <clipPath id="topface"><polygon points="{poly('top')}"/></clipPath>

@@ -83,7 +83,7 @@ PrismUpdaterApp::PrismUpdaterApp(int& argc, char** argv) : QApplication(argc, ar
 
     // Command line parsing
     QCommandLineParser parser;
-    parser.setApplicationDescription(QObject::tr("An auto-updater for WTF Launcher"));
+    parser.setApplicationDescription(QObject::tr("An auto-updater for Komorebi Launcher"));
 
     parser.addOptions(
         { { { "d", "dir" }, tr("Use a custom path as application root (use '.' for current directory)."), tr("directory") },
@@ -456,7 +456,7 @@ void PrismUpdaterApp::run()
 
     if (m_isFlatpak) {
         showFatalErrorMessage(tr("Updating flatpack not supported"), tr("Actions outside of checking if an update is available are not "
-                                                                        "supported when running the flatpak version of WTF Launcher."));
+                                                                        "supported when running the flatpak version of Komorebi Launcher."));
         return;
     }
     if (m_isAppimage) {
@@ -910,7 +910,7 @@ void PrismUpdaterApp::performInstall(const QFileInfo& file)
                "\n"
                "This likely means that a previous update attempt failed. Please ensure your installation is in working order before "
                "proceeding.\n"
-               "Check the WTF Launcher updater log at: \n"
+               "Check the Komorebi Launcher updater log at: \n"
                "%7\n"
                "for details on the last update attempt.\n"
                "\n"

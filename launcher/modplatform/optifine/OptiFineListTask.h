@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 /*
- *  WTF Launcher - Minecraft Launcher
- *  Copyright (C) 2026 WTFLauncher Contributors
+ *  Komorebi Launcher - Minecraft Launcher
+ *  Copyright (C) 2026 Komorebi Contributors
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

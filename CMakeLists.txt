@@ -180,11 +180,11 @@ endif()
 ##################################### Set Application options #####################################
 
 ######## Set URLs ########
-set(Launcher_NEWS_RSS_URL "https://github.com/WTFLauncher/WTFLauncher/releases.atom" CACHE STRING "URL to fetch the release feed shown in the news toolbar.")
-set(Launcher_NEWS_OPEN_URL "https://github.com/WTFLauncher/WTFLauncher/releases" CACHE STRING "URL that gets opened when the user clicks 'More News'")
+set(Launcher_NEWS_RSS_URL "https://github.com/KomorebiLauncher/KomorebiLauncher/releases.atom" CACHE STRING "URL to fetch the release feed shown in the news toolbar.")
+set(Launcher_NEWS_OPEN_URL "https://github.com/KomorebiLauncher/KomorebiLauncher/releases" CACHE STRING "URL that gets opened when the user clicks 'More News'")
 set(Launcher_WIKI_URL "https://prismlauncher.org/wiki/" CACHE STRING "URL that gets opened when the user clicks 'Launcher Help'")
 set(Launcher_HELP_URL "https://prismlauncher.org/wiki/help-pages/%1" CACHE STRING "URL (with arg %1 to be substituted with page-id) that gets opened when the user requests help in a dialog window")
-set(Launcher_LOGIN_CALLBACK_URL "https://github.com/WTFLauncher/WTFLauncher" CACHE STRING "URL that gets opened when the user successfully logins.")
+set(Launcher_LOGIN_CALLBACK_URL "https://github.com/KomorebiLauncher/KomorebiLauncher" CACHE STRING "URL that gets opened when the user successfully logins.")
 set(Launcher_LEGACY_FMLLIBS_BASE_URL "https://files.prismlauncher.org/fmllibs/" CACHE STRING "URL for legacy (<=1.5.2) FML Libraries.")
 
 ######## Set version numbers ########
@@ -200,7 +200,7 @@ set(Launcher_VERSION_NAME4_COMMA "${Launcher_VERSION_MAJOR},${Launcher_VERSION_M
 set(Launcher_BUILD_PLATFORM "unknown" CACHE STRING "A short string identifying the platform that this build was built for. Only used to display in the about dialog.")
 
 # Github repo URL with releases for updater
-set(Launcher_UPDATER_GITHUB_REPO "https://github.com/WTFLauncher/WTFLauncher" CACHE STRING "Base github URL for the updater.")
+set(Launcher_UPDATER_GITHUB_REPO "https://github.com/KomorebiLauncher/KomorebiLauncher" CACHE STRING "Base github URL for the updater.")
 
 # Name to help updater identify valid artifacts
 set(Launcher_BUILD_ARTIFACT "" CACHE STRING "Artifact name to help the updater identify valid artifacts.")
@@ -213,11 +213,11 @@ set(Launcher_META_URL "https://meta.prismlauncher.org/v1/" CACHE STRING "URL to 
 set(Launcher_IMGUR_CLIENT_ID "" CACHE STRING "Client ID you can get from Imgur when you register an application")
 
 # Bug tracker URL
-set(Launcher_BUG_TRACKER_URL "https://github.com/WTFLauncher/WTFLauncher/issues" CACHE STRING "URL for the bug tracker.")
+set(Launcher_BUG_TRACKER_URL "https://github.com/KomorebiLauncher/KomorebiLauncher/issues" CACHE STRING "URL for the bug tracker.")
 
 # Translations Platform URL
-set(Launcher_TRANSLATIONS_URL "https://github.com/WTFLauncher/i18n" CACHE STRING "URL for the translations platform.")
-set(Launcher_TRANSLATION_FILES_URL "https://wtflauncher.github.io/i18n/" CACHE STRING "URL for the translations files.")
+set(Launcher_TRANSLATIONS_URL "https://github.com/KomorebiLauncher/i18n" CACHE STRING "URL for the translations platform.")
+set(Launcher_TRANSLATION_FILES_URL "https://komorebilauncher.github.io/i18n/" CACHE STRING "URL for the translations files.")
 
 # Matrix Space
 # Left empty: this fork does not run these channels, and the menu entries hide themselves when empty.
@@ -271,7 +271,7 @@ endif()
 
 # By using this key in your builds you accept the terms of use laid down in
 # https://docs.microsoft.com/en-us/legal/microsoft-identity-platform/terms-of-use
-# Registered for WTFLauncher: native public client, personal Microsoft accounts, device-code flow enabled.
+# Registered for Komorebi: native public client, personal Microsoft accounts, device-code flow enabled.
 set(Launcher_MSA_CLIENT_ID "3d838444-a2c4-41e1-9f13-00364c9c94e3" CACHE STRING "Client ID you can get from Microsoft Identity Platform when you register an application")
 
 # By using this key in your builds you accept the terms and conditions laid down in
@@ -385,7 +385,7 @@ include(ECMQtDeclareLoggingCategory)
 
 ####################################### Program Info #######################################
 
-set(Launcher_APP_BINARY_NAME "wtflauncher" CACHE STRING "Name of the Launcher binary")
+set(Launcher_APP_BINARY_NAME "komorebi" CACHE STRING "Name of the Launcher binary")
 add_subdirectory(program_info)
 
 ####################################### Install layout #######################################

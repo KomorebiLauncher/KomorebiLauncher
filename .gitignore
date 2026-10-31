@@ -64,4 +64,4 @@ flatbuild
 *.snap
 
 # Installer produced by packaging
-/WTFLauncher-Setup.exe
+/Komorebi-Setup.exe

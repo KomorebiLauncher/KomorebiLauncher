@@ -1,9 +1,9 @@
-# WTF Launcher
+# Komorebi Launcher
 
 面向需要国内下载环境的 Minecraft 玩家的启动器，fork 自 Prism Launcher。
 A Minecraft launcher forked from Prism Launcher, aimed at players who need China-oriented download sources.
 
-官网 https://wtflauncher.github.io/ ｜ 下载 https://github.com/WTFLauncher/WTFLauncher/releases
+官网 https://komorebilauncher.github.io/ ｜ 下载 https://github.com/KomorebiLauncher/KomorebiLauncher/releases
 
 GPL-3.0-only，见 LICENSE 。
 
@@ -48,7 +48,7 @@ GPL-3.0-only，见 LICENSE 。
 
 - https://meta.prismlauncher.org/v1/ ：版本与加载器元数据
 - https://files.prismlauncher.org/fmllibs/ ：1.5.2 及更早版本的 Forge 依赖库
-- https://wtflauncher.github.io/i18n/ ：语言包，仓库为 WTFLauncher/i18n
+- https://komorebilauncher.github.io/i18n/ ：语言包，仓库为 KomorebiLauncher/i18n
 
 ## 构建
 
@@ -75,7 +75,7 @@ vcpkg 会在首次配置时从源码编译 libarchive 、 cmark 、 libqrencode 
        call "...\vcvars64.bat"
        set VCPKG_FORCE_SYSTEM_BINARIES=1
        set VCPKG_BINARY_SOURCES=clear
-       set TMP=D:\Project\Github\WTFLauncher\build\vtmp
+       set TMP=D:\Project\Github\Komorebi\build\vtmp
        set TEMP=%TMP%
        cmake\vcpkg\vcpkg.exe install --triplet x64-windows --x-manifest-root=. --x-install-root=build\vcpkg_installed --x-buildtrees-root=build\vbt --x-packages-root=build\vpkg
 

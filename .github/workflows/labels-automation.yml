@@ -20,7 +20,7 @@ jobs:
   run-labels-script:
     name: Run script
     runs-on: ubuntu-slim
-    if: github.repository_owner == 'WTFLauncher'
+    if: github.repository_owner == 'Komorebi'
 
     steps:
       - name: Generate token
