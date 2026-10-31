@@ -8,7 +8,7 @@
  *  the Free Software Foundation, version 3.
  */
 
-package wtf.optifine;
+package komorebi.optifine;
 
 import java.io.File;
 import java.lang.reflect.Method;

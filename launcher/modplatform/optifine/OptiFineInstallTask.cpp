@@ -330,7 +330,7 @@ void InstallTask::runInstaller()
     });
 
     auto classPath = QStringList{ m_optiFineJar, runner }.join(QDir::listSeparator());
-    m_process->start(m_javaPath, { QStringLiteral("-cp"), classPath, QStringLiteral("wtf.optifine.Runner"), m_scratchRoot });
+    m_process->start(m_javaPath, { QStringLiteral("-cp"), classPath, QStringLiteral("komorebi.optifine.Runner"), m_scratchRoot });
 }
 
 void InstallTask::harvest()
