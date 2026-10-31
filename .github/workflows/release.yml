@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           submodules: "true"
-          path: "Komorebi-source"
+          path: "KomorebiLauncher-source"
       - name: Download artifacts
         uses: actions/download-artifact@v8
       - name: Grab and store version
@@ -43,19 +43,19 @@ jobs:
           echo "VERSION=$tag_name" >> $GITHUB_ENV
       - name: Package artifacts properly
         run: |
-          mv ${{ github.workspace }}/Komorebi-source KomorebiLauncher-${{ env.VERSION }}
-          mv Komorebi-Linux-Qt6-Portable*/Komorebi-portable.tar.gz KomorebiLauncher-Linux-Qt6-Portable-${{ env.VERSION }}.tar.gz
-          mv Komorebi-Linux-aarch64-Qt6-Portable*/Komorebi-portable.tar.gz KomorebiLauncher-Linux-aarch64-Qt6-Portable-${{ env.VERSION }}.tar.gz
-          mv Komorebi-*.AppImage/Komorebi-*-x86_64.AppImage KomorebiLauncher-Linux-x86_64.AppImage
-          mv Komorebi-*.AppImage.zsync/Komorebi-*-x86_64.AppImage.zsync KomorebiLauncher-Linux-x86_64.AppImage.zsync
-          mv Komorebi-*.AppImage/Komorebi-*-aarch64.AppImage KomorebiLauncher-Linux-aarch64.AppImage
-          mv Komorebi-*.AppImage.zsync/Komorebi-*-aarch64.AppImage.zsync KomorebiLauncher-Linux-aarch64.AppImage.zsync
-          mv Komorebi-macOS*/Komorebi.zip KomorebiLauncher-macOS-${{ env.VERSION }}.zip
-          mv Komorebi-macOS*/Komorebi.dmg KomorebiLauncher-macOS-${{ env.VERSION }}.dmg
+          mv ${{ github.workspace }}/KomorebiLauncher-source KomorebiLauncher-${{ env.VERSION }}
+          mv KomorebiLauncher-Linux-Qt6-Portable*/KomorebiLauncher-portable.tar.gz KomorebiLauncher-Linux-Qt6-Portable-${{ env.VERSION }}.tar.gz
+          mv KomorebiLauncher-Linux-aarch64-Qt6-Portable*/KomorebiLauncher-portable.tar.gz KomorebiLauncher-Linux-aarch64-Qt6-Portable-${{ env.VERSION }}.tar.gz
+          mv KomorebiLauncher-*.AppImage/KomorebiLauncher-*-x86_64.AppImage KomorebiLauncher-Linux-x86_64.AppImage
+          mv KomorebiLauncher-*.AppImage.zsync/KomorebiLauncher-*-x86_64.AppImage.zsync KomorebiLauncher-Linux-x86_64.AppImage.zsync
+          mv KomorebiLauncher-*.AppImage/KomorebiLauncher-*-aarch64.AppImage KomorebiLauncher-Linux-aarch64.AppImage
+          mv KomorebiLauncher-*.AppImage.zsync/KomorebiLauncher-*-aarch64.AppImage.zsync KomorebiLauncher-Linux-aarch64.AppImage.zsync
+          mv KomorebiLauncher-macOS*/KomorebiLauncher.zip KomorebiLauncher-macOS-${{ env.VERSION }}.zip
+          mv KomorebiLauncher-macOS*/KomorebiLauncher.dmg KomorebiLauncher-macOS-${{ env.VERSION }}.dmg
 
           tar --exclude='.git' -czf KomorebiLauncher-${{ env.VERSION }}.tar.gz KomorebiLauncher-${{ env.VERSION }}
 
-          for d in Komorebi-Windows-MSVC*; do
+          for d in KomorebiLauncher-Windows-MSVC*; do
             cd "${d}" || continue
             LEGACY="$(echo -n ${d} | grep -o Legacy || true)"
             ARM64="$(echo -n ${d} | grep -o arm64 || true)"
@@ -65,18 +65,18 @@ jobs:
             test -z "${LEGACY}" || NAME="${NAME}-Legacy"
             test -z "${ARM64}" || NAME="${NAME}-arm64"
             test -z "${PORT}" || NAME="${NAME}-Portable"
-            test -z "${INST}" || mv Komorebi-*.exe ../${NAME}-Setup-${{ env.VERSION }}.exe
+            test -z "${INST}" || mv KomorebiLauncher-*.exe ../${NAME}-Setup-${{ env.VERSION }}.exe
             test -n "${INST}" || zip -r -9 "../${NAME}-${{ env.VERSION }}.zip" *
             cd ..
           done
 
-          for d in Komorebi-Windows-MinGW-w64*; do
+          for d in KomorebiLauncher-Windows-MinGW-w64*; do
             cd "${d}" || continue
             INST="$(echo -n ${d} | grep -o Setup || true)"
             PORT="$(echo -n ${d} | grep -o Portable || true)"
             NAME="KomorebiLauncher-Windows-MinGW-w64"
             test -z "${PORT}" || NAME="${NAME}-Portable"
-            test -z "${INST}" || mv Komorebi-*.exe ../${NAME}-Setup-${{ env.VERSION }}.exe
+            test -z "${INST}" || mv KomorebiLauncher-*.exe ../${NAME}-Setup-${{ env.VERSION }}.exe
             test -n "${INST}" || zip -r -9 "../${NAME}-${{ env.VERSION }}.zip" *
             cd ..
           done

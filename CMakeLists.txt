@@ -272,7 +272,7 @@ endif()
 # By using this key in your builds you accept the terms of use laid down in
 # https://docs.microsoft.com/en-us/legal/microsoft-identity-platform/terms-of-use
 # Registered for Komorebi Launcher: personal Microsoft accounts only, public client with
-# "allow public client flows" on, redirect URIs komorebi://oauth/microsoft and http://localhost.
+# "allow public client flows" on, redirect URIs komorebilauncher://oauth/microsoft and http://localhost.
 set(Launcher_MSA_CLIENT_ID "bbee7876-69f0-40c7-980c-b717f438de9c" CACHE STRING "Client ID you can get from Microsoft Identity Platform when you register an application")
 
 # By using this key in your builds you accept the terms and conditions laid down in
@@ -386,7 +386,7 @@ include(ECMQtDeclareLoggingCategory)
 
 ####################################### Program Info #######################################
 
-set(Launcher_APP_BINARY_NAME "komorebi" CACHE STRING "Name of the Launcher binary")
+set(Launcher_APP_BINARY_NAME "komorebilauncher" CACHE STRING "Name of the Launcher binary")
 add_subdirectory(program_info)
 
 ####################################### Install layout #######################################

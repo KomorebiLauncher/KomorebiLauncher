@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Komorebi mark, original work, SPDX-License-Identifier: CC0-1.0 -->
+  <!-- KomorebiLauncher mark, original work, SPDX-License-Identifier: CC0-1.0 -->
   <rect width="1024" height="1024" fill="#1f2430"/>
   <circle cx="470" cy="340" r="232" fill="#f2b84b"/>
   <line x1="470" y1="340" x2="860" y2="250" stroke="#f2b84b" stroke-opacity="0.25" stroke-width="16" stroke-linecap="round"/>

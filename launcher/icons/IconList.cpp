@@ -474,7 +474,7 @@ QIcon IconList::getIcon(const QString& key) const
 
 int IconList::getIconIndex(const QString& key) const
 {
-    auto iter = m_nameIndex.find(key == "default" ? "komorebi" : key);
+    auto iter = m_nameIndex.find(key == "default" ? "komorebilauncher" : key);
     if (iter != m_nameIndex.end())
         return *iter;
 

@@ -1,9 +1,9 @@
-"""Generate Komorebi branding artwork from one shared geometry spec.
+"""Generate KomorebiLauncher branding artwork from one shared geometry spec.
 
 Emits the SVG (used by the Qt resource), the 256px PNG (Linux icon), the multi-size
 ICO (Windows exe icon) and the ICNS (macOS bundle) so they can never drift apart.
 
-The mark is komorebi: sunlight coming through leaves - a warm disc crossed by three
+The mark is komorebilauncher: sunlight coming through leaves - a warm disc crossed by three
 leaves, on the dark background the launcher's chrome uses.
 """
 import math
@@ -12,8 +12,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw
 
-APPID = "io.github.komorebilauncher.Komorebi"
-BINARY = "komorebi"
+APPID = "io.github.komorebilauncher.KomorebiLauncher"
+BINARY = "komorebilauncher"
 
 S = 1024
 BG = (31, 36, 48)
@@ -93,7 +93,7 @@ def write_svg(path: Path, size=S, background=True, viewbox=None, mask_radius=0.0
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{vx} {vy} {vw} {vh}" '
         f'width="{vw}" height="{vh}">\n'
-        "  <!-- Komorebi mark, original work, SPDX-License-Identifier: CC0-1.0 -->\n"
+        "  <!-- KomorebiLauncher mark, original work, SPDX-License-Identifier: CC0-1.0 -->\n"
         f"{body}\n</svg>\n"
     )
     path.write_text(svg, encoding="utf-8", newline="\n")

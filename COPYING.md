@@ -1,7 +1,7 @@
 ## Komorebi Launcher
 
      Komorebi Launcher - Minecraft Launcher
-     Copyright (C) 2026 Komorebi Contributors
+     Copyright (C) 2026 KomorebiLauncher Contributors
 
      This program is free software: you can redistribute it and/or modify
      it under the terms of the GNU General Public License as published by

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 /*
  *  Komorebi Launcher - Minecraft Launcher
- *  Copyright (C) 2026 Komorebi Contributors
+ *  Copyright (C) 2026 KomorebiLauncher Contributors
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 namespace OptiFine {
 
 /// The component id an installed OptiFine profile uses.
-inline const QString componentUid = QStringLiteral("komorebi.optifine");
+inline const QString componentUid = QStringLiteral("komorebilauncher.optifine");
 
 /**
  * One OptiFine build as published by the mirror's version list.
