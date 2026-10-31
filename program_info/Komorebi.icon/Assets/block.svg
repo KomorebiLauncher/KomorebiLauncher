@@ -1,91 +1,12 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg
-  width="48"
-  height="48"
-  version="1.1"
-  viewBox="0 0 12.7 12.7"
-  id="svg_combined"
-  xmlns="http://www.w3.org/2000/svg"
-  xmlns:svg="http://www.w3.org/2000/svg"
-  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-  xmlns:cc="http://creativecommons.org/ns#"
-  xmlns:dc="http://purl.org/dc/elements/1.1/">
-  <title>Prism Launcher Logo</title>
-  <g
-    transform="matrix(0.88,0,0,0.88,-10.906,-1.2421)"
-    id="g32_top"
-    style="display:inline">
-    <g
-      transform="translate(13.26,2.2776)"
-      id="g28"
-      style="display:inline">
-      <path
-        transform="matrix(0.96975,0,0,0.96975,0.1921,0.1921)"
-        d="m 6.3498,2.9393 c -0.34105,0 -2.7827,1.4099 -2.9532,1.7052 L 6.3498,9.7602 9.3036,4.6445 C 9.13308,4.34915 6.6909,2.9393 6.3498,2.9393 Z"
-        fill="#ffffff"
-        stroke-width="0.26458"
-        id="path26"
-        style="display:inline" />
-    </g>
-  </g>
-  <g
-    transform="matrix(0.88,0,0,0.88,-10.906,-1.2421)"
-    id="g32"
-    style="display:inline">
-    <path
-      d="m 16.746,6.9737 2.8639,4.9609 c 0.33073,0 2.6991,-1.3672 2.8644,-1.6536 0.16536,-0.28642 0.16536,-3.0209 0,-3.3073 l -2.8644,1.6536 z"
-      fill="#dfdfdf"
-      stroke-width="0.26458"
-      id="path30"
-      style="display:inline" />
-  </g>
-  <path
-    d="m 3.8299,4.8948 c -0.14551,0.25205 -0.14553,2.6584 0,2.9104 0.14553,0.25204 2.2292,1.4552 2.5203,1.4552 V 6.35 Z"
-    fill="#d6d2d2"
-    stroke-width="0.26458"
-    id="path34"
-    style="display:inline" />
-  <metadata
-    id="metadata64">
-    <rdf:RDF>
-      <cc:Work
-        rdf:about="">
-        <dc:title>Prism Launcher Logo</dc:title>
-        <dc:date>19/10/2022</dc:date>
-        <dc:creator>
-          <cc:Agent>
-            <dc:title>Prism Launcher</dc:title>
-          </cc:Agent>
-        </dc:creator>
-        <dc:contributor>
-          <cc:Agent>
-            <dc:title>AutiOne, Boba, ely, Fulmine, gon sawa, Pankakes, tobimori, Zeke</dc:title>
-          </cc:Agent>
-        </dc:contributor>
-        <dc:source>https://github.com/PrismLauncher/PrismLauncher</dc:source>
-        <dc:publisher>
-          <cc:Agent>
-            <dc:title>Prism Launcher</dc:title>
-          </cc:Agent>
-        </dc:publisher>
-        <cc:license
-          rdf:resource="http://creativecommons.org/licenses/by-sa/4.0/" />
-      </cc:Work>
-      <cc:License
-        rdf:about="http://creativecommons.org/licenses/by-sa/4.0/">
-        <cc:permits
-          rdf:resource="http://creativecommons.org/ns#Reproduction" />
-        <cc:permits
-          rdf:resource="http://creativecommons.org/ns#Distribution" />
-        <cc:requires
-          rdf:resource="http://creativecommons.org/ns#Notice" />
-        <cc:requires
-          rdf:resource="http://creativecommons.org/ns#Attribution" />
-        <cc:permits
-          rdf:resource="http://creativecommons.org/ns#DerivativeWorks" />
-        <cc:requires
-          rdf:resource="http://creativecommons.org/ns#ShareAlike" />
-      </cc:License>
-    </rdf:RDF>
-  </metadata>
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12.7 12.7" width="12.7" height="12.7">
+  <!-- Komorebi mark, original work, SPDX-License-Identifier: CC0-1.0 -->
+  <rect width="12.7" height="12.7" fill="#1f2430"/>
+  <circle cx="5.829" cy="4.217" r="2.877" fill="#f2b84b"/>
+  <line x1="5.829" y1="4.217" x2="10.666" y2="3.101" stroke="#f2b84b" stroke-opacity="0.25" stroke-width="0.198" stroke-linecap="round"/>
+  <line x1="5.829" y1="4.217" x2="11.038" y2="5.829" stroke="#f2b84b" stroke-opacity="0.25" stroke-width="0.149" stroke-linecap="round"/>
+  <line x1="5.829" y1="4.217" x2="8.682" y2="8.682" stroke="#f2b84b" stroke-opacity="0.25" stroke-width="0.124" stroke-linecap="round"/>
+  <polygon points="5.219,4.448 5.447,4.402 5.675,4.355 5.9,4.306 6.124,4.254 6.344,4.198 6.56,4.136 6.772,4.07 6.979,3.996 7.18,3.916 7.376,3.827 7.564,3.73 7.746,3.625 7.921,3.511 8.088,3.387 8.249,3.254 8.402,3.112 8.549,2.961 8.688,2.802 8.821,2.634 8.948,2.458 9.069,2.275 9.185,2.086 9.297,1.891 9.405,1.69 9.51,1.486 9.612,1.279 9.713,1.07 9.813,0.86 9.813,0.86 9.584,0.906 9.357,0.953 9.131,1.002 8.908,1.054 8.688,1.111 8.471,1.172 8.259,1.239 8.052,1.312 7.851,1.393 7.656,1.481 7.467,1.578 7.286,1.683 7.111,1.798 6.943,1.921 6.783,2.054 6.629,2.196 6.483,2.347 6.344,2.506 6.211,2.674 6.084,2.85 5.963,3.033 5.846,3.222 5.735,3.418 5.627,3.618 5.522,3.822 5.42,4.029 5.319,4.238 5.219,4.448" fill="#2e7654"/>
+  <polygon points="1.795,6.023 1.978,6.205 2.161,6.386 2.346,6.564 2.531,6.738 2.719,6.906 2.909,7.068 3.101,7.222 3.296,7.367 3.494,7.503 3.695,7.628 3.901,7.741 4.11,7.843 4.323,7.933 4.54,8.011 4.761,8.075 4.986,8.128 5.215,8.168 5.448,8.197 5.684,8.215 5.924,8.221 6.167,8.219 6.413,8.207 6.662,8.187 6.913,8.161 7.165,8.13 7.419,8.094 7.673,8.056 7.929,8.016 7.929,8.016 7.745,7.834 7.562,7.653 7.378,7.475 7.192,7.302 7.005,7.133 6.815,6.971 6.623,6.817 6.428,6.672 6.23,6.537 6.028,6.412 5.823,6.298 5.614,6.196 5.401,6.106 5.184,6.029 4.963,5.964 4.737,5.911 4.508,5.871 4.276,5.842 4.039,5.825 3.799,5.818 3.556,5.821 3.31,5.833 3.061,5.852 2.811,5.878 2.558,5.91 2.305,5.945 2.05,5.984 1.795,6.023" fill="#1c4635"/>
+  <polygon points="6.849,4.045 6.925,4.245 7.003,4.443 7.082,4.64 7.163,4.835 7.248,5.025 7.336,5.212 7.429,5.393 7.527,5.569 7.631,5.738 7.741,5.901 7.858,6.056 7.981,6.203 8.112,6.343 8.25,6.474 8.395,6.598 8.547,6.713 8.707,6.82 8.873,6.92 9.046,7.013 9.226,7.098 9.41,7.177 9.601,7.251 9.795,7.319 9.994,7.383 10.196,7.444 10.4,7.502 10.605,7.558 10.812,7.613 10.812,7.613 10.736,7.414 10.658,7.215 10.579,7.018 10.498,6.824 10.413,6.633 10.325,6.446 10.232,6.265 10.134,6.089 10.03,5.92 9.92,5.758 9.803,5.602 9.68,5.455 9.549,5.315 9.411,5.184 9.266,5.061 9.114,4.945 8.954,4.838 8.788,4.738 8.615,4.646 8.435,4.56 8.25,4.481 8.06,4.407 7.866,4.339 7.667,4.275 7.465,4.214 7.261,4.156 7.055,4.1 6.849,4.045" fill="#57d9a3"/>
 </svg>
