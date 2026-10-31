@@ -63,7 +63,7 @@ void LauncherLoginStep::onRequestDone(QByteArray* response)
         if (m_request->replyStatusCode() == 403 && response->contains("Invalid app registration")) {
             emit finished(AccountTaskState::STATE_FAILED_SOFT,
                           tr("This build's application is not approved by Mojang yet, so it cannot sign in to Minecraft. "
-                             "Offline accounts and third-party servers still work."));
+                             "Third-party server accounts still work."));
             return;
         }
 

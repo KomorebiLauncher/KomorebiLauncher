@@ -83,9 +83,10 @@ auto MSALoginDialog::describeFailure(const QString& reason) -> QString
     // failure itself is a wall of AADSTS text, so repeat the conclusion next to it.
     ui->approvalNotice->setVisible(true);
     text += QStringLiteral("<p>%1</p>").arg(
-        tr("Microsoft refused the application ID this build uses, not your account. Offline accounts and third-party "
-           "servers are unaffected. Mojang has not approved this application yet, and an app ID registered by hand "
-           "would not be approved either; sign-in stays unavailable until the review passes."));
+        tr("Microsoft refused the application ID this build uses, not your account. Third-party server accounts are "
+           "unaffected; offline profiles require a signed-in Microsoft account, which this build cannot obtain yet. "
+           "An app ID registered by hand would not be approved either; sign-in stays unavailable until the review "
+           "passes."));
     return text;
 }
 
@@ -126,7 +127,7 @@ int MSALoginDialog::exec()
         QMessageBox box(this);
         box.setWindowTitle(tr("Microsoft sign-in is not available"));
         box.setText(tr("Mojang has not approved this build's application yet, so signing in cannot finish. "
-                       "Offline accounts and third-party servers are unaffected. Try anyway?"));
+                       "Third-party server accounts are unaffected. Try anyway?"));
         auto* tryButton = box.addButton(tr("Try anyway"), QMessageBox::AcceptRole);
         auto* cancelButton = box.addButton(tr("Cancel"), QMessageBox::RejectRole);
         box.setDefaultButton(cancelButton);
