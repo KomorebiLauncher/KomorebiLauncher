@@ -23,7 +23,7 @@
    <item>
     <widget class="QLabel" name="approvalNotice">
      <property name="text">
-      <string>Mojang has not approved this build's application yet, so signing in with a Microsoft account cannot finish. Offline accounts and third-party servers still work.</string>
+      <string>Mojang has not approved this build's application yet, so signing in with a Microsoft account cannot finish. Third-party server accounts still work; offline profiles need a signed-in Microsoft account, so they cannot be created until the application is approved.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
