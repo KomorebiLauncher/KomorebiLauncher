@@ -5,18 +5,18 @@ body:
 - type: markdown
   attributes:
     value: |
-      ### Use this form to suggest a feature for WTF Launcher.
+      ### Use this form to suggest a feature for Komorebi Launcher.
 - type: input
   attributes:
     label: Suggestion
-    description: What do you want WTF Launcher to do?
+    description: What do you want Komorebi Launcher to do?
     placeholder: I want the cat button to meow.
   validations:
     required: true
 - type: input
   attributes:
     label: Benefit
-    description: Why do you need WTF Launcher to do this?
+    description: Why do you need Komorebi Launcher to do this?
     placeholder: so that I can always hear a cat when I need to.
   validations:
     required: true

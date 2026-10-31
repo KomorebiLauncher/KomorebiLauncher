@@ -10,7 +10,7 @@ permissions: {}
 
 jobs:
   update-flake:
-    if: github.repository == 'WTFLauncher/WTFLauncher'
+    if: github.repository == 'KomorebiLauncher/KomorebiLauncher'
 
     permissions:
       contents: write

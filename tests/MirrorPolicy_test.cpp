@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 /*
- *  WTF Launcher - Minecraft Launcher
- *  Copyright (C) 2026 WTFLauncher Contributors
+ *  Komorebi Launcher - Minecraft Launcher
+ *  Copyright (C) 2026 Komorebi Contributors
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -87,15 +87,15 @@ class MirrorPolicyTest : public QObject {
                                                                  QStringLiteral("https://meta.prismlauncher.org/v1/net.minecraft/index.json") };
 
         QTest::newRow("translations untouched by the content mirror")
-            << QStringLiteral("https://wtflauncher.github.io/i18n/index_v2.json") << static_cast<int>(Kind::MirrorThenOfficial)
-            << QStringList{ QStringLiteral("https://wtflauncher.github.io/i18n/index_v2.json") };
+            << QStringLiteral("https://komorebilauncher.github.io/i18n/index_v2.json") << static_cast<int>(Kind::MirrorThenOfficial)
+            << QStringList{ QStringLiteral("https://komorebilauncher.github.io/i18n/index_v2.json") };
     }
 
     void test_ServicesMirror()
     {
         const auto services = QStringLiteral("https://mirror.example");
         auto meta = QUrl(QStringLiteral("https://meta.prismlauncher.org/v1/net.minecraft/1.21.4.json"));
-        auto i18n = QUrl(QStringLiteral("https://wtflauncher.github.io/i18n/index_v2.json"));
+        auto i18n = QUrl(QStringLiteral("https://komorebilauncher.github.io/i18n/index_v2.json"));
 
         // Path is preserved verbatim, including the /i18n prefix, so any crawler of the two sites works.
         QStringList expectedMeta{ QStringLiteral("https://mirror.example/v1/net.minecraft/1.21.4.json"), meta.toString() };

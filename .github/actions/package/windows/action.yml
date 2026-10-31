@@ -1,5 +1,5 @@
 name: Package for Windows
-description: Create a Windows package for WTF Launcher
+description: Create a Windows package for Komorebi Launcher
 
 inputs:
   version:
@@ -80,8 +80,8 @@ runs:
       uses: azure/artifact-signing-action@v2
       with:
         endpoint: https://eus.codesigning.azure.net/
-        trusted-signing-account-name: WTFLauncher
-        certificate-profile-name: WTFLauncher
+        trusted-signing-account-name: Komorebi
+        certificate-profile-name: Komorebi
         files-folder: ${{ github.workspace }}\install\
         files-folder-filter: dll,exe
         files-folder-recurse: true
@@ -153,11 +153,11 @@ runs:
       uses: azure/artifact-signing-action@v2
       with:
         endpoint: https://eus.codesigning.azure.net/
-        trusted-signing-account-name: WTFLauncher
-        certificate-profile-name: WTFLauncher
+        trusted-signing-account-name: Komorebi
+        certificate-profile-name: Komorebi
 
         files: |
-          ${{ github.workspace }}\WTFLauncher-Setup.exe
+          ${{ github.workspace }}\Komorebi-Setup.exe
 
         # recommended in https://github.com/Azure/artifact-signing-action#timestamping-1
         timestamp-rfc3161: 'http://timestamp.acs.microsoft.com'
@@ -178,17 +178,17 @@ runs:
     - name: Upload binary zip
       uses: actions/upload-artifact@v7
       with:
-        name: WTFLauncher-${{ inputs.artifact-name }}-${{ inputs.version }}-${{ inputs.build-type }}
+        name: Komorebi-${{ inputs.artifact-name }}-${{ inputs.version }}-${{ inputs.build-type }}
         path: install/**
 
     - name: Upload portable zip
       uses: actions/upload-artifact@v7
       with:
-        name: WTFLauncher-${{ inputs.artifact-name }}-Portable-${{ inputs.version }}-${{ inputs.build-type }}
+        name: Komorebi-${{ inputs.artifact-name }}-Portable-${{ inputs.version }}-${{ inputs.build-type }}
         path: install-portable/**
 
     - name: Upload installer
       uses: actions/upload-artifact@v7
       with:
-        name: WTFLauncher-${{ inputs.artifact-name }}-Setup-${{ inputs.version }}-${{ inputs.build-type }}
-        path: WTFLauncher-Setup.exe
+        name: Komorebi-${{ inputs.artifact-name }}-Setup-${{ inputs.version }}-${{ inputs.build-type }}
+        path: Komorebi-Setup.exe

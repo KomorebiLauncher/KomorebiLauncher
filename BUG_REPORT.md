@@ -1,8 +1,8 @@
-# WTFLauncher 缺陷审查报告
+# Komorebi 缺陷审查报告
 
 | 项目 | 内容 |
 | --- | --- |
-| 审查对象 | `D:\Project\Github\WTFLauncher`（PrismLauncher 的二次开发分支，C++23 / Qt ≥ 6.8 / CMake + Ninja） |
+| 审查对象 | `D:\Project\Github\Komorebi`（PrismLauncher 的二次开发分支，C++23 / Qt ≥ 6.8 / CMake + Ninja） |
 | 审查方式 | 静态审查：逐文件通读源码，并用仓库内单元测试所表达的预期行为做交叉验证 |
 | 审查日期 | 2026-10-25 |
 | 结论 | 5 项高危、14 项中危、13 项低危可证缺陷；另有 6 项需运行验证、3 项经复核排除的误报 |

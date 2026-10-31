@@ -82,6 +82,6 @@ void JavaWizardPage::retranslate()
 {
     setTitle(tr("Java"));
     setSubTitle(
-        tr("Please select how much memory to allocate to instances and if WTF Launcher should manage Java automatically or manually."));
+        tr("Please select how much memory to allocate to instances and if Komorebi Launcher should manage Java automatically or manually."));
     m_java_widget->retranslate();
 }
