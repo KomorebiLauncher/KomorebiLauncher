@@ -90,7 +90,7 @@ class OptiFineListTest : public QObject {
                                                                     QStringLiteral("0123456789abcdef0123456789abcdef01234567"), 2709891 } };
         auto component = OptiFine::buildComponent(produced, build, files);
 
-        QCOMPARE(component.value("uid").toString(), QStringLiteral("wtf.optifine"));
+        QCOMPARE(component.value("uid").toString(), QStringLiteral("komorebi.optifine"));
         QCOMPARE(component.value("name").toString(), QStringLiteral("OptiFine HD_U_E7"));
         QCOMPARE(component.value("version").toString(), QStringLiteral("E7"));
         // What the launcher needs in order to load the profile alongside the right Minecraft.
@@ -125,7 +125,7 @@ class OptiFineListTest : public QObject {
 
         auto component = OptiFine::buildComponent(produced, build, {});
         // Nothing to point at the local copy, but the component itself must still be well formed.
-        QCOMPARE(component.value("uid").toString(), QStringLiteral("wtf.optifine"));
+        QCOMPARE(component.value("uid").toString(), QStringLiteral("komorebi.optifine"));
         QCOMPARE(component.value("libraries").toArray().size(), 1);
     }
 

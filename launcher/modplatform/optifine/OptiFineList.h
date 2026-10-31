@@ -18,7 +18,7 @@
 namespace OptiFine {
 
 /// The component id an installed OptiFine profile uses.
-inline const QString componentUid = QStringLiteral("wtf.optifine");
+inline const QString componentUid = QStringLiteral("komorebi.optifine");
 
 /**
  * One OptiFine build as published by the mirror's version list.
