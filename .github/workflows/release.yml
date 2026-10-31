@@ -43,17 +43,17 @@ jobs:
           echo "VERSION=$tag_name" >> $GITHUB_ENV
       - name: Package artifacts properly
         run: |
-          mv ${{ github.workspace }}/Komorebi-source Komorebi-${{ env.VERSION }}
-          mv Komorebi-Linux-Qt6-Portable*/Komorebi-portable.tar.gz Komorebi-Linux-Qt6-Portable-${{ env.VERSION }}.tar.gz
-          mv Komorebi-Linux-aarch64-Qt6-Portable*/Komorebi-portable.tar.gz Komorebi-Linux-aarch64-Qt6-Portable-${{ env.VERSION }}.tar.gz
-          mv Komorebi-*.AppImage/Komorebi-*-x86_64.AppImage Komorebi-Linux-x86_64.AppImage
-          mv Komorebi-*.AppImage.zsync/Komorebi-*-x86_64.AppImage.zsync Komorebi-Linux-x86_64.AppImage.zsync
-          mv Komorebi-*.AppImage/Komorebi-*-aarch64.AppImage Komorebi-Linux-aarch64.AppImage
-          mv Komorebi-*.AppImage.zsync/Komorebi-*-aarch64.AppImage.zsync Komorebi-Linux-aarch64.AppImage.zsync
-          mv Komorebi-macOS*/Komorebi.zip Komorebi-macOS-${{ env.VERSION }}.zip
-          mv Komorebi-macOS*/Komorebi.dmg Komorebi-macOS-${{ env.VERSION }}.dmg
+          mv ${{ github.workspace }}/Komorebi-source KomorebiLauncher-${{ env.VERSION }}
+          mv Komorebi-Linux-Qt6-Portable*/Komorebi-portable.tar.gz KomorebiLauncher-Linux-Qt6-Portable-${{ env.VERSION }}.tar.gz
+          mv Komorebi-Linux-aarch64-Qt6-Portable*/Komorebi-portable.tar.gz KomorebiLauncher-Linux-aarch64-Qt6-Portable-${{ env.VERSION }}.tar.gz
+          mv Komorebi-*.AppImage/Komorebi-*-x86_64.AppImage KomorebiLauncher-Linux-x86_64.AppImage
+          mv Komorebi-*.AppImage.zsync/Komorebi-*-x86_64.AppImage.zsync KomorebiLauncher-Linux-x86_64.AppImage.zsync
+          mv Komorebi-*.AppImage/Komorebi-*-aarch64.AppImage KomorebiLauncher-Linux-aarch64.AppImage
+          mv Komorebi-*.AppImage.zsync/Komorebi-*-aarch64.AppImage.zsync KomorebiLauncher-Linux-aarch64.AppImage.zsync
+          mv Komorebi-macOS*/Komorebi.zip KomorebiLauncher-macOS-${{ env.VERSION }}.zip
+          mv Komorebi-macOS*/Komorebi.dmg KomorebiLauncher-macOS-${{ env.VERSION }}.dmg
 
-          tar --exclude='.git' -czf Komorebi-${{ env.VERSION }}.tar.gz Komorebi-${{ env.VERSION }}
+          tar --exclude='.git' -czf KomorebiLauncher-${{ env.VERSION }}.tar.gz KomorebiLauncher-${{ env.VERSION }}
 
           for d in Komorebi-Windows-MSVC*; do
             cd "${d}" || continue
@@ -61,7 +61,7 @@ jobs:
             ARM64="$(echo -n ${d} | grep -o arm64 || true)"
             INST="$(echo -n ${d} | grep -o Setup || true)"
             PORT="$(echo -n ${d} | grep -o Portable || true)"
-            NAME="Komorebi-Windows-MSVC"
+            NAME="KomorebiLauncher-Windows-MSVC"
             test -z "${LEGACY}" || NAME="${NAME}-Legacy"
             test -z "${ARM64}" || NAME="${NAME}-arm64"
             test -z "${PORT}" || NAME="${NAME}-Portable"
@@ -74,7 +74,7 @@ jobs:
             cd "${d}" || continue
             INST="$(echo -n ${d} | grep -o Setup || true)"
             PORT="$(echo -n ${d} | grep -o Portable || true)"
-            NAME="Komorebi-Windows-MinGW-w64"
+            NAME="KomorebiLauncher-Windows-MinGW-w64"
             test -z "${PORT}" || NAME="${NAME}-Portable"
             test -z "${INST}" || mv Komorebi-*.exe ../${NAME}-Setup-${{ env.VERSION }}.exe
             test -n "${INST}" || zip -r -9 "../${NAME}-${{ env.VERSION }}.zip" *
@@ -92,21 +92,21 @@ jobs:
           prerelease: false
           fail_on_unmatched_files: true
           files: |
-            Komorebi-Linux-x86_64.AppImage
-            Komorebi-Linux-x86_64.AppImage.zsync
-            Komorebi-Linux-aarch64.AppImage
-            Komorebi-Linux-aarch64.AppImage.zsync
-            Komorebi-Linux-Qt6-Portable-${{ env.VERSION }}.tar.gz
-            Komorebi-Linux-aarch64-Qt6-Portable-${{ env.VERSION }}.tar.gz
-            Komorebi-Windows-MinGW-w64-${{ env.VERSION }}.zip
-            Komorebi-Windows-MinGW-w64-Portable-${{ env.VERSION }}.zip
-            Komorebi-Windows-MinGW-w64-Setup-${{ env.VERSION }}.exe
-            Komorebi-Windows-MSVC-arm64-${{ env.VERSION }}.zip
-            Komorebi-Windows-MSVC-arm64-Portable-${{ env.VERSION }}.zip
-            Komorebi-Windows-MSVC-arm64-Setup-${{ env.VERSION }}.exe
-            Komorebi-Windows-MSVC-${{ env.VERSION }}.zip
-            Komorebi-Windows-MSVC-Portable-${{ env.VERSION }}.zip
-            Komorebi-Windows-MSVC-Setup-${{ env.VERSION }}.exe
-            Komorebi-macOS-${{ env.VERSION }}.zip
-            Komorebi-macOS-${{ env.VERSION }}.dmg
-            Komorebi-${{ env.VERSION }}.tar.gz
+            KomorebiLauncher-Linux-x86_64.AppImage
+            KomorebiLauncher-Linux-x86_64.AppImage.zsync
+            KomorebiLauncher-Linux-aarch64.AppImage
+            KomorebiLauncher-Linux-aarch64.AppImage.zsync
+            KomorebiLauncher-Linux-Qt6-Portable-${{ env.VERSION }}.tar.gz
+            KomorebiLauncher-Linux-aarch64-Qt6-Portable-${{ env.VERSION }}.tar.gz
+            KomorebiLauncher-Windows-MinGW-w64-${{ env.VERSION }}.zip
+            KomorebiLauncher-Windows-MinGW-w64-Portable-${{ env.VERSION }}.zip
+            KomorebiLauncher-Windows-MinGW-w64-Setup-${{ env.VERSION }}.exe
+            KomorebiLauncher-Windows-MSVC-arm64-${{ env.VERSION }}.zip
+            KomorebiLauncher-Windows-MSVC-arm64-Portable-${{ env.VERSION }}.zip
+            KomorebiLauncher-Windows-MSVC-arm64-Setup-${{ env.VERSION }}.exe
+            KomorebiLauncher-Windows-MSVC-${{ env.VERSION }}.zip
+            KomorebiLauncher-Windows-MSVC-Portable-${{ env.VERSION }}.zip
+            KomorebiLauncher-Windows-MSVC-Setup-${{ env.VERSION }}.exe
+            KomorebiLauncher-macOS-${{ env.VERSION }}.zip
+            KomorebiLauncher-macOS-${{ env.VERSION }}.dmg
+            KomorebiLauncher-${{ env.VERSION }}.tar.gz

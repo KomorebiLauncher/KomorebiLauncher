@@ -25,5 +25,5 @@ jobs:
         with:
           identifier: KomorebiLauncher.Komorebi
           version: ${{ github.event.release.tag_name }}
-          installers-regex: 'Komorebi-Windows-MSVC(:?-arm64|-Legacy)?-Setup-.+\.exe$'
+          installers-regex: 'KomorebiLauncher-Windows-MSVC(:?-arm64|-Legacy)?-Setup-.+\.exe$'
           token: ${{ secrets.WINGET_TOKEN }}
