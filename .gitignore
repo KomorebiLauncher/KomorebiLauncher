@@ -65,3 +65,6 @@ flatbuild
 
 # Installer produced by packaging
 /Komorebi-Setup.exe
+
+# Python bytecode from program_info/gen_icons.py
+__pycache__/
