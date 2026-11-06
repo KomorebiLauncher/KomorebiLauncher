@@ -389,9 +389,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     connect(APPLICATION, &Application::globalSettingsApplied, this, &MainWindow::globalSettingsClosed);
 
     m_statusLeft = new QLabel(tr("No instance selected"), this);
-    m_statusCenter = new QLabel(tr("Total playtime: 0s"), this);
+    // Left empty here: updateStatusCenter fills it with the single translatable string, so the
+    // label never shows a second, differently-worded variant that the catalogue may not carry.
+    m_statusCenter = new QLabel(this);
     statusBar()->addPermanentWidget(m_statusLeft, 1);
     statusBar()->addPermanentWidget(m_statusCenter, 0);
+    updateStatusCenter();
 
     // Add "manage accounts" button, right align
     QWidget* spacer = new QWidget();
@@ -1802,12 +1805,12 @@ void MainWindow::checkInstancePathForProblems()
 void MainWindow::updateStatusCenter()
 {
     m_statusCenter->setVisible(APPLICATION->settings()->get("ShowGlobalGameTime").toBool());
-    int64_t timePlayed = APPLICATION->playtimeSettings()->get("TotalPlayTime").toLongLong();
-    if (timePlayed > 0) {
-        m_statusCenter->setText(
-            tr("Total playtime: %1")
-                .arg(Time::prettifyDuration(timePlayed, APPLICATION->settings()->get("ShowGameTimeWithoutDays").toBool())));
-    }
+    const int64_t timePlayed = APPLICATION->playtimeSettings()->get("TotalPlayTime").toLongLong();
+    // Always set, including zero: leaving the label alone would keep whatever text it had, and an
+    // unformatted leftover is what made the same label look translated one minute and not the next.
+    m_statusCenter->setText(
+        tr("Total playtime: %1")
+            .arg(Time::prettifyDuration(timePlayed, APPLICATION->settings()->get("ShowGameTimeWithoutDays").toBool())));
 }
 // "Instance actions" are actions that require an instance to be selected (i.e. "new instance" is not here)
 // Actions that also require other conditions (e.g. a running instance) won't be changed.
