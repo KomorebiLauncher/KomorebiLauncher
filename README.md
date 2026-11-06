@@ -14,7 +14,7 @@ GPL-3.0-only，见 LICENSE 。
 
 - 实例隔离：每个实例独立的 .minecraft 目录、独立设置与独立图标
 - 组件系统：Minecraft 本体与 Fabric 、 Forge 、 NeoForge 、 Quilt 等加载器按组件装拆
-- 整合包来源：Modrinth 、 CurseForge 、 ATLauncher 、 FTB 、 Legacy FTB 、 Technic ，以及导入 .mrpack 、 MultiMC 与 PolyMC 导出的压缩包
+- 整合包来源：Modrinth 、 CurseForge 、 ATLauncher 、 FTB 、 Legacy FTB 、 Technic ，以及导入 .mrpack 、 MultiMC 与 PolyMC 导出的压缩包、HMCL 整合包与 MCBBS 格式整合包
 - 模组与整合包更新检查：对已安装的 Mod 逐个比对来源站点的版本
 - 模组、资源包、光影包、数据包、存档、截图在实例内直接管理，可从 Modrinth 搜索并安装
 - 皮肤上传与披风选择
@@ -25,7 +25,8 @@ GPL-3.0-only，见 LICENSE 。
 
 ## 尚未完成的部分
 
-- **Java 运行时下载还没有镜像**：游戏本体、库文件与资源走 BMCLAPI（默认值，可在设置 → API 里改）或等价镜像，但自动下载的 Java 运行时仍取自 Mojang 的 java-runtime 清单与各发行版的官方 API（Adoptium 等），国内网络下可能很慢或失败。这是当前对目标用户影响最大的一处缺口。
+- **Java 运行时镜像只覆盖了归档下载**：游戏本体、库文件与资源走 BMCLAPI（默认值，可在设置 → API 里改）或等价镜像；自动下载的 Java 运行时现在会优先尝试清华的 Adoptium 镜像（文件与官方 SHA-256 一致）。但 `api.adoptium.net` 那种"只带版本参数、不带文件名"的入口还没处理，因为镜像路径需要先问 API 要包名才能拼出来。
+- **国内整合包的远程文件**：HMCL 与 MCBBS 格式的整合包可以导入了，压缩包里的内容（mods、config 等）会完整还原并据此建立实例。但清单里通过 CurseForge 文件 ID 声明的那些文件还不会自动下载，导入时会给出警告并告知数量。
 - **本地自行编译时没有 CurseForge key**：CI 构建通过仓库 secret 注入 `Launcher_CURSEFORGE_API_KEY`，正式发布的安装包带 key、CurseForge 来源可用（设置 → API 里也能自己填）。本地 `cmake` 默认该值为空，需要手动加 `-D Launcher_CURSEFORGE_API_KEY=<你的 key>`。另外自 2026-07-16 起，CurseForge 的文件下载域名 edge.forgecdn.net 本身也要求携带 x-api-key。
 - **截图上传需要玩家自己的 ImgBB API key**：不内置任何图床凭据（Imgur 在中国大陆不可达，且其应用注册不对所有人开放）。首次上传时界面会提示填写自己的 key（<https://api.imgbb.com/> 免费注册即可），保存在本机设置里；不填则上传功能不出现。
 
