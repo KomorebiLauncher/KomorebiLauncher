@@ -1856,11 +1856,25 @@ void MainWindow::paintEvent(QPaintEvent* event)
 {
     QMainWindow::paintEvent(event);
 
-    const auto path = APPLICATION->settings()->get("MainWindowBackground").toString();
+    auto path = APPLICATION->settings()->get("MainWindowBackground").toString();
+
+    // With no explicit path, fall back to the picture that ships inside the selected theme. That
+    // makes a theme a single thing to install rather than a theme plus a setting to hand-edit, and
+    // it is where a player would expect a theme's own artwork to live.
+    if (path.isEmpty()) {
+        const auto theme = APPLICATION->settings()->get("ApplicationTheme").toString();
+        if (!theme.isEmpty()) {
+            const auto candidate = FS::PathCombine(APPLICATION->dataRoot(), "themes", theme, "resources", "background.png");
+            if (QFileInfo::exists(candidate))
+                path = QDir::fromNativeSeparators(candidate);
+        }
+    }
+
     if (path.isEmpty()) {
         qDebug() << "[bg] setting is empty; nothing to paint";
         return;
     }
+    qDebug() << "[bg] using" << path;
 
     // Decoded once per paint would stutter while resizing; the cache is keyed on the path so a
     // changed setting is picked up without restarting.
