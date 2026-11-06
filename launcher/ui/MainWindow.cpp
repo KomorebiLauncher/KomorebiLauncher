@@ -153,6 +153,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 {
     ui->setupUi(this);
 
+    // The window paints the background itself in paintEvent, but a child widget fills its own
+    // background first and covers it. These attributes are what let the painting be visible: QSS
+    // cannot do it for a plain QWidget, which is what the central widget is.
+    ui->centralWidget->setAutoFillBackground(false);
+    ui->centralWidget->setAttribute(Qt::WA_NoSystemBackground);
+    QWidget* chrome[] = { ui->centralWidget, ui->mainToolBar, ui->instanceToolBar, ui->newsToolBar, ui->statusBar };
+    for (auto* widget : chrome) {
+        widget->setStyleSheet(QStringLiteral("background: transparent;"));
+    }
     setWindowIcon(APPLICATION->logo());
     setWindowTitle(APPLICATION->applicationDisplayName());
 #ifndef QT_NO_ACCESSIBILITY
