@@ -54,6 +54,7 @@
 
 #include "settings/INISettingsObject.h"
 #include "tasks/Task.h"
+#include "ui/dialogs/UntrustedModsDialog.h"
 
 #include "net/ApiRequest.h"
 #include "net/ChecksumValidator.h"
@@ -567,6 +568,27 @@ void InstanceImportTask::processDomestic()
         }
     }
     QDir().rmdir(gameDir);
+
+    // A pack the user picked from their own disk carries mods nobody vetted, which is the same
+    // situation Flame imports warn about; using the same dialog keeps the two paths consistent
+    // instead of inventing a second opinion for the same risk.
+    if (!m_trustedSource) {
+        QStringList untrustedMods;
+        const auto modsPath = FS::PathCombine(m_stagingPath, QStringLiteral("mods"));
+        if (QDir(modsPath).exists()) {
+            for (const auto& entry :
+                 QDirListing(modsPath, QDirListing::IteratorFlag::FilesOnly | QDirListing::IteratorFlag::ResolveSymlinks)) {
+                untrustedMods.append(QStringLiteral("mods/") + entry.fileName());
+            }
+        }
+        if (!untrustedMods.isEmpty()) {
+            UntrustedModsDialog dialog{ untrustedMods, m_parent };
+            if (dialog.exec() != QDialog::Accepted) {
+                emitAborted();
+                return;
+            }
+        }
+    }
 
     // A minimal instance.cfg is enough to say what this folder is; processMultiMC fills in the rest.
     {
