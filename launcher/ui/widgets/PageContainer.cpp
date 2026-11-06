@@ -39,10 +39,14 @@
 
 #include <QImage>
 #include <QPainter>
-#include "Application.h"`n#include "BuildConfig.h"`n#include "settings/SettingsObject.h"
+#include "Application.h"
+#include "BuildConfig.h"
+#include "settings/SettingsObject.h"
 #include "PageContainer_p.h"
 
-#include <QDialogButtonBox>`n#include <QDir>`n#include <QFileInfo>
+#include <QDialogButtonBox>
+#include <QDir>
+#include <QFileInfo>
 #include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
