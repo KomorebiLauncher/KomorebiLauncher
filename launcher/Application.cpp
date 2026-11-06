@@ -917,6 +917,10 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
                                         "https://chinanet.mirrors.ustc.edu.cn/bmclapi");
         }
 
+        // Empty by default. Screenshot upload goes to ImgBB, whose key belongs to whoever uploads:
+        // shipping one in the build would make every player's uploads count against it.
+        m_settings->registerSetting("ImgbbApiKey", "");
+
         m_settings->registerSetting("MetaRefreshOnLaunch", true);
         m_settings->registerSetting("CloseAfterLaunch", false);
         m_settings->registerSetting("QuitAfterGameStop", false);

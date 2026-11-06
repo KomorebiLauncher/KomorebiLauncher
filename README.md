@@ -27,7 +27,7 @@ GPL-3.0-only，见 LICENSE 。
 
 - **Java 运行时下载还没有镜像**：游戏本体、库文件与资源走 BMCLAPI（默认值，可在设置 → API 里改）或等价镜像，但自动下载的 Java 运行时仍取自 Mojang 的 java-runtime 清单与各发行版的官方 API（Adoptium 等），国内网络下可能很慢或失败。这是当前对目标用户影响最大的一处缺口。
 - **本地自行编译时没有 CurseForge key**：CI 构建通过仓库 secret 注入 `Launcher_CURSEFORGE_API_KEY`，正式发布的安装包带 key、CurseForge 来源可用（设置 → API 里也能自己填）。本地 `cmake` 默认该值为空，需要手动加 `-D Launcher_CURSEFORGE_API_KEY=<你的 key>`。另外自 2026-07-16 起，CurseForge 的文件下载域名 edge.forgecdn.net 本身也要求携带 x-api-key。
-- **截图上传到 Imgur 未配置**：CI 没有注入 `Launcher_IMGUR_CLIENT_ID`，该功能在正式构建里不可用。
+- **截图上传需要玩家自己的 ImgBB API key**：不内置任何图床凭据（Imgur 在中国大陆不可达，且其应用注册不对所有人开放）。首次上传时界面会提示填写自己的 key（<https://api.imgbb.com/> 免费注册即可），保存在本机设置里；不填则上传功能不出现。
 
 ## 微软登录与 AppID
 

@@ -210,7 +210,6 @@ set(Launcher_META_URL "https://meta.prismlauncher.org/v1/" CACHE STRING "URL to 
 
 # Imgur API Client ID
 # Not registered for this fork, so the Imgur upload path in the screenshots page is inert.
-set(Launcher_IMGUR_CLIENT_ID "" CACHE STRING "Client ID you can get from Imgur when you register an application")
 
 # Bug tracker URL
 set(Launcher_BUG_TRACKER_URL "https://github.com/KomorebiLauncher/KomorebiLauncher/issues" CACHE STRING "URL for the bug tracker.")
