@@ -46,6 +46,9 @@
 #include "ui_MainWindow.h"
 
 #include <QDir>
+#include <QHash>
+#include <QImage>
+#include <QPainter>
 #include <QFileInfo>
 #include <QUrl>
 #include <QUrlQuery>
@@ -1838,4 +1841,31 @@ void MainWindow::updateInstanceToolBarOrientation(Qt::Orientation orientation)
     }
     // HACK: sync size (no, I don't know why this works)
     ui->instanceToolBar->resize(0, 0);
+}
+
+void MainWindow::paintEvent(QPaintEvent* event)
+{
+    QMainWindow::paintEvent(event);
+
+    const auto path = APPLICATION->settings()->get("MainWindowBackground").toString();
+    if (path.isEmpty())
+        return;
+
+    // Decoded once per paint would stutter while resizing; the cache is keyed on the path so a
+    // changed setting is picked up without restarting.
+    static QHash<QString, QImage> cache;
+    auto it = cache.find(path);
+    if (it == cache.end())
+        it = cache.insert(path, QImage(path));
+    const auto image = it.value();
+    if (image.isNull())
+        return;
+
+    // Drawn after the base class so it covers the window's own background, and before the children
+    // paint themselves -- that is what puts it behind the toolbars and the instance list too.
+    QPainter painter(this);
+    const auto scaled = image.scaled(size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+    const QRect source((scaled.width() - width()) / 2, (scaled.height() - height()) / 2, width(), height());
+    painter.drawImage(rect(), scaled, source);
+    painter.fillRect(rect(), QColor(0, 0, 0, 96));
 }

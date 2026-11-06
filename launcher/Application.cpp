@@ -919,7 +919,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
         // Empty by default. Screenshot upload goes to ImgBB, whose key belongs to whoever uploads:
         // shipping one in the build would make every player's uploads count against it.
-        m_settings->registerSetting("ImgbbApiKey", "");
+        m_settings->registerSetting("ImgbbApiKey", "");`n`n        // Path to an image painted behind the whole main window, toolbars included. Empty means the`n        // window keeps whatever the theme paints.`n        m_settings->registerSetting("MainWindowBackground", "");
 
         m_settings->registerSetting("MetaRefreshOnLaunch", true);
         m_settings->registerSetting("CloseAfterLaunch", false);
