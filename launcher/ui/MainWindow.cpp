@@ -1857,8 +1857,10 @@ void MainWindow::paintEvent(QPaintEvent* event)
     QMainWindow::paintEvent(event);
 
     const auto path = APPLICATION->settings()->get("MainWindowBackground").toString();
-    if (path.isEmpty())
+    if (path.isEmpty()) {
+        qDebug() << "[bg] setting is empty; nothing to paint";
         return;
+    }
 
     // Decoded once per paint would stutter while resizing; the cache is keyed on the path so a
     // changed setting is picked up without restarting.
@@ -1867,8 +1869,10 @@ void MainWindow::paintEvent(QPaintEvent* event)
     if (it == cache.end())
         it = cache.insert(path, QImage(path));
     const auto image = it.value();
-    if (image.isNull())
+    if (image.isNull()) {
+        qDebug() << "[bg] could not decode" << path;
         return;
+    }
 
     // Drawn after the base class so it covers the window's own background, and before the children
     // paint themselves -- that is what puts it behind the toolbars and the instance list too.
@@ -1877,4 +1881,10 @@ void MainWindow::paintEvent(QPaintEvent* event)
     const QRect source((scaled.width() - width()) / 2, (scaled.height() - height()) / 2, width(), height());
     painter.drawImage(rect(), scaled, source);
     painter.fillRect(rect(), QColor(0, 0, 0, 96));
+
+    static bool logged = false;
+    if (!logged) {
+        logged = true;
+        qDebug() << "[bg] painted" << path << "window" << size() << "image" << image.size();
+    }
 }
