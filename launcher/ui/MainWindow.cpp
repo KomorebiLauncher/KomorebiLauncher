@@ -1864,7 +1864,7 @@ void MainWindow::paintEvent(QPaintEvent* event)
     if (path.isEmpty()) {
         const auto theme = APPLICATION->settings()->get("ApplicationTheme").toString();
         if (!theme.isEmpty()) {
-            const auto candidate = FS::PathCombine(APPLICATION->dataRoot(), "themes", theme, "resources", "background.png");
+            const auto candidate = QDir(APPLICATION->dataRoot()).filePath(QStringLiteral("themes/%1/resources/background.png").arg(theme));
             if (QFileInfo::exists(candidate))
                 path = QDir::fromNativeSeparators(candidate);
         }
