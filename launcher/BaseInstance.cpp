@@ -75,6 +75,10 @@ BaseInstance::BaseInstance(SettingsObject* globalSettings, std::unique_ptr<Setti
     m_settings->registerSetting("name", "Unnamed Instance");
     m_settings->registerSetting("iconKey", "default");
     m_settings->registerSetting("notes", "");
+    // Path to an image drawn behind the console window. A path rather than a copy: the background
+    // is the player's own picture, and duplicating it into every clone and export would cost more
+    // than it is worth.
+    m_settings->registerSetting("InstanceBackground", "");
 
     m_settings->registerSetting("lastLaunchTime", 0);
     m_settings->registerSetting("totalTimePlayed", 0);

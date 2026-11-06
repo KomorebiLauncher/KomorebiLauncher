@@ -79,6 +79,8 @@ class InstanceWindow : public QMainWindow, public BasePageContainer {
 
    protected:
     void closeEvent(QCloseEvent*) override;
+    // Draws the instance's chosen background behind the pages.
+    void paintEvent(QPaintEvent* event) override;
 
    private:
     void updateButtons();
