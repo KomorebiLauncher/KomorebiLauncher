@@ -10,6 +10,8 @@
 
 #include "MirrorPolicy.h"
 
+#include "AdoptiumMirror.h"
+
 #include <QStringList>
 #include <algorithm>
 
@@ -98,13 +100,28 @@ auto MirrorPolicy::mirrorUrls(const QUrl& url, const QString& mirrorBase, const 
     if (!url.isValid() || !url.host().size())
         return {};
 
+    std::vector<QUrl> out;
+
+    // Java runtimes come from Adoptium rather than from a Mojang host, and the mirror is a
+    // different layout rather than a different host, so it is handled before the base is looked
+    // at: a player who configured no Mojang mirror should still reach the Java mirror.
+    if (looksLikeAdoptiumDownload(url)) {
+        auto mirrored = adoptiumMirrorUrl(url);
+        if (mirrored.isValid())
+            out.push_back(mirrored);
+    }
+
     const auto host = url.host().toLower();
     const bool isOwnService = kOwnServiceHosts.contains(host);
     auto base = validatedBase(isOwnService ? servicesMirrorBase : mirrorBase);
-    if (!base.isValid())
-        return {};
-
-    std::vector<QUrl> out;
+    if (!base.isValid()) {
+        std::vector<QUrl> unique;
+        for (const auto& candidate : out) {
+            if (std::find(unique.begin(), unique.end(), candidate) == unique.end())
+                unique.push_back(candidate);
+        }
+        return unique;
+    }
 
     if (isOwnService) {
         // A verbatim mirror keeps the whole path, including the /i18n prefix of the translation site.

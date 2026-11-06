@@ -124,6 +124,8 @@ set(NET_SOURCES
     net/HttpMetaCache.h
     net/MetaCacheSink.cpp
     net/MetaCacheSink.h
+    net/AdoptiumMirror.cpp
+    net/AdoptiumMirror.h
     net/MirrorPolicy.cpp
     net/MirrorPolicy.h
     net/Logging.h
