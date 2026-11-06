@@ -1891,9 +1891,17 @@ void MainWindow::paintEvent(QPaintEvent* event)
     // Drawn after the base class so it covers the window's own background, and before the children
     // paint themselves -- that is what puts it behind the toolbars and the instance list too.
     QPainter painter(this);
-    const auto scaled = image.scaled(size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-    const QRect source((scaled.width() - width()) / 2, (scaled.height() - height()) / 2, width(), height());
-    painter.drawImage(rect(), scaled, source);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+
+    // Fit the whole picture instead of cropping it to fill: a window is rarely the same shape as
+    // the image, and cutting the sides off a picture the player chose is worse than leaving a band
+    // of colour around it.
+    const auto target = size() * devicePixelRatioF();
+    const auto scaled = image.scaled(target, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    painter.fillRect(rect(), QColor(18, 22, 28));
+    painter.drawImage(QPointF((width() - scaled.width() / devicePixelRatioF()) / 2.0,
+                              (height() - scaled.height() / devicePixelRatioF()) / 2.0),
+                      scaled);
     painter.fillRect(rect(), QColor(0, 0, 0, 96));
 
     static bool logged = false;
