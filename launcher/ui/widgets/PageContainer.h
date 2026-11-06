@@ -38,6 +38,7 @@
 
 #include <QListView>
 #include <QModelIndex>
+#include <QImage>
 #include <QWidget>
 
 #include "ui/pages/BasePageContainer.h"
@@ -63,6 +64,16 @@ class PageContainer : public QWidget, public BasePageContainer {
     void addButtons(QLayout* buttons);
 
     void useSidebarStyle(bool sidebar);
+
+    /**
+     * The picture drawn behind the pages, or nothing when the path is empty or unreadable.
+     *
+     * Pages are plain widgets and do not paint a background of their own, so an image set here
+     * shows through around them. Views that do fill their own background (the mod and world lists)
+     * still cover their own rectangles.
+     */
+    void setBackgroundImage(const QString& path);
+    void paintEvent(QPaintEvent* event) override;
 
     /*
      * Save any unsaved state and prepare to be closed.
@@ -93,6 +104,9 @@ class PageContainer : public QWidget, public BasePageContainer {
     void hidePageList() { m_pageList->hide(); }
 
    private:
+    /** Kept decoded: decoding on every paint would stutter while resizing. */
+    QImage m_background;
+
     void createUI();
     void retranslate();
 

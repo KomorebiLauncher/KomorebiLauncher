@@ -38,8 +38,6 @@
 #include "Application.h"
 
 #include <QCloseEvent>
-#include <QImage>
-#include <QPainter>
 #include <QHBoxLayout>
 #include <QMessageBox>
 #include <QPushButton>
@@ -71,6 +69,9 @@ InstanceWindow::InstanceWindow(MinecraftInstance* instance, QWidget* parent) : Q
         m_container = new PageContainer(provider.get(), "console", this);
         m_container->setParentContainer(this);
         setCentralWidget(m_container);
+        // The container paints the picture: painting it on the window instead would be hidden
+        // behind the container's own opaque background.
+        m_container->setBackgroundImage(m_instance->settings()->get("InstanceBackground").toString());
         setContentsMargins(0, 0, 0, 0);
     }
 
@@ -261,22 +262,4 @@ bool InstanceWindow::requestClose()
         return true;
     }
     return false;
-}
-
-void InstanceWindow::paintEvent(QPaintEvent* event)
-{
-    const auto path = m_instance->settings()->get("InstanceBackground").toString();
-    if (!path.isEmpty()) {
-        const QImage image(path);
-        if (!image.isNull()) {
-            QPainter painter(this);
-            // Cover the window rather than letterbox it: a background with bars looks like a bug.
-            const auto scaled = image.scaled(size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-            const QRect source((scaled.width() - width()) / 2, (scaled.height() - height()) / 2, width(), height());
-            painter.drawImage(rect(), scaled, source);
-            // Darken it, otherwise a bright picture makes the pages unreadable.
-            painter.fillRect(rect(), QColor(0, 0, 0, 96));
-        }
-    }
-    QMainWindow::paintEvent(event);
 }

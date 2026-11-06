@@ -36,6 +36,9 @@
  */
 
 #include "PageContainer.h"
+
+#include <QImage>
+#include <QPainter>
 #include "BuildConfig.h"
 #include "PageContainer_p.h"
 
@@ -289,4 +292,25 @@ void PageContainer::changeEvent(QEvent* event)
         retranslate();
     }
     QWidget::changeEvent(event);
+}
+
+void PageContainer::setBackgroundImage(const QString& path)
+{
+    m_background = path.isEmpty() ? QImage() : QImage(path);
+    // Repaint even when the image failed to load: the old one must not stay on screen.
+    update();
+}
+
+void PageContainer::paintEvent(QPaintEvent* event)
+{
+    if (!m_background.isNull()) {
+        QPainter painter(this);
+        // Cover rather than letterbox, so the picture does not end in bars.
+        const auto scaled = m_background.scaled(size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
+        const QRect source((scaled.width() - width()) / 2, (scaled.height() - height()) / 2, width(), height());
+        painter.drawImage(rect(), scaled, source);
+        // Darken it, or a bright picture makes the pages unreadable.
+        painter.fillRect(rect(), QColor(0, 0, 0, 96));
+    }
+    QWidget::paintEvent(event);
 }
