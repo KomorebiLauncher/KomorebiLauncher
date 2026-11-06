@@ -46,6 +46,7 @@
 #include "icons/IconList.h"
 #include "icons/IconUtils.h"
 
+#include "modplatform/flame/FlameAPI.h"
 #include "modplatform/flame/FlameInstanceCreationTask.h"
 #include "modplatform/domestic/PackManifest.h"
 #include "modplatform/modrinth/ModrinthInstanceCreationTask.h"
@@ -55,7 +56,12 @@
 #include "tasks/Task.h"
 
 #include "net/ApiRequest.h"
+#include "net/ChecksumValidator.h"
+#include "net/NetJob.h"
+#include "net/Request.h"
 
+#include <QCryptographicHash>
+#include <QHash>
 #include <QDir>
 #include <QDirListing>
 #include <QFile>
@@ -587,13 +593,124 @@ void InstanceImportTask::processDomestic()
     profile.write(QJsonDocument(QJsonObject{ { QStringLiteral("formatVersion"), 1 }, { QStringLiteral("components"), components } }).toJson());
     profile.close();
 
-    // The archives carry their mods, but a pack may also list files it expects from a service. Those
-    // are not fetched yet, so say so rather than producing an instance that silently lacks them.
-    if (!pack.files.isEmpty()) {
-        logWarning(tr("%1 file(s) listed in the manifest were not downloaded; install them by hand if the instance "
-                      "does not start as expected.")
-                       .arg(pack.files.size()));
+    if (pack.files.isEmpty()) {
+        processMultiMC();
+        return;
     }
 
-    processMultiMC();
+    // The archives carry most of their content, but a pack may also list files it expects from a
+    // service. Those are fetched here so the instance is complete when it is handed over.
+    QStringList curseforgeIds;
+    for (const auto& file : pack.files) {
+        if (file.curseforgeFileId != 0)
+            curseforgeIds.append(QString::number(file.curseforgeFileId));
+    }
+
+    if (!curseforgeIds.isEmpty()) {
+        setStatus(tr("Resolving the files the pack expects from CurseForge"));
+        auto [resolve, response] = FlameAPI::getFiles(curseforgeIds);
+        connect(resolve.get(), &Task::succeeded, this, [this, response, pack] {
+            // The response is a list of file objects; the file name and the download URL are all
+            // this needs, and the pack already said where each one belongs.
+            const auto document = QJsonDocument::fromJson(*response);
+            const auto entries = document.isObject() ? document.object().value(QLatin1String("data")).toArray() : QJsonArray();
+            if (entries.isEmpty()) {
+                emitFailed(tr("CurseForge returned no information about the files this pack lists."));
+                return;
+            }
+
+            QHash<QString, QUrl> urlByFileId;
+            QHash<QString, QString> nameByFileId;
+            for (const auto& value : entries) {
+                const auto object = value.toObject();
+                const auto id = QString::number(static_cast<qint64>(object.value(QLatin1String("id")).toDouble()));
+                urlByFileId.insert(id, QUrl(object.value(QLatin1String("downloadUrl")).toString(), QUrl::TolerantMode));
+                nameByFileId.insert(id, object.value(QLatin1String("fileName")).toString());
+            }
+
+            auto job = makeShared<NetJob>(tr("Pack files"), APPLICATION->network());
+            int missing = 0;
+            for (const auto& file : pack.files) {
+                const auto id = QString::number(file.curseforgeFileId);
+                if (file.curseforgeFileId != 0) {
+                    const auto url = urlByFileId.value(id);
+                    if (!url.isValid() || url.isEmpty()) {
+                        ++missing;
+                        continue;
+                    }
+                    // The manifest may omit the destination; CurseForge's own file name is then the
+                    // best guess, and it is what the launcher that made the pack would have used.
+                    auto destination = file.path;
+                    if (destination.isEmpty())
+                        destination = QStringLiteral("mods/") + nameByFileId.value(id);
+                    auto download = Net::Request::makeFile(url, FS::PathCombine(m_stagingPath, destination));
+                    if (!file.sha1.isEmpty())
+                        download->addValidator(
+                            new Net::ChecksumValidator(QCryptographicHash::Sha1, QByteArray::fromHex(file.sha1.toLatin1())));
+                    job->addNetAction(download);
+                } else if (!file.url.isEmpty()) {
+                    auto download = Net::Request::makeFile(QUrl(file.url, QUrl::TolerantMode), FS::PathCombine(m_stagingPath, file.path));
+                    if (!file.sha1.isEmpty())
+                        download->addValidator(
+                            new Net::ChecksumValidator(QCryptographicHash::Sha1, QByteArray::fromHex(file.sha1.toLatin1())));
+                    job->addNetAction(download);
+                }
+            }
+
+            if (job->size() == 0) {
+                emitFailed(tr("None of the files this pack lists could be downloaded."));
+                return;
+            }
+            if (missing > 0) {
+                logWarning(tr("%1 file(s) in the pack are no longer available from CurseForge and were skipped.").arg(missing));
+            }
+
+            connect(job.get(), &Task::failed, this, [this](const QString& reason) {
+                emitFailed(tr("Could not download the files this pack lists:\n%1").arg(reason));
+            });
+            connect(job.get(), &Task::aborted, this, &InstanceImportTask::emitAborted);
+            connect(job.get(), &Task::progress, this, &InstanceImportTask::setProgress);
+            connect(job.get(), &Task::status, this, &InstanceImportTask::setStatus);
+            connect(job.get(), &Task::succeeded, this, &InstanceImportTask::processMultiMC);
+
+            m_task = job;
+            setAbortable(true);
+            job->start();
+        });
+        connect(resolve.get(), &Task::failed, this, [this](const QString& reason) {
+            emitFailed(tr("Could not ask CurseForge about the files this pack lists:\n%1").arg(reason));
+        });
+        connect(resolve.get(), &Task::aborted, this, &InstanceImportTask::emitAborted);
+
+        m_task = resolve;
+        setAbortable(true);
+        resolve->start();
+        return;
+    }
+
+    // No CurseForge references: only files the manifest gives a URL for.
+    auto job = makeShared<NetJob>(tr("Pack files"), APPLICATION->network());
+    for (const auto& file : pack.files) {
+        if (file.url.isEmpty())
+            continue;
+        auto download = Net::Request::makeFile(QUrl(file.url, QUrl::TolerantMode), FS::PathCombine(m_stagingPath, file.path));
+        if (!file.sha1.isEmpty())
+            download->addValidator(new Net::ChecksumValidator(QCryptographicHash::Sha1, QByteArray::fromHex(file.sha1.toLatin1())));
+        job->addNetAction(download);
+    }
+    if (job->size() == 0) {
+        processMultiMC();
+        return;
+    }
+    connect(job.get(), &Task::failed, this, [this](const QString& reason) {
+        emitFailed(tr("Could not download the files this pack lists:\n%1").arg(reason));
+    });
+    connect(job.get(), &Task::aborted, this, &InstanceImportTask::emitAborted);
+    connect(job.get(), &Task::progress, this, &InstanceImportTask::setProgress);
+    connect(job.get(), &Task::status, this, &InstanceImportTask::setStatus);
+    connect(job.get(), &Task::succeeded, this, &InstanceImportTask::processMultiMC);
+
+    m_task = job;
+    setAbortable(true);
+    job->start();
 }
