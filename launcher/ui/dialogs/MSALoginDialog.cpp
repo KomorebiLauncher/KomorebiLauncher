@@ -45,7 +45,6 @@
 #include "minecraft/auth/MSAErrors.h"
 
 #include <QApplication>
-#include <QMessageBox>
 #include <QClipboard>
 #include <QColor>
 #include <QPainter>
@@ -79,14 +78,11 @@ auto MSALoginDialog::describeFailure(const QString& reason) -> QString
         return text;
     }
 
-    // The notice at the top of the dialog says the same thing, but it is easy to read past when the
-    // failure itself is a wall of AADSTS text, so repeat the conclusion next to it.
-    ui->approvalNotice->setVisible(true);
+    // The failure text is a wall of AADSTS noise, so put the conclusion next to it.
     text += QStringLiteral("<p>%1</p>").arg(
-        tr("Microsoft refused the application ID this build uses, not your account. Third-party server accounts are "
-           "unaffected; offline profiles require a signed-in Microsoft account, which this build cannot obtain yet. "
-           "An app ID registered by hand would not be approved either; sign-in stays unavailable until the review "
-           "passes."));
+        tr("Microsoft refused the application ID this build uses, not your account. That means the registration is "
+           "misconfigured, or it no longer has access to the Minecraft services API. Third-party server accounts are "
+           "unaffected."));
     return text;
 }
 
@@ -112,31 +108,10 @@ MSALoginDialog::MSALoginDialog(QWidget* parent) : QDialog(parent), ui(new Ui::MS
     });
 
     ui->buttonBox->button(QDialogButtonBox::Cancel)->setText(tr("Cancel"));
-
-    // Drop this along with the label once the shipped app id is on Xbox Live's allowlist.
-    ui->approvalNotice->setVisible(APPLICATION->settings()->get("MSAClientIDOverride").toString().isEmpty());
 }
 
 int MSALoginDialog::exec()
 {
-    // While Mojang has not approved the application this build ships, the sign-in cannot finish:
-    // Microsoft and Xbox succeed, then Minecraft refuses the token. Every attempt is also a refused
-    // call to their API, so ask before starting one. An app id the player configured themselves is
-    // taken at face value.
-    if (APPLICATION->settings()->get("MSAClientIDOverride").toString().isEmpty()) {
-        QMessageBox box(this);
-        box.setWindowTitle(tr("Microsoft sign-in is not available"));
-        box.setText(tr("Mojang has not approved this build's application yet, so signing in cannot finish. "
-                       "Third-party server accounts are unaffected. Try anyway?"));
-        auto* tryButton = box.addButton(tr("Try anyway"), QMessageBox::AcceptRole);
-        auto* cancelButton = box.addButton(tr("Cancel"), QMessageBox::RejectRole);
-        box.setDefaultButton(cancelButton);
-        box.exec();
-        if (box.clickedButton() != tryButton) {
-            return QDialog::Rejected;
-        }
-    }
-
     // Setup the login task and start it
     m_account = MinecraftAccount::createBlankMSA();
     m_authflow_task.reset(new AuthFlow(m_account->accountData(), AuthFlow::Action::Login));

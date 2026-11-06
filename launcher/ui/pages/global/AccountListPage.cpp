@@ -146,9 +146,9 @@ void AccountListPage::on_actionAddOffline_triggered()
         QMessageBox::warning(this, tr("Error"),
                              tr("You must add a Microsoft account that owns Minecraft before you can add an offline account."
                                 "<br><br>"
-                                "Microsoft sign-in is currently unavailable because this build's application has not "
-                                "been approved by Mojang, so an offline profile cannot be created yet. Third-party "
-                                "server accounts are not affected."
+                                "An offline profile is a local name for singleplayer worlds and for servers that allow "
+                                "offline players; it is not a way to use Minecraft without owning it. Add the Microsoft "
+                                "account that owns the game first, then the offline profile."
                                 "<br><br>"
                                 "If you have lost your account you can contact Microsoft for support."));
         return;

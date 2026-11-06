@@ -57,12 +57,14 @@ void LauncherLoginStep::onRequestDone(QByteArray* response)
     if (m_request->error() != QNetworkReply::NoError) {
         qWarning() << "Reply error:" << m_request->error();
 
-        // Mojang refuses the whole request for an application id that is not on its allow list,
-        // which is where this build stands until the review passes. Say that, instead of leaving a
-        // bare 403 that reads like an account problem the player could fix.
+        // Mojang refuses the whole request with this body when the application id is not on its allow
+        // list. That is a build-side problem the player cannot fix, so say so instead of leaving a
+        // bare 403 that reads like an account issue. It should not happen for a normally distributed
+        // build; it means the shipped id was never approved or its access was withdrawn.
         if (m_request->replyStatusCode() == 403 && response->contains("Invalid app registration")) {
             emit finished(AccountTaskState::STATE_FAILED_SOFT,
-                          tr("This build's application is not approved by Mojang yet, so it cannot sign in to Minecraft. "
+                          tr("Mojang refused this build's application ID, so it cannot sign in to Minecraft. "
+                             "The registration is either not approved or no longer approved; see https://aka.ms/AppRegInfo. "
                              "Third-party server accounts still work."));
             return;
         }
