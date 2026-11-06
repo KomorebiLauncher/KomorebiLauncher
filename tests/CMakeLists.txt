@@ -18,6 +18,9 @@ ecm_add_test(Library_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR
 ecm_add_test(MirrorPolicy_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME MirrorPolicy)
 
+ecm_add_test(PackManifest_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME PackManifest)
+
 ecm_add_test(MirrorFallback_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME MirrorFallback)
 

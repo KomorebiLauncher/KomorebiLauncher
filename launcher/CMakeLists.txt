@@ -586,6 +586,12 @@ set(PACKWIZ_SOURCES
 )
 
 
+set(DOMESTIC_SOURCES
+    modplatform/domestic/PackManifest.h
+    modplatform/domestic/PackManifest.cpp
+)
+
+
 set(TECHNIC_SOURCES
     modplatform/technic/SingleZipPackInstallTask.h
     modplatform/technic/SingleZipPackInstallTask.cpp
@@ -797,6 +803,7 @@ set(LOGIC_SOURCES
     ${OPTIFINE_SOURCES}
     ${AUTHLIBINJECTOR_SOURCES}
     ${PACKWIZ_SOURCES}
+    ${DOMESTIC_SOURCES}
     ${TECHNIC_SOURCES}
     ${ATLAUNCHER_SOURCES}
 )
