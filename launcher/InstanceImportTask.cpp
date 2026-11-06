@@ -47,6 +47,7 @@
 #include "icons/IconUtils.h"
 
 #include "modplatform/flame/FlameInstanceCreationTask.h"
+#include "modplatform/domestic/PackManifest.h"
 #include "modplatform/modrinth/ModrinthInstanceCreationTask.h"
 #include "modplatform/technic/TechnicPackProcessor.h"
 
@@ -55,8 +56,14 @@
 
 #include "net/ApiRequest.h"
 
+#include <QDir>
 #include <QDirListing>
+#include <QFile>
 #include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QSettings>
 #include <QtConcurrentRun>
 #include <memory>
 #include <utility>
@@ -161,6 +168,18 @@ void InstanceImportTask::processZipPack()
             qDebug() << "Flame:" << true;
             m_modpackType = ModpackType::Flame;
             return true;
+        } else if (fileName == "mcbbs.packmeta") {
+            // Only the MCBBS format has this file, so it identifies the pack on its own.
+            qDebug() << "MCBBS:" << true;
+            m_modpackType = ModpackType::Mcbbs;
+            return true;
+        } else if (fileName == "modpack.json") {
+            // HMCL's export marker. Whether the instance manifest next to it exists is checked
+            // during the import, so a pack that merely ships a file with this name fails loudly
+            // instead of being silently mangled.
+            qDebug() << "HMCL:" << true;
+            m_modpackType = ModpackType::HMCL;
+            return true;
         } else if (QFileInfo fileInfo(fileName); fileInfo.fileName() == "instance.cfg") {
             qDebug() << "MultiMC:" << true;
             m_modpackType = ModpackType::MultiMC;
@@ -247,6 +266,10 @@ void InstanceImportTask::extractFinished()
             return;
         case ModpackType::Modrinth:
             processModrinth();
+            return;
+        case ModpackType::HMCL:
+        case ModpackType::Mcbbs:
+            processDomestic();
             return;
         case ModpackType::Unknown:
             emitFailed(tr("Archive does not contain a recognized modpack type."));
@@ -445,4 +468,132 @@ void InstanceImportTask::processModrinth()
     m_task.reset(instCreationTask);
     setAbortable(true);
     m_task->start();
+}
+
+namespace {
+
+/** The pack component id each loader name maps to. */
+auto loaderUid(const QString& loader) -> QString
+{
+    if (loader == QLatin1String("fabric"))
+        return QStringLiteral("net.fabricmc.fabric-loader");
+    if (loader == QLatin1String("quilt"))
+        return QStringLiteral("org.quiltmc.quilt-loader");
+    if (loader == QLatin1String("forge"))
+        return QStringLiteral("net.minecraftforge");
+    if (loader == QLatin1String("neoforge"))
+        return QStringLiteral("net.neoforged");
+    return {};
+}
+
+}  // namespace
+
+void InstanceImportTask::processDomestic()
+{
+    const bool isMcbbs = m_modpackType == ModpackType::Mcbbs;
+
+    auto readEntry = [this](const QString& name) -> QByteArray {
+        QFile file(FS::PathCombine(m_stagingPath, name));
+        if (!file.open(QIODevice::ReadOnly))
+            return {};
+        return file.readAll();
+    };
+
+    Domestic::PackDescription pack;
+    QString error;
+
+    if (isMcbbs) {
+        const auto manifest = readEntry(QStringLiteral("mcbbs.packmeta"));
+        if (manifest.isEmpty()) {
+            emitFailed(tr("The pack does not contain an mcbbs.packmeta manifest."));
+            return;
+        }
+        if (!Domestic::parseMcbbs(manifest, pack, &error)) {
+            emitFailed(tr("Could not read the pack manifest:\n%1").arg(error));
+            return;
+        }
+    } else {
+        const auto manifest = readEntry(QStringLiteral("modpack.json"));
+        if (manifest.isEmpty()) {
+            emitFailed(tr("The pack does not contain an HMCL modpack.json manifest."));
+            return;
+        }
+        const auto instance = readEntry(QStringLiteral("minecraft/pack.json"));
+        if (instance.isEmpty()) {
+            emitFailed(tr("The pack does not contain the HMCL instance manifest (minecraft/pack.json), so its game "
+                          "version cannot be determined."));
+            return;
+        }
+        if (!Domestic::parseHmcl(manifest, instance, pack, &error)) {
+            emitFailed(tr("Could not read the pack manifest:\n%1").arg(error));
+            return;
+        }
+    }
+
+    for (const auto& warning : pack.warnings)
+        logWarning(warning);
+
+    if (pack.gameVersion.isEmpty()) {
+        emitFailed(tr("The pack manifest does not name a Minecraft version."));
+        return;
+    }
+
+    // Both formats keep the game directory under a prefix; the rest of the archive is the manifest.
+    // Flattening it here is what lets the rest of the import be the MultiMC path.
+    const auto gameDir = FS::PathCombine(m_stagingPath, pack.overridesPrefix);
+    if (!QFileInfo::exists(gameDir)) {
+        emitFailed(tr("The pack does not contain the expected %1 folder.").arg(pack.overridesPrefix));
+        return;
+    }
+    const auto entries = QDir(gameDir).entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot);
+    for (const auto& entry : entries) {
+        const auto target = FS::PathCombine(m_stagingPath, entry.fileName());
+        if (QFileInfo::exists(target)) {
+            // The manifest files sit at the root under names the game folder also uses (modpack.json
+            // is the realistic case), so the copy that belongs to the game directory wins.
+            logWarning(tr("Both the archive root and the game folder contain %1; keeping the one inside the game folder.")
+                           .arg(entry.fileName()));
+            FS::deletePath(target);
+        }
+        if (!FS::move(entry.absoluteFilePath(), target)) {
+            emitFailed(tr("Could not move %1 out of the pack's game folder.").arg(entry.fileName()));
+            return;
+        }
+    }
+    QDir().rmdir(gameDir);
+
+    // A minimal instance.cfg is enough to say what this folder is; processMultiMC fills in the rest.
+    {
+        QSettings config(FS::PathCombine(m_stagingPath, QStringLiteral("instance.cfg")), QSettings::IniFormat);
+        config.setValue(QStringLiteral("InstanceType"), QStringLiteral("OneSix"));
+        config.sync();
+    }
+
+    QJsonArray components;
+    components.append(QJsonObject{ { QStringLiteral("uid"), QStringLiteral("net.minecraft") }, { QStringLiteral("version"), pack.gameVersion } });
+    const auto uid = loaderUid(pack.loader);
+    if (!uid.isEmpty() && !pack.loaderVersion.isEmpty()) {
+        components.append(QJsonObject{ { QStringLiteral("uid"), uid }, { QStringLiteral("version"), pack.loaderVersion } });
+    } else if (!pack.loader.isEmpty()) {
+        logWarning(tr("The pack names the %1 loader but not its version, so it will not be installed automatically.")
+                       .arg(pack.loader));
+    }
+
+    QFile profile(FS::PathCombine(m_stagingPath, QStringLiteral("mmc-pack.json")));
+    if (!profile.open(QIODevice::WriteOnly)) {
+        emitFailed(tr("Could not write mmc-pack.json into the instance folder."));
+        return;
+    }
+    profile.write(QJsonDocument(QJsonObject{ { QStringLiteral("formatVersion"), 1 }, { QStringLiteral("components"), components } }).toJson());
+    profile.close();
+
+    // The archives carry their mods, but a pack may also list files it expects from a service. Those
+    // are not fetched yet, so say so rather than producing an instance that silently lacks them.
+    if (!pack.files.isEmpty()) {
+        logWarning(tr("%1 file(s) listed in the manifest were not downloaded; install them by hand if the instance "
+                      "does not start as expected.")
+                       .arg(pack.files.size()));
+    }
+
+    processMultiMC();
 }

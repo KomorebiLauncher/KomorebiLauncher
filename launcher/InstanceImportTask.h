@@ -56,6 +56,10 @@ class InstanceImportTask : public InstanceTask {
     void processTechnic();
     void processFlame();
     void processModrinth();
+    // Importers for the pack formats used by the domestic launchers. Both are converted into the
+    // MultiMC layout and then handed to processMultiMC, which already knows how to build an
+    // instance out of a folder with an instance.cfg and a mmc-pack.json.
+    void processDomestic();
     void downloadFromUrl();
 
    private slots:
@@ -73,6 +77,8 @@ class InstanceImportTask : public InstanceTask {
         Technic,
         Flame,
         Modrinth,
+        HMCL,
+        Mcbbs,
     } m_modpackType = ModpackType::Unknown;
 
     // Extra info we might need, that's available before, but can't be derived from
