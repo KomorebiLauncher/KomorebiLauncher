@@ -39,10 +39,10 @@
 
 #include <QImage>
 #include <QPainter>
-#include "BuildConfig.h"
+#include "Application.h"`n#include "BuildConfig.h"`n#include "settings/SettingsObject.h"
 #include "PageContainer_p.h"
 
-#include <QDialogButtonBox>
+#include <QDialogButtonBox>`n#include <QDir>`n#include <QFileInfo>
 #include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -294,6 +294,32 @@ void PageContainer::changeEvent(QEvent* event)
     QWidget::changeEvent(event);
 }
 
+namespace {
+
+/**
+ * The picture the launcher should use when nothing was set for this particular window: the
+ * explicit setting first, then the artwork the active theme ships.
+ */
+auto resolveDefaultBackground() -> QImage
+{
+    auto* app = APPLICATION_DYN;
+    if (!app)
+        return {};
+
+    auto path = app->settings()->get("MainWindowBackground").toString();
+    if (path.isEmpty()) {
+        const auto theme = app->settings()->get("ApplicationTheme").toString();
+        if (!theme.isEmpty()) {
+            const auto candidate = QDir(app->dataRoot()).filePath(QStringLiteral("themes/%1/resources/background.png").arg(theme));
+            if (QFileInfo::exists(candidate))
+                path = QDir::fromNativeSeparators(candidate);
+        }
+    }
+    return path.isEmpty() ? QImage() : QImage(path);
+}
+
+}  // namespace
+
 void PageContainer::setBackgroundImage(const QString& path)
 {
     m_background = path.isEmpty() ? QImage() : QImage(path);
@@ -303,6 +329,15 @@ void PageContainer::setBackgroundImage(const QString& path)
 
 void PageContainer::paintEvent(QPaintEvent* event)
 {
+    // Every window built on this container shows the same background, so it is looked up here
+    // rather than pushed in by each caller: the settings window, the new-instance dialog and the
+    // resource browser all get it without knowing the feature exists.
+    if (!m_backgroundResolved) {
+        m_backgroundResolved = true;
+        if (m_background.isNull())
+            m_background = resolveDefaultBackground();
+    }
+
     if (!m_background.isNull()) {
         QPainter painter(this);
         // Cover rather than letterbox, so the picture does not end in bars.

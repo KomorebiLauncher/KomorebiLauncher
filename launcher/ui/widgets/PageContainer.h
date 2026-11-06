@@ -106,6 +106,8 @@ class PageContainer : public QWidget, public BasePageContainer {
    private:
     /** Kept decoded: decoding on every paint would stutter while resizing. */
     QImage m_background;
+    /** Resolved once: the setting changes rarely and re-reading it on every paint is waste. */
+    bool m_backgroundResolved = false;
 
     void createUI();
     void retranslate();
