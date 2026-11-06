@@ -1896,8 +1896,12 @@ void MainWindow::paintEvent(QPaintEvent* event)
     // Fit the whole picture instead of cropping it to fill: a window is rarely the same shape as
     // the image, and cutting the sides off a picture the player chose is worse than leaving a band
     // of colour around it.
+    const auto mode = APPLICATION->settings()->get("MainWindowBackgroundMode").toString();
+    const bool fillWindow = mode.compare(QLatin1String("cover"), Qt::CaseInsensitive) == 0;
+
     const auto target = size() * devicePixelRatioF();
-    const auto scaled = image.scaled(target, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    const auto scaled = image.scaled(target, fillWindow ? Qt::KeepAspectRatioByExpanding : Qt::KeepAspectRatio,
+                                     Qt::SmoothTransformation);
     painter.fillRect(rect(), QColor(18, 22, 28));
     painter.drawImage(QPointF((width() - scaled.width() / devicePixelRatioF()) / 2.0,
                               (height() - scaled.height() / devicePixelRatioF()) / 2.0),

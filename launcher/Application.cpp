@@ -924,6 +924,10 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // Path to an image painted behind the whole main window, toolbars included. Empty means the
         // window keeps whatever the theme paints.
         m_settings->registerSetting("MainWindowBackground", "");
+        // "fit" shows the whole picture with a band of colour around it, "cover" fills the window
+        // and crops the overflow. Both are reasonable; which one looks right depends on whether the
+        // picture and the window happen to be the same shape.
+        m_settings->registerSetting("MainWindowBackgroundMode", "fit");
 
         m_settings->registerSetting("MetaRefreshOnLaunch", true);
         m_settings->registerSetting("CloseAfterLaunch", false);
