@@ -85,7 +85,7 @@ class MainWindow : public QMainWindow {
 
    protected:
     // Paints the window-wide background behind every child widget, toolbars included.
-      void paintEvent(QPaintEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
    private slots:
     void onCatToggled(bool);
