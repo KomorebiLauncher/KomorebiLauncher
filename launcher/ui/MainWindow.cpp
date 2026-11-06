@@ -46,6 +46,8 @@
 #include "ui_MainWindow.h"
 
 #include <QDir>
+#include <cmath>
+#include <algorithm>
 #include <QHash>
 #include <QImage>
 #include <QPainter>
@@ -1899,8 +1901,22 @@ void MainWindow::paintEvent(QPaintEvent* event)
     // Fit the whole picture instead of cropping it to fill: a window is rarely the same shape as
     // the image, and cutting the sides off a picture the player chose is worse than leaving a band
     // of colour around it.
-    const auto mode = APPLICATION->settings()->get("MainWindowBackgroundMode").toString();
-    const bool fillWindow = mode.compare(QLatin1String("cover"), Qt::CaseInsensitive) == 0;
+    const auto mode = APPLICATION->settings()->get("MainWindowBackgroundMode").toString().toLower();
+
+    // "cover" and "fit" are literal. Anything else (including the default) picks between them from
+    // the shape of the picture: a tall picture in a wide window loses most of its height when it is
+    // cropped to fill, and that reads as the background being broken rather than as a choice.
+    bool fillWindow = true;
+    if (mode == QLatin1String("cover"))
+        fillWindow = true;
+    else if (mode == QLatin1String("fit"))
+        fillWindow = false;
+    else if (height() > 0 && image.height() > 0) {
+        const double imageAspect = static_cast<double>(image.width()) / image.height();
+        const double windowAspect = static_cast<double>(width()) / height();
+        const double difference = std::abs(imageAspect - windowAspect) / std::max(imageAspect, windowAspect);
+        fillWindow = difference < 0.18;
+    }
 
     const auto target = size() * devicePixelRatioF();
     const auto scaled = image.scaled(target, fillWindow ? Qt::KeepAspectRatioByExpanding : Qt::KeepAspectRatio,
