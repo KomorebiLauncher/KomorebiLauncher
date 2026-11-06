@@ -267,7 +267,7 @@ auto parseHmcl(const QByteArray& modpackJson, const QByteArray& packJson, PackDe
         QStringList coordinates;
         const auto libraries = pack.value(QLatin1String("libraries"));
         if (libraries.isArray()) {
-            for (const auto& value : libraries) {
+            for (const auto& value : libraries.toArray()) {
                 const auto name = value.toObject().value(QLatin1String("name")).toString();
                 if (!name.isEmpty())
                     coordinates.append(name);

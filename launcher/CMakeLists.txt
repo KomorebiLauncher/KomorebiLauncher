@@ -670,6 +670,8 @@ set(PRISMUPDATER_SOURCES
     net/FileSink.h
     net/HttpMetaCache.cpp
     net/HttpMetaCache.h
+    net/AdoptiumMirror.cpp
+    net/AdoptiumMirror.h
     net/MirrorPolicy.cpp
     net/MirrorPolicy.h
     net/Logging.h
