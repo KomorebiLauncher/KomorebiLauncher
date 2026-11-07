@@ -8,7 +8,16 @@
 #include "translations/TranslationsModel.h"
 
 #include <BuildConfig.h>
+#include "settings/SettingsObject.h"
+
 #include <QAbstractButton>
+#include <QDir>
+#include <QFileInfo>
+#include <QImage>
+#include <QPainter>
+
+#include <algorithm>
+#include <cmath>
 
 SetupWizard::SetupWizard(QWidget* parent) : QWizard(parent)
 {
@@ -77,3 +86,51 @@ void SetupWizard::changeEvent(QEvent* event)
 }
 
 SetupWizard::~SetupWizard() {}
+
+void SetupWizard::paintEvent(QPaintEvent* event)
+{
+    QWizard::paintEvent(event);
+
+    // Same rule as the main window: an explicit picture first, then the one the theme ships.
+    auto path = APPLICATION->settings()->get("MainWindowBackground").toString();
+    if (path.isEmpty()) {
+        const auto theme = APPLICATION->settings()->get("ApplicationTheme").toString();
+        if (!theme.isEmpty()) {
+            const auto candidate = QDir(APPLICATION->dataRoot()).filePath(QStringLiteral("themes/%1/resources/background.png").arg(theme));
+            if (QFileInfo::exists(candidate))
+                path = QDir::fromNativeSeparators(candidate);
+        }
+    }
+    if (path.isEmpty())
+        return;
+
+    const QImage image(path);
+    if (image.isNull())
+        return;
+
+    const auto mode = APPLICATION->settings()->get("MainWindowBackgroundMode").toString().toLower();
+    bool fill = true;
+    if (mode == QLatin1String("fit"))
+        fill = false;
+    else if (mode != QLatin1String("cover") && height() > 0 && image.height() > 0) {
+        const double imageAspect = static_cast<double>(image.width()) / image.height();
+        const double windowAspect = static_cast<double>(width()) / height();
+        fill = std::abs(imageAspect - windowAspect) / std::max(imageAspect, windowAspect) < 0.18;
+    }
+
+    const auto target = size() * devicePixelRatioF();
+    const auto scaled = image.scaled(target, fill ? Qt::KeepAspectRatioByExpanding : Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
+    // Wizard pages fill their own background by default, which would hide the picture.
+    if (auto* page = currentPage()) {
+        page->setAutoFillBackground(false);
+        page->setAttribute(Qt::WA_NoSystemBackground, true);
+    }
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    painter.fillRect(rect(), QColor(245, 239, 227));
+    painter.drawImage(QPointF((width() - scaled.width() / devicePixelRatioF()) / 2.0,
+                              (height() - scaled.height() / devicePixelRatioF()) / 2.0),
+                      scaled);
+}

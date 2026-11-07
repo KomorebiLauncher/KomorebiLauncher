@@ -31,6 +31,9 @@ class SetupWizard : public QWizard {
     virtual ~SetupWizard();
 
     void changeEvent(QEvent* event) override;
+
+    /** Paints the launcher background behind the wizard pages, which are opaque by default. */
+    void paintEvent(QPaintEvent* event) override;
     BaseWizardPage* getBasePage(int id);
     BaseWizardPage* getCurrentBasePage();
 
