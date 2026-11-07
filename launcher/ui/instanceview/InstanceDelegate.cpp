@@ -37,6 +37,7 @@
 #include <QApplication>
 #include <QDebug>
 #include <QPainter>
+#include <QPainterPath>
 #include <QTextLayout>
 #include <QTextOption>
 #include <QtMath>
@@ -71,13 +72,35 @@ ListViewDelegate::ListViewDelegate(QObject* parent) : QStyledItemDelegate(parent
 
 void drawSelectionRect(QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect)
 {
-    if ((option.state & QStyle::State_Selected))
-        painter->fillRect(rect, option.palette.brush(QPalette::Highlight));
-    else {
-        QColor backgroundColor = option.palette.color(QPalette::Window);
-        backgroundColor.setAlpha(160);
-        painter->fillRect(rect, QBrush(backgroundColor));
+    // Each instance is a card rather than a row: a translucent plate with a soft outline, and the
+    // selected one gets a warm wash plus a bar on its left edge. Drawn in the item delegate because
+    // the plate has to follow the row's own size, which a stylesheet cannot express.
+    const bool selected = option.state & QStyle::State_Selected;
+    const bool hovered = option.state & QStyle::State_MouseOver;
+
+    QRect card = option.rect.adjusted(3, 3, -3, -3);
+
+    painter->save();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+
+    QColor fill = QColor(252, 250, 245, selected ? 236 : (hovered ? 220 : 200));
+    QColor border = QColor(201, 194, 180, selected ? 150 : 110);
+    if (selected) {
+        fill = QColor(239, 220, 216, 236);
+        border = QColor(139, 36, 58, 150);
     }
+
+    painter->setPen(QPen(border, 1));
+    painter->setBrush(fill);
+    painter->drawRoundedRect(card, 9, 9);
+
+    if (selected) {
+        QPainterPath bar;
+        bar.addRoundedRect(QRectF(card.left() + 1, card.top() + 12, 3, card.height() - 24), 1.5, 1.5);
+        painter->fillPath(bar, QColor(139, 36, 58));
+    }
+
+    painter->restore();
 }
 
 void drawBadges(QPainter* painter, const QStyleOptionViewItem& option, BaseInstance* instance, QIcon::Mode mode, QIcon::State state)
@@ -174,11 +197,9 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
     QPalette::ColorGroup cg = opt.state & QStyle::State_Enabled ? QPalette::Normal : QPalette::Disabled;
     if (cg == QPalette::Normal && !(opt.state & QStyle::State_Active))
         cg = QPalette::Inactive;
-    if (opt.state & QStyle::State_Selected) {
-        painter->setPen(opt.palette.color(cg, QPalette::HighlightedText));
-    } else {
-        painter->setPen(opt.palette.color(cg, QPalette::Text));
-    }
+    // The card carries a light plate, so the text stays dark in both states -- a white label on a
+    // pale selected card would be unreadable.
+    painter->setPen(opt.palette.color(cg, QPalette::Text));
 
     // draw the text
     QTextOption textOption;
@@ -222,7 +243,7 @@ QSize ListViewDelegate::sizeHint(const QStyleOptionViewItem& option, const QMode
 
     QStyle* style = opt.widget ? opt.widget->style() : QApplication::style();
     const int textMargin = style->pixelMetric(QStyle::PM_FocusFrameHMargin, &option, opt.widget) + 1;
-    int height = 48 + textMargin * 2 + 5;  // TODO: turn constants into variables
+    int height = 48 + textMargin * 2 + 18;  // extra room for the card padding
     QSize szz = viewItemTextSize(&opt);
     height += szz.height();
     // FIXME: maybe the icon items could scale and keep proportions?

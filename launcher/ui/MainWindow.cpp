@@ -326,6 +326,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         auto delegate = new ListViewDelegate(this);
         view->setItemDelegate(delegate);
         view->setFrameShape(QFrame::NoFrame);
+        // Gaps between the cards, and hover needs the mouse position.
+        view->setSpacing(6);
+        view->setMouseTracking(true);
         // do not show ugly blue border on the mac
         view->setAttribute(Qt::WA_MacShowFocusRect, false);
         connect(delegate, &ListViewDelegate::textChanged, this, [this](QString before, QString after) {
