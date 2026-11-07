@@ -511,4 +511,44 @@ QMenuBar {
 QMenuBar::item:selected {
     background-color: #EFDCD8;
     color: #242E4C;
+}/* ============================================================
+ * 工具栏按钮
+ *
+ * 主窗口给子控件关掉了系统背景，按钮的悬停高亮一旦画上就擦不掉。
+ * 这里明确写出各状态，让样式系统自己负责重绘。
+ * ============================================================ */
+
+QToolBar {
+    background: transparent;
+    border: none;
+    spacing: 4px;
+}
+
+QToolBar QToolButton {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    padding: 4px 8px;
+    color: #242E4C;
+}
+
+QToolBar QToolButton:hover {
+    background-color: rgba(139, 36, 58, 0.16);
+    border-color: rgba(139, 36, 58, 0.22);
+}
+
+QToolBar QToolButton:pressed,
+QToolBar QToolButton:checked {
+    background-color: rgba(139, 36, 58, 0.26);
+    border-color: rgba(139, 36, 58, 0.32);
+}
+
+QToolBar QToolButton:disabled {
+    color: #A9A296;
+}
+
+QToolBar::separator {
+    background-color: rgba(36, 46, 76, 0.18);
+    width: 1px;
+    margin: 4px 6px;
 }
