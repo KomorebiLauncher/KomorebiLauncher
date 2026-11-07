@@ -46,6 +46,7 @@
 #include <QGraphicsDropShadowEffect>
 #include <QLabel>
 #include <QMenu>
+#include <QDebug>
 #include <QPainter>
 #include <QPalette>
 
@@ -175,6 +176,17 @@ void ITheme::apply(bool)
     const auto textColor = APPLICATION->settings()->get("ThemeTextColor").toString();
     if (!textColor.isEmpty())
         sheet += QStringLiteral("\n* { color: %1; }\n").arg(textColor);
+
+    // A dialog is a top-level window: a rule that leaves it transparent has no desktop to show
+    // through, and the window comes out black. Appended last so it wins over the theme's own
+    // dialog rule wherever in that file it sits, and derived from the palette so it matches the
+    // theme that is actually in use.
+    const auto paper = colorScheme().color(QPalette::Window);
+    sheet += QStringLiteral("\nQDialog { background-color: %1; }\n").arg(paper.name());
+
+    qDebug() << "[theme] stylesheet" << sheet.size() << "bytes; dialog rule present:"
+             << sheet.contains(QLatin1String("QDialog { background-color"))
+             << "; window colour:" << paper.name();
 
     APPLICATION->setStyleSheet(sheet);
     QDir::setSearchPaths("theme", searchPaths());
