@@ -771,3 +771,28 @@ QDialog QComboBox QListView {
     color: @ink;
     border: 1px solid rgba(@inkRgb, 0.30);
 }
+
+/* ============================================================
+ * 控件 Kit（KButton / KField / KCombo / KCard）
+ *
+ * 这几个控件自己画底板、边框和箭头；样式表只负责把平台默认外观让开，
+ * 否则会出现"自绘 + 平台样式"两层叠在一起。用两段选择器压过上面的 QDialog/QMainWindow 规则。
+ * ============================================================ */
+
+QDialog KButton, QMainWindow KButton,
+QDialog KField, QMainWindow KField,
+QDialog KCombo, QMainWindow KCombo,
+QDialog KCard, QMainWindow KCard {
+    background: transparent;
+    border: none;
+    padding: 0px;
+}
+
+KCombo::drop-down {
+    border: none;
+    width: 0px;
+}
+
+KCombo::down-arrow {
+    image: none;
+}

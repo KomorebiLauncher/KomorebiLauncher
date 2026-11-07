@@ -1204,6 +1204,16 @@ SET(LAUNCHER_SOURCES
     ui/widgets/WideBar.h
     ui/widgets/WideBar.cpp
     ui/widgets/AppearanceWidget.h
+    ui/kit/KButton.cpp
+    ui/kit/KButton.h
+    ui/kit/KCard.cpp
+    ui/kit/KCard.h
+    ui/kit/KCombo.cpp
+    ui/kit/KCombo.h
+    ui/kit/KField.cpp
+    ui/kit/KField.h
+    ui/kit/KPalette.cpp
+    ui/kit/KPalette.h
     ui/widgets/AppearanceWidget.cpp
     ui/widgets/MinecraftSettingsWidget.h
     ui/widgets/MinecraftSettingsWidget.cpp

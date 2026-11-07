@@ -37,6 +37,9 @@
 #include "AppearanceWidget.h"
 #include "ui_AppearanceWidget.h"
 
+#include "ui/kit/KCard.h"
+#include "ui/kit/KCombo.h"
+
 #include "Application.h"
 
 #include <QApplication>
@@ -157,7 +160,7 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
         auto* row = new QHBoxLayout(rowWidget);
         row->setContentsMargins(0, 0, 0, 0);
         auto* label = new QLabel(tr("Window layout"), rowWidget);
-        auto* combo = new QComboBox(rowWidget);
+        auto* combo = new KCombo(rowWidget);
         combo->setObjectName("layoutComboBox");
         combo->addItem(tr("Sidebar"), QStringLiteral("sidebar"));
         combo->addItem(tr("Top action bar"), QStringLiteral("topnav"));
