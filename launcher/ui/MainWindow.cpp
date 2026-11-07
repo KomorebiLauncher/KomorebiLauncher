@@ -222,7 +222,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         nameLabel->setTextFormat(Qt::PlainText);
         infoLayout->addWidget(nameLabel);
 
-        instanceInfoWidget = ui->instanceToolBar->insertWidgetBefore(ui->actionRenameInstance, infoWidget);
+        instanceInfoWidget = ui->instanceToolBar->insertWidgetBefore(ui->actionLaunchInstance, infoWidget);
         Q_ASSERT(instanceInfoWidget != nullptr);
     }
 

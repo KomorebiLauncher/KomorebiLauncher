@@ -111,8 +111,6 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
-   <addaction name="actionRenameInstance"/>
-   <addaction name="separator"/>
    <addaction name="actionLaunchInstance"/>
    <addaction name="actionKillInstance"/>
    <addaction name="separator"/>
