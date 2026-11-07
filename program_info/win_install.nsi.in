@@ -18,8 +18,8 @@ OutFile "../@Launcher_CommonName@-Setup.exe"
 ; a tall panel on the welcome and finish pages, a strip on the header of the others.
 !define MUI_HEADERIMAGE
 !define MUI_HEADERIMAGE_RIGHT
-!define MUI_HEADERIMAGE_BITMAP "../../program_info/installer/header.bmp"
-!define MUI_WELCOMEFINISHPAGE_BITMAP "../../program_info/installer/welcome.bmp"
+!define MUI_HEADERIMAGE_BITMAP "${__FILEDIR__}\..\..\program_info\installer\header.bmp"
+!define MUI_WELCOMEFINISHPAGE_BITMAP "${__FILEDIR__}\..\..\program_info\installer\welcome.bmp"
 !define MUI_WELCOMEFINISHPAGE_BITMAP_NOSTRETCH
 
 !define UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\@Launcher_CommonName@"
