@@ -926,7 +926,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("MainWindowBackground", "");
         // "cover" fills the window and crops the overflow, which is what a background is expected to
         // do; "fit" shows the whole picture and leaves a band of colour around it.
-        m_settings->registerSetting("MainWindowBackgroundMode", "cover");
+        m_settings->registerSetting("MainWindowBackgroundMode", "auto");
 
         // Empty means "whatever the theme says". A stylesheet cannot take the colour from a
         // setting, so the value is applied by code when the theme is applied.
