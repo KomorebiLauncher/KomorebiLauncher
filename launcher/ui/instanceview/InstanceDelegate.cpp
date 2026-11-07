@@ -57,6 +57,7 @@ constexpr int cardPadTop = 10;    // plate's top edge to the icon
 constexpr int iconSize = 48;
 constexpr int iconTextGap = 6;    // icon to the label
 constexpr int cardPadBottom = 12;
+constexpr int compactWidth = 120;  // narrower than this and the label is dropped
 }  // namespace
 
 // Origin: Qt
@@ -203,40 +204,65 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
 
     // draw the icon
     opt.icon.paint(painter, iconbox, Qt::AlignCenter, mode, state);
-    // set the text colors
-    QPalette::ColorGroup cg = opt.state & QStyle::State_Enabled ? QPalette::Normal : QPalette::Disabled;
-    if (cg == QPalette::Normal && !(opt.state & QStyle::State_Active))
-        cg = QPalette::Inactive;
-    // The card carries a light plate, so the text stays dark in both states -- a white label on a
-    // pale selected card would be unreadable.
-    painter->setPen(opt.palette.color(cg, QPalette::Text));
 
-    // draw the text
-    QTextOption textOption;
-    textOption.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-    textOption.setTextDirection(opt.direction);
-    textOption.setAlignment(QStyle::visualAlignment(opt.direction, opt.displayAlignment));
-    QTextLayout textLayout;
-    textLayout.setTextOption(textOption);
-    textLayout.setFont(opt.font);
-    textLayout.setText(opt.text);
+    // In a rail there is no room beside the icon for a label, and a squeezed one is worse than
+    // none: the card becomes the icon and the name lives in the tooltip.
+    const bool compact = opt.rect.width() < compactWidth;
 
-    qreal width, height;
-    viewItemTextLayout(textLayout, textRect.width(), height, width);
+    if (!compact) {
+        // set the text colors
+        QPalette::ColorGroup cg = opt.state & QStyle::State_Enabled ? QPalette::Normal : QPalette::Disabled;
+        if (cg == QPalette::Normal && !(opt.state & QStyle::State_Active))
+            cg = QPalette::Inactive;
+        // The card carries a light plate, so the text stays dark in both states -- a white label on
+        // a pale selected card would be unreadable.
+        painter->setPen(opt.palette.color(cg, QPalette::Text));
 
-    const int lineCount = textLayout.lineCount();
+        // draw the text
+        QTextOption textOption;
+        textOption.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+        textOption.setTextDirection(opt.direction);
+        textOption.setAlignment(QStyle::visualAlignment(opt.direction, opt.displayAlignment));
+        QTextLayout textLayout;
+        textLayout.setTextOption(textOption);
+        textLayout.setFont(opt.font);
+        textLayout.setText(opt.text);
 
-    const QRect layoutRect = QStyle::alignedRect(opt.direction, opt.displayAlignment, QSize(textRect.width(), int(height)), textRect);
-    const QPointF position = layoutRect.topLeft();
-    for (int i = 0; i < lineCount; ++i) {
-        const QTextLine line = textLayout.lineAt(i);
-        line.draw(painter, position);
+        qreal width, height;
+        viewItemTextLayout(textLayout, textRect.width(), height, width);
+
+        const int lineCount = textLayout.lineCount();
+
+        const QRect layoutRect =
+            QStyle::alignedRect(opt.direction, opt.displayAlignment, QSize(textRect.width(), int(height)), textRect);
+        const QPointF position = layoutRect.topLeft();
+        for (int i = 0; i < lineCount; ++i) {
+            const QTextLine line = textLayout.lineAt(i);
+            line.draw(painter, position);
+        }
     }
 
     // FIXME: this really has no business of being here. Make generic.
     auto instance = (BaseInstance*)index.data(InstanceList::InstancePointerRole).value<void*>();
     if (instance) {
-        drawBadges(painter, opt, instance, mode, state);
+        if (!compact) {
+            drawBadges(painter, opt, instance, mode, state);
+        } else {
+            // A 24px badge would sit on top of the icon in a card this narrow, so the state is a
+            // dot in the corner instead.
+            QColor dot;
+            if (instance->isRunning())
+                dot = QColor(0x3F, 0xA0, 0x62);
+            else if (instance->hasCrashed() || instance->hasVersionBroken())
+                dot = QColor(0xB0, 0x3A, 0x3A);
+
+            if (dot.isValid()) {
+                const QRect card = opt.rect.adjusted(cardInset, cardInset, -cardInset, -cardInset);
+                painter->setPen(Qt::NoPen);
+                painter->setBrush(dot);
+                painter->drawEllipse(QPointF(card.right() - 7, card.bottom() - 7), 4, 4);
+            }
+        }
     }
 
     painter->restore();
@@ -251,15 +277,19 @@ QSize ListViewDelegate::sizeHint(const QStyleOptionViewItem& option, const QMode
     opt.textElideMode = Qt::ElideRight;
     opt.displayAlignment = Qt::AlignTop | Qt::AlignHCenter;
 
+    // The width follows the list, not a constant: a card that is 100px wide cannot show a name and
+    // was what made the list look like a column of slivers. The floor is low enough for the rail,
+    // where the card is meant to be a bare icon.
+    const int available = option.widget ? option.widget->width() : 240;
+    const int width = qMax(48, available - 16);
+
     // The plate covers the item, and everything inside it is placed from the same offsets the
     // painter uses, so the height stays in step with what is actually drawn.
-    int height = 2 * cardInset + cardPadTop + iconSize + iconTextGap + cardPadBottom;
-    QSize szz = viewItemTextSize(&opt);
-    height += szz.height();
-    // The width follows the list, not a constant: a card that is 100px wide cannot show a name and
-    // was what made the list look like a column of slivers.
-    const int available = option.widget ? option.widget->width() : 240;
-    const int width = qMax(180, available - 16);
+    int height = 2 * cardInset + cardPadTop + iconSize + cardPadBottom;
+    if (width >= compactWidth) {
+        height += iconTextGap;
+        height += viewItemTextSize(&opt).height();
+    }
     return QSize(width, height);
 }
 

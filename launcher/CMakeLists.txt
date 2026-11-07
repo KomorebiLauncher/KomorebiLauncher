@@ -862,7 +862,9 @@ SET(LAUNCHER_SOURCES
     ui/MainWindow.h
     ui/MainWindow.cpp
     ui/window/MainContentPanel.cpp
+    ui/window/RailShell.cpp
     ui/window/SidebarShell.cpp
+    ui/window/TopNavShell.cpp
     ui/InstanceWindow.h
     ui/InstanceWindow.cpp
     ui/ViewLogWindow.h

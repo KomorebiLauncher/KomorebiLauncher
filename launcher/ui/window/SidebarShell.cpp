@@ -9,37 +9,22 @@
 
 #include "SidebarShell.h"
 
-#include <QHBoxLayout>
-#include <QWidget>
+#include "ShellHelpers.h"
 
-#include "MainContentPanel.h"
+namespace {
 
-#include "ui/instanceview/InstanceView.h"
+/** The list in a column, the selected instance taking the rest, the actions on the right. */
+void place(const WindowParts& parts, int listWidth)
+{
+    WindowShell::adoptColumns(parts, listWidth);
+
+    WindowShell::placeToolBar(parts.window, parts.mainToolBar, Qt::TopToolBarArea);
+    WindowShell::placeToolBar(parts.window, parts.instanceToolBar, Qt::RightToolBarArea);
+}
+
+}  // namespace
 
 void SidebarShell::adopt(const WindowParts& parts)
 {
-    if (!parts.centralWidget || !parts.instanceView)
-        return;
-
-    // Ownership stays with the main window: the shell only decides where the widgets sit, which is
-    // what makes a layout switch a re-parent rather than a rebuild.
-    if (auto* layout = qobject_cast<QHBoxLayout*>(parts.centralWidget->layout())) {
-        if (parts.instanceView->parentWidget() != parts.centralWidget)
-            parts.instanceView->setParent(parts.centralWidget);
-
-        // The list keeps a fixed column so the area beside it belongs to the selected instance.
-        // Without it the cards stretched across the whole window and there was nowhere to put
-        // anything next to them.
-        parts.instanceView->setFixedWidth(SidebarShell::sidebarWidth);
-
-        if (layout->indexOf(parts.instanceView) < 0)
-            layout->addWidget(parts.instanceView);
-
-        if (parts.contentPanel) {
-            if (parts.contentPanel->parentWidget() != parts.centralWidget)
-                parts.contentPanel->setParent(parts.centralWidget);
-            if (layout->indexOf(parts.contentPanel) < 0)
-                layout->addWidget(parts.contentPanel, 1);
-        }
-    }
+    place(parts, sidebarWidth);
 }

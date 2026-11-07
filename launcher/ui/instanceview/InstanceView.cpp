@@ -268,6 +268,17 @@ int InstanceView::contentWidth() const
 
 int InstanceView::itemWidth() const
 {
+    // The delegate decides how wide a card is, and it follows the column, so the row layout has to
+    // ask it. The fixed 100 left over from the icon grid would otherwise put two full-width cards on
+    // the same row, one painted over the other.
+    auto* currentModel = model();
+    if (currentModel && currentModel->rowCount() > 0) {
+        QStyleOptionViewItem option;
+        initViewItemOption(&option);
+        const int width = itemDelegate()->sizeHint(option, currentModel->index(0, 0)).width();
+        if (width > 0)
+            return width;
+    }
     return m_itemWidth;
 }
 
@@ -578,6 +589,10 @@ void InstanceView::paintEvent([[maybe_unused]] QPaintEvent* event)
 
 void InstanceView::resizeEvent([[maybe_unused]] QResizeEvent* event)
 {
+    // The cards follow the column, so a resize changes their width even when the number of items
+    // per row stays the same -- and the cached rectangles would keep the old one.
+    m_geometryCache.clear();
+
     int newItemsPerRow = calculateItemsPerRow();
     if (newItemsPerRow != m_currentItemsPerRow) {
         m_currentCursorColumn = -1;
@@ -585,6 +600,7 @@ void InstanceView::resizeEvent([[maybe_unused]] QResizeEvent* event)
         updateGeometries();
     } else {
         updateScrollbar();
+        viewport()->update();
     }
 }
 

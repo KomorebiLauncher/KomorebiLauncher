@@ -115,9 +115,13 @@
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
 #include "ui/window/MainContentPanel.h"
+#include "ui/window/RailShell.h"
 #include "ui/window/SidebarShell.h"
+#include "ui/window/TopNavShell.h"
 #include "ui/themes/ITheme.h"
 #include "ui/themes/ThemeManager.h"
+#include "settings/Setting.h"
+#include "settings/SettingsObject.h"
 
 #include "minecraft/PackProfile.h"
 #include "minecraft/VersionFile.h"
@@ -365,8 +369,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
-        // Placement is the shell's job; the window only owns the widgets.
-        m_shell = std::make_unique<SidebarShell>();
+        // Placement is the shell's job; the window only owns the widgets. The shell is chosen once
+        // every part exists, further down.
         m_contentPanel = new MainContentPanel(ui->centralWidget);
         m_contentPanel->setNewsWidget(newsLabel);
         m_contentPanel->setMoreNewsAction(ui->actionMoreNews);
@@ -477,6 +481,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // Registered at the end of the constructor, once every widget exists. The layout shells read
     // from here; nothing else should create these widgets a second time.
+    m_windowParts.window = this;
     m_windowParts.centralWidget = ui->centralWidget;
     m_windowParts.instanceView = view;
     m_windowParts.instanceToolBar = ui->instanceToolBar;
@@ -486,7 +491,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     m_windowParts.contentPanel = m_contentPanel;
     m_windowParts.newsWidget = newsLabel;
 
-    m_shell->adopt(m_windowParts);
+    applyWindowLayout();
+
+    // The layout is a setting, so it can be picked while the window is open; the appearance page
+    // writes it and this is what makes the change show up without a restart.
+    connect(APPLICATION->settings(), &SettingsObject::SettingChanged, this, [this](const Setting& setting, QVariant) {
+        if (setting.id() == QLatin1String("MainWindowLayout"))
+            applyWindowLayout();
+    });
 }
 
 // macOS always has a native menu bar, so these fixes are not applicable
@@ -1666,6 +1678,20 @@ void MainWindow::closeEvent(QCloseEvent* event)
     emit isClosing();
 }
 
+void MainWindow::applyWindowLayout()
+{
+    const auto layout = APPLICATION->settings()->get("MainWindowLayout").toString();
+
+    if (layout == QLatin1String("rail"))
+        m_shell = std::make_unique<RailShell>();
+    else if (layout == QLatin1String("topnav"))
+        m_shell = std::make_unique<TopNavShell>();
+    else
+        m_shell = std::make_unique<SidebarShell>();
+
+    m_shell->adopt(m_windowParts);
+}
+
 void MainWindow::showEvent(QShowEvent* event)
 {
     QMainWindow::showEvent(event);
@@ -1675,6 +1701,10 @@ void MainWindow::showEvent(QShowEvent* event)
     // panel -- so it is put away again here rather than in the constructor, where the state
     // restore would simply undo it.
     ui->newsToolBar->hide();
+
+    // The same restore also puts the toolbars back in the areas they had last time, which would
+    // undo the placement the chosen layout asks for; it is only known after that has happened.
+    applyWindowLayout();
 }
 void MainWindow::changeEvent(QEvent* event)
 {

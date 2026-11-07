@@ -9,13 +9,13 @@
 
 #pragma once
 
+class QMainWindow;
 class QStatusBar;
 class QToolBar;
 class QWidget;
 
 class InstanceView;
 class MainContentPanel;
-class WideBar;
 
 /**
  * The long-lived widgets of the main window, in one place.
@@ -24,9 +24,12 @@ class WideBar;
  * state -- selection, scroll position, models -- intact when the player switches layouts.
  */
 struct WindowParts {
+    /** The window itself, needed to place toolbars. */
+    QMainWindow* window = nullptr;
     QWidget* centralWidget = nullptr;
     InstanceView* instanceView = nullptr;
-    WideBar* instanceToolBar = nullptr;
+    /** The bar of instance actions: a WideBar (a QToolBar that lays its buttons out as rows). */
+    QToolBar* instanceToolBar = nullptr;
     QToolBar* mainToolBar = nullptr;
     QToolBar* newsToolBar = nullptr;
     MainContentPanel* contentPanel = nullptr;

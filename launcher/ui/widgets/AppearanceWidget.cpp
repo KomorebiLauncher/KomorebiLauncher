@@ -40,6 +40,7 @@
 #include "Application.h"
 
 #include <QApplication>
+#include <QComboBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QSlider>
@@ -116,6 +117,29 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
             APPLICATION->settings()->set("MainWindowBackgroundDim", v / 100.0);
             for (auto* widget : QApplication::topLevelWidgets())
                 widget->update();
+        });
+    }
+
+    // Window layout. Only the arrangement of the list, the content and the actions; every entry
+    // shows the same widgets. The main window watches this setting, so a change applies at once.
+    {
+        auto* row = new QHBoxLayout();
+        auto* label = new QLabel(tr("Window layout"), this);
+        auto* combo = new QComboBox(this);
+        combo->setObjectName("layoutComboBox");
+        combo->addItem(tr("Sidebar"), QStringLiteral("sidebar"));
+        combo->addItem(tr("Top action bar"), QStringLiteral("topnav"));
+        combo->addItem(tr("Icon rail"), QStringLiteral("rail"));
+
+        const int index = combo->findData(APPLICATION->settings()->get("MainWindowLayout").toString());
+        combo->setCurrentIndex(index < 0 ? 0 : index);
+
+        row->addWidget(label);
+        row->addWidget(combo, 1);
+        m_ui->settingsBox->layout()->addItem(row);
+
+        connect(combo, &QComboBox::currentIndexChanged, this, [combo](int) {
+            APPLICATION->settings()->set("MainWindowLayout", combo->currentData().toString());
         });
     }
 }

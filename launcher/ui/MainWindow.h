@@ -247,6 +247,9 @@ class MainWindow : public QMainWindow {
     void runModalTask(Task* task);
     void instanceFromInstanceTask(InstanceTask* task);
 
+    /** Builds the shell the layout setting names and lets it place the widgets. */
+    void applyWindowLayout();
+
    private:
     Ui::MainWindow* ui;
     // these are managed by Qt's memory management model!
