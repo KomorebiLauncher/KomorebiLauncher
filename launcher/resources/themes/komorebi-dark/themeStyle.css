@@ -534,6 +534,42 @@ QToolBar {
     spacing: 4px;
 }
 
+/* 顶部主工具栏：一块很淡的板 + 一条细线，让它在壁纸上读起来是"栏"而不是一排浮字 */
+#mainToolBar {
+    background: rgba(20, 25, 34, 0.66);
+    border-bottom: 1px solid rgba(239, 231, 214, 0.10);
+    padding: 4px 10px;
+    spacing: 6px;
+}
+
+#mainToolBar QToolButton {
+    padding: 6px 12px;
+    border-radius: 6px;
+    color: #EFE7D6;
+    font-size: 13px;
+}
+
+#mainToolBar::separator {
+    width: 1px;
+    background: rgba(239, 231, 214, 0.16);
+    margin: 8px 10px;
+}
+
+/* 主窗口里的普通按钮（实例窗口底部的 帮助/启动/重启/结束/关闭）：和设置页同一套描边 */
+QMainWindow QPushButton,
+QMainWindow QToolButton {
+    background: transparent;
+    border: 1px solid rgba(239, 231, 214, 0.24);
+    border-radius: 6px;
+    color: #EFE7D6;
+    padding: 5px 14px;
+}
+
+QMainWindow QPushButton:hover,
+QMainWindow QToolButton:hover {
+    background-color: rgba(139, 36, 58, 0.12);
+}
+
 QToolBar QToolButton {
     background: transparent;
     border: 1px solid transparent;
