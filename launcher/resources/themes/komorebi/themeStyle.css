@@ -332,7 +332,7 @@ QComboBox QAbstractItemView::item:selected {
 
 QMenu {
     background-color: #FAF7F0;
-    border: 1px solid rgba(36, 46, 76, 0.20);
+    border: 1px solid #C9C2B4;
     border-radius: 6px;
     padding: 5px;
     color: #242E4C;
