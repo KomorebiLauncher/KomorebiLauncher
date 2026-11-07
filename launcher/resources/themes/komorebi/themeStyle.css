@@ -736,3 +736,38 @@ QSlider::handle:horizontal {
 QSlider::handle:horizontal:disabled {
     background: rgba(120, 120, 110, 0.5);
 }
+
+/* ============================================================
+ * 弹层：提示、菜单、下拉列表
+ *
+ * 它们挂在窗口下面，所以同样命中了上面 QMainWindow QWidget { background: transparent }
+ * 的透明规则 —— 那比单个类型选择器更具体，弹层被压成透明后露出窗口的黑色表面。
+ * 这里用同样具体的选择器补回实底；放在文件末尾，同优先级时后写的胜出。
+ * ============================================================ */
+
+QMainWindow QToolTip,
+QDialog QToolTip {
+    background-color: #FAF7F0;
+    color: #242E4C;
+    border: 1px solid rgba(36, 46, 76, 0.30);
+    border-radius: 5px;
+    padding: 4px 8px;
+}
+
+QMainWindow QMenu,
+QDialog QMenu {
+    background-color: #FAF7F0;
+    border: 1px solid #C9C2B4;
+    border-radius: 6px;
+    padding: 5px;
+    color: #242E4C;
+}
+
+QMainWindow QComboBox QAbstractItemView,
+QDialog QComboBox QAbstractItemView,
+QMainWindow QComboBox QListView,
+QDialog QComboBox QListView {
+    background-color: #F3ECDE;
+    color: #242E4C;
+    border: 1px solid rgba(36, 46, 76, 0.30);
+}
