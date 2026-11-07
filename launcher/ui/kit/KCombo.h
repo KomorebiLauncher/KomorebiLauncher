@@ -20,4 +20,11 @@ class KCombo : public QComboBox {
 
    protected:
     void paintEvent(QPaintEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+
+   private:
+    /// True only when the focus arrived from the keyboard: the first widget of a page takes focus
+    /// when the window opens, and a ring there reads as an error state.
+    bool m_keyboardFocus = false;
 };

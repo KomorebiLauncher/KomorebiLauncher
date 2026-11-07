@@ -1217,6 +1217,8 @@ SET(LAUNCHER_SOURCES
     ui/kit/KCombo.h
     ui/kit/KField.cpp
     ui/kit/KField.h
+    ui/kit/KSlider.cpp
+    ui/kit/KSlider.h
     ui/kit/KPalette.cpp
     ui/kit/KPalette.h
     ui/widgets/AppearanceWidget.cpp

@@ -39,6 +39,7 @@
 
 #include "ui/kit/KCard.h"
 #include "ui/kit/KCombo.h"
+#include "ui/kit/KSlider.h"
 
 #include "Application.h"
 
@@ -134,7 +135,7 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
         auto* row = new QHBoxLayout(rowWidget);
         row->setContentsMargins(0, 0, 0, 0);
         auto* label = new QLabel(tr("Background dimming"), rowWidget);
-        auto* slider = new QSlider(Qt::Horizontal, rowWidget);
+        auto* slider = new KSlider(Qt::Horizontal, rowWidget);
         slider->setObjectName("dimSlider");
         slider->setRange(0, 100);
         slider->setValue(qRound(APPLICATION->settings()->get("MainWindowBackgroundDim").toDouble() * 100));

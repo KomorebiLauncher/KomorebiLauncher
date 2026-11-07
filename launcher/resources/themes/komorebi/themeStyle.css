@@ -796,3 +796,8 @@ KCombo::drop-down {
 KCombo::down-arrow {
     image: none;
 }
+
+QDialog KSlider, QMainWindow KSlider {
+    background: transparent;
+    border: none;
+}
