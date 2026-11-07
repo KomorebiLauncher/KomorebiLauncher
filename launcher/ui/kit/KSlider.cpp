@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "KSlider.h"
 
+#include <QApplication>
 #include <QPainter>
 #include <QPainterPath>
 
@@ -22,7 +23,7 @@ void KSlider::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event);
 
-    const Komorebi::KColors colors = Komorebi::KColors::fromPalette(palette());
+    const Komorebi::KColors colors = Komorebi::KColors::fromPalette(QApplication::palette());
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);

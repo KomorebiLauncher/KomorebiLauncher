@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "KField.h"
 
+#include <QApplication>
 #include <QPainter>
 #include <QPainterPath>
 
@@ -16,7 +17,7 @@ KField::KField(QWidget* parent) : QLineEdit(parent)
 
 void KField::paintEvent(QPaintEvent* event)
 {
-    const Komorebi::KColors colors = Komorebi::KColors::fromPalette(palette());
+    const Komorebi::KColors colors = Komorebi::KColors::fromPalette(QApplication::palette());
 
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);

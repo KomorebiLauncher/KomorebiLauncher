@@ -2,6 +2,7 @@
 #include "KButton.h"
 
 #include <QFontMetrics>
+#include <QApplication>
 #include <QPainter>
 #include <QPainterPath>
 
@@ -47,7 +48,7 @@ void KButton::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event);
 
-    const Komorebi::KColors colors = Komorebi::KColors::fromPalette(palette());
+    const Komorebi::KColors colors = Komorebi::KColors::fromPalette(QApplication::palette());
     const bool enabled = isEnabled();
     const bool down = isDown();
 

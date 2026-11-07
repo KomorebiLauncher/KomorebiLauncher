@@ -801,3 +801,19 @@ QDialog KSlider, QMainWindow KSlider {
     background: transparent;
     border: none;
 }
+
+/* 分组框的标题压着边框线走（默认 subcontrol-origin: border），改成在 margin 里，
+   标题就不会被那根线穿过。 */
+QDialog QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    padding: 0 6px;
+}
+
+PageContainer QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    left: 12px;
+    padding: 0 6px;
+}

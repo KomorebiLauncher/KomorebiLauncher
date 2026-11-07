@@ -3,6 +3,7 @@
 
 #include <QAbstractItemView>
 #include <QFocusEvent>
+#include <QApplication>
 #include <QPainter>
 #include <QPainterPath>
 
@@ -47,7 +48,7 @@ void KCombo::paintEvent(QPaintEvent* event)
 {
     Q_UNUSED(event);
 
-    const Komorebi::KColors colors = Komorebi::KColors::fromPalette(palette());
+    const Komorebi::KColors colors = Komorebi::KColors::fromPalette(QApplication::palette());
     const bool open = view() && view()->isVisible();
 
     QPainter painter(this);
