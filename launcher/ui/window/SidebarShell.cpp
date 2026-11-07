@@ -10,6 +10,8 @@
 #include "SidebarShell.h"
 
 #include <QHBoxLayout>
+#include <QSizePolicy>
+#include <QSpacerItem>
 #include <QWidget>
 
 #include "ui/instanceview/InstanceView.h"
@@ -24,7 +26,17 @@ void SidebarShell::adopt(const WindowParts& parts)
     if (auto* layout = qobject_cast<QHBoxLayout*>(parts.centralWidget->layout())) {
         if (parts.instanceView->parentWidget() != parts.centralWidget)
             parts.instanceView->setParent(parts.centralWidget);
+
+        // The list keeps a fixed column so the area beside it belongs to the selected instance.
+        // Without it the cards stretched across the whole window and there was nowhere to put
+        // anything next to them.
+        parts.instanceView->setFixedWidth(SidebarShell::sidebarWidth);
+
         if (layout->indexOf(parts.instanceView) < 0)
             layout->addWidget(parts.instanceView);
+        if (!m_spacer) {
+            m_spacer = new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Minimum);
+            layout->addItem(m_spacer);
+        }
     }
 }
