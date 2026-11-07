@@ -210,7 +210,7 @@ void showCoreInstanceList(QWidget* parent)
     layout->addWidget(page);
 
     // The page only knows what was wanted; the shell knows what to do about it.
-    const auto find = [page](const QString& id) -> MinecraftInstance* {
+    const auto find = [](const QString& id) -> MinecraftInstance* {
         auto* instances = APPLICATION->instances();
         return instances ? instances->getInstanceById(id) : nullptr;
     };
