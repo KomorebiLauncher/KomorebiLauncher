@@ -239,9 +239,6 @@
    <property name="text">
     <string>More News...</string>
    </property>
-   <property name="toolTip">
-    <string>Open the development blog to read more news about %1.</string>
-   </property>
   </action>
   <action name="actionCAT">
    <property name="checkable">
@@ -252,9 +249,6 @@
    </property>
    <property name="text">
     <string>&amp;Meow</string>
-   </property>
-   <property name="toolTip">
-    <string>It's a fluffy kitty :3</string>
    </property>
   </action>
   <action name="actionToggleStatusBar">
@@ -288,9 +282,6 @@
    <property name="text">
     <string>Add Instanc&amp;e...</string>
    </property>
-   <property name="toolTip">
-    <string>Add a new instance.</string>
-   </property>
   </action>
   <action name="actionCheckUpdate">
    <property name="icon">
@@ -298,9 +289,6 @@
    </property>
    <property name="text">
     <string>&amp;Update...</string>
-   </property>
-   <property name="toolTip">
-    <string>Check for new updates for %1.</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::ApplicationSpecificRole</enum>
@@ -312,9 +300,6 @@
    </property>
    <property name="text">
     <string>Setti&amp;ngs...</string>
-   </property>
-   <property name="toolTip">
-    <string>Change settings.</string>
    </property>
    <property name="menuRole">
     <enum>QAction::MenuRole::PreferencesRole</enum>
@@ -698,9 +683,6 @@
    <property name="text">
     <string>Folders</string>
    </property>
-   <property name="toolTip">
-    <string>Open one of the folders shared between instances.</string>
-   </property>
   </action>
   <action name="actionHelpButton">
    <property name="icon">
@@ -708,9 +690,6 @@
    </property>
    <property name="text">
     <string>Help</string>
-   </property>
-   <property name="toolTip">
-    <string>Get help with %1 or Minecraft.</string>
    </property>
   </action>
   <action name="actionAccountsButton">

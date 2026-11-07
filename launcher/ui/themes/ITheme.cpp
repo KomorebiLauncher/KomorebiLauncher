@@ -111,6 +111,26 @@ class PopupPaletteFilter final : public QObject
         return QObject::eventFilter(object, event);
     }
 };
+/**
+ * Swallows the platform tooltips.
+ *
+ * Every action in this launcher is labelled with text, so a hint box adds little -- and between
+ * the stylesheet's transparent rules and the halo the theme puts on labels, each one came out as a
+ * dark rectangle. Removing them is the honest fix for a hint nobody needs.
+ */
+class NoTooltipFilter final : public QObject
+{
+  public:
+    explicit NoTooltipFilter(QObject* parent) : QObject(parent) {}
+
+  protected:
+    bool eventFilter(QObject* object, QEvent* event) override
+    {
+        if (event->type() == QEvent::ToolTip)
+            return true;
+        return QObject::eventFilter(object, event);
+    }
+};
 class TextOutlineFilter final : public QObject
 {
   public:
@@ -229,6 +249,14 @@ void ITheme::apply(bool)
             outlineFilter = new TextOutlineFilter(APPLICATION);
             APPLICATION->installEventFilter(outlineFilter);
         }
+
+    }
+
+    // Not part of a theme: the hint boxes are turned off for good, whatever the theme.
+    static NoTooltipFilter* noTooltipFilter = nullptr;
+    if (!noTooltipFilter) {
+        noTooltipFilter = new NoTooltipFilter(APPLICATION);
+        APPLICATION->installEventFilter(noTooltipFilter);
     }
 }
 

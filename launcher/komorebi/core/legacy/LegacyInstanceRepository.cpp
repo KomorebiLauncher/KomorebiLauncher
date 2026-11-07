@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-#include "InstanceRepository.h"
+#include "komorebi/core/InstanceRepository.h"
 
 #include <QDebug>
 
