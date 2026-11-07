@@ -59,6 +59,7 @@ class MinecraftInstance;
 class MinecraftLauncher;
 class BaseProfilerFactory;
 class InstanceView;
+class MainContentPanel;
 class KonamiCode;
 class InstanceTask;
 
@@ -250,6 +251,9 @@ class MainWindow : public QMainWindow {
 
     /** The widgets a layout shell arranges; filled once, never replaced. */
     WindowParts m_windowParts;
+
+    /** The area beside the instance list; owned by the window, placed by the shell. */
+    MainContentPanel* m_contentPanel = nullptr;
     InstanceProxyModel* proxymodel = nullptr;
     QToolButton* newsLabel = nullptr;
     QLabel* m_statusLeft = nullptr;

@@ -14,6 +14,7 @@ class QToolBar;
 class QWidget;
 
 class InstanceView;
+class MainContentPanel;
 class WideBar;
 
 /**
@@ -28,5 +29,7 @@ struct WindowParts {
     WideBar* instanceToolBar = nullptr;
     QToolBar* mainToolBar = nullptr;
     QToolBar* newsToolBar = nullptr;
+    MainContentPanel* contentPanel = nullptr;
+    QWidget* newsWidget = nullptr;
     QStatusBar* statusBar = nullptr;
 };

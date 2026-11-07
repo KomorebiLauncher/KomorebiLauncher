@@ -14,6 +14,8 @@
 #include <QSpacerItem>
 #include <QWidget>
 
+#include "MainContentPanel.h"
+
 #include "ui/instanceview/InstanceView.h"
 
 void SidebarShell::adopt(const WindowParts& parts)
@@ -34,9 +36,12 @@ void SidebarShell::adopt(const WindowParts& parts)
 
         if (layout->indexOf(parts.instanceView) < 0)
             layout->addWidget(parts.instanceView);
-        if (!m_spacer) {
-            m_spacer = new QSpacerItem(0, 0, QSizePolicy::Expanding, QSizePolicy::Minimum);
-            layout->addItem(m_spacer);
+
+        if (parts.contentPanel) {
+            if (parts.contentPanel->parentWidget() != parts.centralWidget)
+                parts.contentPanel->setParent(parts.centralWidget);
+            if (layout->indexOf(parts.contentPanel) < 0)
+                layout->addWidget(parts.contentPanel, 1);
         }
     }
 }

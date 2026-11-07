@@ -114,6 +114,7 @@
 #include "ui/instanceview/InstanceDelegate.h"
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
+#include "ui/window/MainContentPanel.h"
 #include "ui/window/SidebarShell.h"
 #include "ui/themes/ITheme.h"
 #include "ui/themes/ThemeManager.h"
@@ -361,8 +362,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
-        // Placement is the shell's job; the window only owns the widget.
+        // Placement is the shell's job; the window only owns the widgets.
         m_shell = std::make_unique<SidebarShell>();
+        m_contentPanel = new MainContentPanel(ui->centralWidget);
+        m_contentPanel->setNewsWidget(newsLabel);
     }
     // The cat background
     {
@@ -474,6 +477,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     m_windowParts.mainToolBar = ui->mainToolBar;
     m_windowParts.newsToolBar = ui->newsToolBar;
     m_windowParts.statusBar = statusBar();
+    m_windowParts.contentPanel = m_contentPanel;
+    m_windowParts.newsWidget = newsLabel;
 
     m_shell->adopt(m_windowParts);
 }
@@ -1731,6 +1736,8 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
 {
     if (!current.isValid()) {
         APPLICATION->settings()->set("SelectedInstance", QString());
+        if (m_contentPanel)
+            m_contentPanel->setInstance(nullptr);
         selectionBad();
         return;
     }
@@ -1748,6 +1755,8 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
         ui->actionKillInstance->setEnabled(m_selectedInstance->isRunning());
         ui->actionExportInstance->setEnabled(m_selectedInstance->canExport());
         updateNameLabel();
+        if (m_contentPanel)
+            m_contentPanel->setInstance(m_selectedInstance);
         nameLabel->setToolTip(m_selectedInstance->name());
         m_statusLeft->setText(m_selectedInstance->getStatusbarDescription());
         updateStatusCenter();
@@ -1761,6 +1770,8 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
         connect(m_selectedInstance, &BaseInstance::profilerChanged, this, &MainWindow::refreshCurrentInstance);
     } else {
         APPLICATION->settings()->set("SelectedInstance", QString());
+        if (m_contentPanel)
+            m_contentPanel->setInstance(nullptr);
         selectionBad();
         return;
     }
