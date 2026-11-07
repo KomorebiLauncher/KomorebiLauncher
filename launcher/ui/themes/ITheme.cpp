@@ -123,7 +123,11 @@ class TextOutlineFilter final : public QObject
             // Only labels that sit inside a window: a tooltip is a QLabel too, and it is a window
             // of its own, so an effect here replaced its styled surface with the halo colour and
             // every tooltip came out as a dark box.
-            if (auto* label = qobject_cast<QLabel*>(object); label && !label->isWindow() && !label->graphicsEffect()) {
+            // Two guards, because a tooltip is a QLabel twice over: it is a window of its own, and
+            // Qt labels it QTipLabel. Either one alone is enough today; both keep the effect away
+            // if Qt changes how the tip is parented.
+            if (auto* label = qobject_cast<QLabel*>(object);
+                label && !label->isWindow() && !label->inherits("QTipLabel") && !label->graphicsEffect()) {
                 auto* halo = new QGraphicsDropShadowEffect(label);
                 halo->setBlurRadius(4);
                 halo->setOffset(0, 0);
