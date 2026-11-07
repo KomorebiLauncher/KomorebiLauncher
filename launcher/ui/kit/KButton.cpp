@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "KButton.h"
 
+#include <QFontMetrics>
 #include <QPainter>
 #include <QPainterPath>
 
@@ -24,8 +25,8 @@ void KButton::setPrimary(bool primary)
 
 QSize KButton::sizeHint() const
 {
-    const QSize text = fontMetrics().size(Qt::TextShowMnemonic, text());
-    return QSize(text.width() + 36, qMax(32, text.height() + 16));
+    const QFontMetrics metrics = fontMetrics();
+    return QSize(metrics.horizontalAdvance(text()) + 36, qMax(32, metrics.height() + 16));
 }
 
 void KButton::enterEvent(QEnterEvent* event)
