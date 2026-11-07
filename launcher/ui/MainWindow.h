@@ -45,6 +45,7 @@
 #include <QTimer>
 
 #include "minecraft/auth/MinecraftAccount.h"
+#include "ui/window/WindowParts.h"
 
 class LaunchController;
 class NewsChecker;
@@ -240,6 +241,9 @@ class MainWindow : public QMainWindow {
     Ui::MainWindow* ui;
     // these are managed by Qt's memory management model!
     InstanceView* view = nullptr;
+
+    /** The widgets a layout shell arranges; filled once, never replaced. */
+    WindowParts m_windowParts;
     InstanceProxyModel* proxymodel = nullptr;
     QToolButton* newsLabel = nullptr;
     QLabel* m_statusLeft = nullptr;

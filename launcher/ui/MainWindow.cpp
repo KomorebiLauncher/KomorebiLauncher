@@ -461,6 +461,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     view->setFocus();
 
     retranslateUi();
+
+    // Registered at the end of the constructor, once every widget exists. The layout shells read
+    // from here; nothing else should create these widgets a second time.
+    m_windowParts.centralWidget = ui->centralWidget;
+    m_windowParts.instanceView = view;
+    m_windowParts.instanceToolBar = ui->instanceToolBar;
+    m_windowParts.mainToolBar = ui->mainToolBar;
+    m_windowParts.newsToolBar = ui->newsToolBar;
+    m_windowParts.statusBar = statusBar();
 }
 
 // macOS always has a native menu bar, so these fixes are not applicable
