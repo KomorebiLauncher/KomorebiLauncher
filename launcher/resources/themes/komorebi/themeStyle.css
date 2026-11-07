@@ -483,10 +483,15 @@ QMenu {
 }
 
 QMenu::item {
-    background-color: transparent;
+    /* 必须是实色：弹窗窗口的底色是黑的，条目透明就等于露出黑底 */
+    background-color: #FAF7F0;
     color: #242E4C;
     padding: 6px 26px 6px 22px;
     border-radius: 4px;
+}
+
+QMenu::item:hover {
+    background-color: #EFDCD8;
 }
 
 QMenu::item:selected {
