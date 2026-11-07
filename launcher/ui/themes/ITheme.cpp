@@ -37,6 +37,7 @@
 #include <QDir>
 #include <QStyleFactory>
 #include "Application.h"
+#include "settings/SettingsObject.h"
 #include "HintOverrideProxyStyle.h"
 #include "rainbow.h"
 
