@@ -302,6 +302,12 @@ void PageContainer::changeEvent(QEvent* event)
     QWidget::changeEvent(event);
 }
 
+void PageContainer::setPaintsBackground(bool paints)
+{
+    m_paintsBackground = paints;
+    update();
+}
+
 void PageContainer::setBackgroundImage(const QString& path)
 {
     m_hasExplicitBackground = true;
@@ -312,22 +318,26 @@ void PageContainer::setBackgroundImage(const QString& path)
 
 void PageContainer::paintEvent(QPaintEvent* event)
 {
-    // Every window built on this container shows the same background, so it is looked up here
-    // rather than pushed in by each caller: the settings window, the new-instance dialog and the
-    // resource browser all get it without knowing the feature exists.
-    // Re-resolved whenever the theme changes: switching to the dark theme has to bring its own
-    // picture, and a picture resolved once would keep the light one on screen forever.
-    if (!m_hasExplicitBackground) {
-        const auto theme = APPLICATION->settings()->get("ApplicationTheme").toString();
-        if (theme != m_resolvedTheme) {
-            m_resolvedTheme = theme;
-            m_background = LauncherBackground::resolve();
-        }
-    }
+    // Unconditional: this pass is what gives the lazily built pages their stylesheet backgrounds,
+    // whether or not a picture is painted here.
+    enableStyledBackgrounds();
 
-    if (!m_background.isNull()) {
-        enableStyledBackgrounds();
-        LauncherBackground::paint(this, m_background);
+    if (m_paintsBackground) {
+        // Every window built on this container shows the same background, so it is looked up here
+        // rather than pushed in by each caller: the settings window, the new-instance dialog and the
+        // resource browser all get it without knowing the feature exists.
+        // Re-resolved whenever the theme changes: switching to the dark theme has to bring its own
+        // picture, and a picture resolved once would keep the light one on screen forever.
+        if (!m_hasExplicitBackground) {
+            const auto theme = APPLICATION->settings()->get("ApplicationTheme").toString();
+            if (theme != m_resolvedTheme) {
+                m_resolvedTheme = theme;
+                m_background = LauncherBackground::resolve();
+            }
+        }
+
+        if (!m_background.isNull())
+            LauncherBackground::paint(this, m_background);
     }
     QWidget::paintEvent(event);
 }

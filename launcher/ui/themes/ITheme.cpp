@@ -41,6 +41,7 @@
 #include "HintOverrideProxyStyle.h"
 #include "rainbow.h"
 
+#include <QAbstractItemView>
 #include <QDialog>
 #include <QEvent>
 #include <QGraphicsDropShadowEffect>
@@ -101,17 +102,10 @@ class PopupPaletteFilter final : public QObject
             const bool isPopup = qobject_cast<QMenu*>(object) || object->inherits("QToolTip") ||
                                  object->inherits("QComboBoxPrivateContainer");
             if (isPopup) {
-                auto palette = QApplication::palette();
-                palette.setColor(QPalette::Window, QColor(0xFA, 0xF7, 0xF0));
-                palette.setColor(QPalette::Base, QColor(0xFA, 0xF7, 0xF0));
-                palette.setColor(QPalette::WindowText, QColor(0x24, 0x2E, 0x4C));
-                palette.setColor(QPalette::Text, QColor(0x24, 0x2E, 0x4C));
-                palette.setColor(QPalette::Button, QColor(0xFA, 0xF7, 0xF0));
-                palette.setColor(QPalette::ButtonText, QColor(0x24, 0x2E, 0x4C));
-                palette.setColor(QPalette::Highlight, QColor(0xEF, 0xDC, 0xD8));
-                palette.setColor(QPalette::HighlightedText, QColor(0x24, 0x2E, 0x4C));
+                // The theme carries its own palette now (theme.json), so the popup takes the
+                // application one: pinning light colours here made menus light on the dark theme.
                 if (auto* widget = qobject_cast<QWidget*>(object))
-                    widget->setPalette(palette);
+                    widget->setPalette(QApplication::palette());
             }
         }
         return QObject::eventFilter(object, event);
@@ -161,6 +155,17 @@ class DialogBackgroundFilter final : public QObject
                 // QDialog is a QWidget subclass: without this attribute the stylesheet's own
                 // background is not painted for it at all.
                 dialog->setAttribute(Qt::WA_StyledBackground, true);
+
+                // A view draws its check indicators from the palette, and the transparent rules
+                // leave that base colour black -- a checked box would come out as a black square.
+                const QColor paper = dialog->palette().color(QPalette::Window);
+                for (auto* view : dialog->findChildren<QAbstractItemView*>()) {
+                    QPalette viewPalette = view->palette();
+                    if (viewPalette.color(QPalette::Base) != paper) {
+                        viewPalette.setColor(QPalette::Base, paper);
+                        view->setPalette(viewPalette);
+                    }
+                }
             }
         }
         return QObject::eventFilter(object, event);

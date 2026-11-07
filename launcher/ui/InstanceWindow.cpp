@@ -44,6 +44,7 @@
 #include <QScrollBar>
 #include <QTimer>
 
+#include "ui/widgets/LauncherBackground.h"
 #include "ui/widgets/PageContainer.h"
 
 #include "InstancePageProvider.h"
@@ -69,9 +70,12 @@ InstanceWindow::InstanceWindow(MinecraftInstance* instance, QWidget* parent) : Q
         m_container = new PageContainer(provider.get(), "console", this);
         m_container->setParentContainer(this);
         setCentralWidget(m_container);
-        // The container paints the picture: painting it on the window instead would be hidden
-        // behind the container's own opaque background.
-        m_container->setBackgroundImage(m_instance->settings()->get("InstanceBackground").toString());
+        // The window paints the picture for the whole frame -- toolbars and buttons included -- and
+        // the container is told to stay out of it, or the same image would be drawn twice at two
+        // different scales and the seam would show.
+        m_container->setPaintsBackground(false);
+        const auto instanceBackground = m_instance->settings()->get("InstanceBackground").toString();
+        m_background = instanceBackground.isEmpty() ? LauncherBackground::resolve() : QImage(instanceBackground);
         setContentsMargins(0, 0, 0, 0);
     }
 
@@ -262,4 +266,10 @@ bool InstanceWindow::requestClose()
         return true;
     }
     return false;
+}
+
+void InstanceWindow::paintEvent(QPaintEvent* event)
+{
+    QMainWindow::paintEvent(event);
+    LauncherBackground::paint(this, m_background);
 }

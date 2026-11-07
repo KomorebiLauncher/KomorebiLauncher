@@ -114,6 +114,7 @@
 #include "ui/instanceview/InstanceDelegate.h"
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
+#include "ui/widgets/LauncherBackground.h"
 #include "ui/window/MainContentPanel.h"
 #include "ui/window/RailShell.h"
 #include "ui/window/SidebarShell.h"
@@ -1945,77 +1946,7 @@ void MainWindow::paintEvent(QPaintEvent* event)
 {
     QMainWindow::paintEvent(event);
 
-    auto path = APPLICATION->settings()->get("MainWindowBackground").toString();
-
-    // With no explicit path, fall back to the picture that ships inside the selected theme. That
-    // makes a theme a single thing to install rather than a theme plus a setting to hand-edit, and
-    // it is where a player would expect a theme's own artwork to live.
-    if (path.isEmpty()) {
-        const auto theme = APPLICATION->settings()->get("ApplicationTheme").toString();
-        if (!theme.isEmpty()) {
-            const auto candidate = QDir(APPLICATION->dataRoot()).filePath(QStringLiteral("themes/%1/resources/background.png").arg(theme));
-            if (QFileInfo::exists(candidate))
-                path = QDir::fromNativeSeparators(candidate);
-        }
-    }
-
-    if (path.isEmpty()) {
-        qDebug() << "[bg] setting is empty; nothing to paint";
-        return;
-    }
-    qDebug() << "[bg] using" << path;
-
-    // Decoded once per paint would stutter while resizing; the cache is keyed on the path so a
-    // changed setting is picked up without restarting.
-    static QHash<QString, QImage> cache;
-    auto it = cache.find(path);
-    if (it == cache.end())
-        it = cache.insert(path, QImage(path));
-    const auto image = it.value();
-    if (image.isNull()) {
-        qDebug() << "[bg] could not decode" << path;
-        return;
-    }
-
     // Drawn after the base class so it covers the window's own background, and before the children
     // paint themselves -- that is what puts it behind the toolbars and the instance list too.
-    QPainter painter(this);
-    painter.setRenderHint(QPainter::SmoothPixmapTransform);
-
-    // Fit the whole picture instead of cropping it to fill: a window is rarely the same shape as
-    // the image, and cutting the sides off a picture the player chose is worse than leaving a band
-    // of colour around it.
-    const auto mode = APPLICATION->settings()->get("MainWindowBackgroundMode").toString().toLower();
-
-    // "cover" and "fit" are literal. Anything else (including the default) picks between them from
-    // the shape of the picture: a tall picture in a wide window loses most of its height when it is
-    // cropped to fill, and that reads as the background being broken rather than as a choice.
-    bool fillWindow = true;
-    if (mode == QLatin1String("cover"))
-        fillWindow = true;
-    else if (mode == QLatin1String("fit"))
-        fillWindow = false;
-    else if (height() > 0 && image.height() > 0) {
-        const double imageAspect = static_cast<double>(image.width()) / image.height();
-        const double windowAspect = static_cast<double>(width()) / height();
-        const double difference = std::abs(imageAspect - windowAspect) / std::max(imageAspect, windowAspect);
-        fillWindow = difference < 0.18;
-    }
-
-    const auto target = size() * devicePixelRatioF();
-    const auto scaled = image.scaled(target, fillWindow ? Qt::KeepAspectRatioByExpanding : Qt::KeepAspectRatio,
-                                     Qt::SmoothTransformation);
-    painter.fillRect(rect(), QColor(18, 22, 28));
-    painter.drawImage(QPointF((width() - scaled.width() / devicePixelRatioF()) / 2.0,
-                              (height() - scaled.height() / devicePixelRatioF()) / 2.0),
-                      scaled);
-    const qreal dim = std::clamp(APPLICATION->settings()->get("MainWindowBackgroundDim").toDouble(), 0.0, 1.0);
-    if (dim > 0.0)
-        painter.fillRect(rect(), QColor(0, 0, 0, qRound(dim * 255)));
-
-    static bool logged = false;
-    if (!logged) {
-        logged = true;
-        qDebug() << "[bg] painted" << path << "window" << size() << "image" << image.size();
-    }
+    LauncherBackground::paint(this, LauncherBackground::resolve());
 }

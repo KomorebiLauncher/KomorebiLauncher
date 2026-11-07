@@ -12,6 +12,7 @@
 #include <QColor>
 #include <QDir>
 #include <QFileInfo>
+#include <QHash>
 #include <QImage>
 #include <QPainter>
 #include <QWidget>
@@ -24,16 +25,16 @@
 /**
  * The artwork the launcher draws behind its windows.
  *
- * It lives in one place because every window that paints it has to look it up the same way: the
- * path from the settings first, then the picture the active theme ships next to its stylesheet.
+ * One place, because every window that paints it has to look it up the same way: the path from the
+ * settings first, then the picture the active theme ships next to its stylesheet -- and then the
+ * same scaling rule and the same dimming, whichever window is asking.
  *
  * A window that does not paint it shows whatever the stylesheet left behind -- and a stylesheet
- * that says `background: transparent` on a top-level window leaves a black surface, not the
- * desktop.
+ * that says `background: transparent` on a top-level window leaves a black surface, not the desktop.
  */
 namespace LauncherBackground {
 
-/** The picture to paint, or a null image when there is none. */
+/** The picture to paint, or a null image when there is none. Decoded once per path. */
 inline QImage resolve()
 {
     auto* app = APPLICATION_DYN;
@@ -49,24 +50,67 @@ inline QImage resolve()
                 path = QDir::fromNativeSeparators(candidate);
         }
     }
-    return path.isEmpty() ? QImage() : QImage(path);
+    if (path.isEmpty())
+        return {};
+
+    // Decoding on every paint would stutter while a window is resized; keying on the path means a
+    // changed setting is still picked up without a restart.
+    static QHash<QString, QImage> cache;
+    auto it = cache.constFind(path);
+    if (it != cache.constEnd())
+        return it.value();
+    if (cache.size() > 4)
+        cache.clear();
+    return cache.insert(path, QImage(path)).value();
 }
 
-/** Draws the picture over the whole widget, cover-scaled and dimmed as configured. */
+/**
+ * Draws the picture over the whole widget.
+ *
+ * Cover or fit is decided by the same rule everywhere: `cover` and `fit` are literal, anything else
+ * picks from the shape of the picture, because a tall picture cropped to fill a wide window reads
+ * as the background being broken rather than as a choice.
+ */
 inline void paint(QWidget* target, const QImage& image)
 {
     if (image.isNull() || !target)
         return;
 
-    QPainter painter(target);
     const QSize size = target->size();
-    // Cover rather than letterbox, so the picture does not end in bars.
-    const auto scaled = image.scaled(size, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-    const QRect source((scaled.width() - size.width()) / 2, (scaled.height() - size.height()) / 2, size.width(), size.height());
-    painter.drawImage(target->rect(), scaled, source);
+    if (size.isEmpty() || image.height() <= 0)
+        return;
 
-    // Darken it, or a bright picture makes the text unreadable.
-    const qreal dim = std::clamp(APPLICATION->settings()->get("MainWindowBackgroundDim").toDouble(), 0.0, 1.0);
+    auto* app = APPLICATION_DYN;
+    if (!app)
+        return;
+
+    const auto mode = app->settings()->get("MainWindowBackgroundMode").toString().toLower();
+    bool fillWindow = true;
+    if (mode == QLatin1String("cover")) {
+        fillWindow = true;
+    } else if (mode == QLatin1String("fit")) {
+        fillWindow = false;
+    } else {
+        const double imageAspect = static_cast<double>(image.width()) / image.height();
+        const double windowAspect = static_cast<double>(size.width()) / size.height();
+        const double difference = std::abs(imageAspect - windowAspect) / std::max(imageAspect, windowAspect);
+        fillWindow = difference < 0.18;
+    }
+
+    QPainter painter(target);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+
+    const qreal ratio = target->devicePixelRatioF();
+    const auto targetSize = size * ratio;
+    const auto scaled =
+        image.scaled(targetSize, fillWindow ? Qt::KeepAspectRatioByExpanding : Qt::KeepAspectRatio, Qt::SmoothTransformation);
+
+    // The colour behind the bands: dark enough not to compete with the picture, neutral enough not
+    // to tint it.
+    painter.fillRect(target->rect(), QColor(18, 22, 28));
+    painter.drawImage(QPointF((size.width() - scaled.width() / ratio) / 2.0, (size.height() - scaled.height() / ratio) / 2.0), scaled);
+
+    const qreal dim = std::clamp(app->settings()->get("MainWindowBackgroundDim").toDouble(), 0.0, 1.0);
     if (dim > 0.0)
         painter.fillRect(target->rect(), QColor(0, 0, 0, qRound(dim * 255)));
 }

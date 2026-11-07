@@ -75,6 +75,13 @@ class PageContainer : public QWidget, public BasePageContainer {
     void setBackgroundImage(const QString& path);
 
     /**
+     * Whether this container paints the picture itself. A window that paints the whole frame --
+     * so that its toolbars and status bar sit on the same picture as the pages -- switches this
+     * off to avoid painting the image twice at two different scales.
+     */
+    void setPaintsBackground(bool paints);
+
+    /**
      * Turns on stylesheet backgrounds for every child that is a QWidget subclass.
      *
      * A plain stylesheet cannot make those transparent: Qt only paints a stylesheet background
@@ -118,6 +125,9 @@ class PageContainer : public QWidget, public BasePageContainer {
     QImage m_background;
     /** Set when a caller supplied its own picture; the theme no longer applies to this window. */
     bool m_hasExplicitBackground = false;
+
+    /// False when the window this container sits in paints the picture for the whole frame.
+    bool m_paintsBackground = true;
 
     /** Which theme the current picture came from, so a theme change re-resolves it. */
     QString m_resolvedTheme;

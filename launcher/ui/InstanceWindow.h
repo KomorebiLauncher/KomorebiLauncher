@@ -36,6 +36,7 @@
 
 #pragma once
 
+#include <QImage>
 #include <QMainWindow>
 #include <QSystemTrayIcon>
 #include <QToolButton>
@@ -80,6 +81,9 @@ class InstanceWindow : public QMainWindow, public BasePageContainer {
    protected:
     void closeEvent(QCloseEvent*) override;
 
+   protected:
+    void paintEvent(QPaintEvent* event) override;
+
    private:
     void updateButtons();
 
@@ -89,6 +93,8 @@ class InstanceWindow : public QMainWindow, public BasePageContainer {
     bool m_doNotSave = false;
     bool m_restartQueued = false;
     PageContainer* m_container = nullptr;
+    /// Painted behind the whole frame, so the toolbars share the picture with the pages.
+    QImage m_background;
     QPushButton* m_closeButton = nullptr;
     QToolButton* m_launchButton = nullptr;
     QPushButton* m_restartButton = nullptr;
