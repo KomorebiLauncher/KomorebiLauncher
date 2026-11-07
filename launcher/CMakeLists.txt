@@ -1204,6 +1204,8 @@ SET(LAUNCHER_SOURCES
     ui/widgets/WideBar.h
     ui/widgets/WideBar.cpp
     ui/widgets/AppearanceWidget.h
+    komorebi/ui/InstanceListPage.cpp
+    komorebi/ui/InstanceListPage.h
     komorebi/core/Instance.h
     komorebi/core/InstanceRepository.h
     komorebi/core/legacy/LegacyInstanceRepository.cpp

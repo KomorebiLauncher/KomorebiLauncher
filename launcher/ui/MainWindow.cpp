@@ -114,6 +114,7 @@
 #include "ui/instanceview/InstanceDelegate.h"
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
+#include "komorebi/ui/InstanceListPage.h"
 #include "ui/widgets/LauncherBackground.h"
 #include "ui/window/MainContentPanel.h"
 #include "ui/window/RailShell.h"
@@ -436,7 +437,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     ui->mainToolBar->insertWidget(ui->actionHelpButton, spacer);
 
 
-    // Use undocumented property... https://stackoverflow.com/questions/7121718/create-a-scrollbar-in-a-submenu-qt
+
+    // A window onto the list the core layer reports: the new page already reads only the
+    // repository, so opening it is how the interface is exercised before anything is migrated.
+    {
+        auto* coreListAction = new QAction(tr("Instances (core preview)"), this);
+        ui->viewMenu->addAction(coreListAction);
+        connect(coreListAction, &QAction::triggered, this, [this] { showCoreInstanceList(this); });
+    }    // Use undocumented property... https://stackoverflow.com/questions/7121718/create-a-scrollbar-in-a-submenu-qt
     ui->accountsMenu->setStyleSheet("QMenu { menu-scrollable: 1; }");
 
     repopulateAccountsMenu();
