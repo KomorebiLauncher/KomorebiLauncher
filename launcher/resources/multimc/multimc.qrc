@@ -196,6 +196,7 @@
         <file>32x32/instances/grass.svg</file>
         <file>32x32/instances/lantern.svg</file>
         <file>32x32/instances/log.svg</file>
+        <file>32x32/instances/komorebilauncher.svg</file>
         <file>32x32/instances/logfile.svg</file>
         <file>32x32/instances/modpack.svg</file>
         <file>32x32/instances/mods.svg</file>
@@ -233,6 +234,7 @@
         <file>50x50/instances/grass.svg</file>
         <file>50x50/instances/lantern.svg</file>
         <file>50x50/instances/log.svg</file>
+        <file>50x50/instances/komorebilauncher.svg</file>
         <file>50x50/instances/logfile.svg</file>
         <file>50x50/instances/modpack.svg</file>
         <file>50x50/instances/mods.svg</file>
@@ -270,6 +272,7 @@
         <file>128x128/instances/grass.svg</file>
         <file>128x128/instances/lantern.svg</file>
         <file>128x128/instances/log.svg</file>
+        <file>128x128/instances/komorebilauncher.svg</file>
         <file>128x128/instances/logfile.svg</file>
         <file>128x128/instances/modpack.svg</file>
         <file>128x128/instances/mods.svg</file>
@@ -307,6 +310,7 @@
         <file>scalable/instances/grass.svg</file>
         <file>scalable/instances/lantern.svg</file>
         <file>scalable/instances/log.svg</file>
+        <file>scalable/instances/komorebilauncher.svg</file>
         <file>scalable/instances/logfile.svg</file>
         <file>scalable/instances/modpack.svg</file>
         <file>scalable/instances/mods.svg</file>
