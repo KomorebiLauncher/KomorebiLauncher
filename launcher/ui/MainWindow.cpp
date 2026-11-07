@@ -164,6 +164,14 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     for (auto* widget : chrome) {
         widget->setStyleSheet(QStringLiteral("background: transparent;"));
     }
+
+    // The same applies to everything inside the central widget: a plain child that fills its own
+    // background leaves a dark patch in the middle of the picture. This is what the instance view,
+    // the news list and the status widgets needed.
+    for (auto* child : findChildren<QWidget*>()) {
+        child->setAutoFillBackground(false);
+        child->setAttribute(Qt::WA_NoSystemBackground, true);
+    }
     setWindowIcon(APPLICATION->logo());
     setWindowTitle(APPLICATION->applicationDisplayName());
 #ifndef QT_NO_ACCESSIBILITY
