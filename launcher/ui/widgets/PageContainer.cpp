@@ -328,6 +328,7 @@ auto resolveDefaultBackground() -> QImage
 
 void PageContainer::setBackgroundImage(const QString& path)
 {
+    m_hasExplicitBackground = true;
     m_background = path.isEmpty() ? QImage() : QImage(path);
     // Repaint even when the image failed to load: the old one must not stay on screen.
     update();
@@ -338,10 +339,14 @@ void PageContainer::paintEvent(QPaintEvent* event)
     // Every window built on this container shows the same background, so it is looked up here
     // rather than pushed in by each caller: the settings window, the new-instance dialog and the
     // resource browser all get it without knowing the feature exists.
-    if (!m_backgroundResolved) {
-        m_backgroundResolved = true;
-        if (m_background.isNull())
+    // Re-resolved whenever the theme changes: switching to the dark theme has to bring its own
+    // picture, and a picture resolved once would keep the light one on screen forever.
+    if (!m_hasExplicitBackground) {
+        const auto theme = APPLICATION->settings()->get("ApplicationTheme").toString();
+        if (theme != m_resolvedTheme) {
+            m_resolvedTheme = theme;
             m_background = resolveDefaultBackground();
+        }
     }
 
     if (!m_background.isNull()) {

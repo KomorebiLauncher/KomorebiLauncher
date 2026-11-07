@@ -138,6 +138,11 @@ void ITheme::apply(bool)
     APPLICATION->setStyleSheet(sheet);
     QDir::setSearchPaths("theme", searchPaths());
 
+    // Windows that paint the theme's background picture have to redraw now, or the previous
+    // theme's picture stays on screen until something else causes a repaint.
+    for (auto* widget : QApplication::topLevelWidgets())
+        widget->update();
+
     static PopupPaletteFilter* popupFilter = nullptr;
     if (!popupFilter) {
         popupFilter = new PopupPaletteFilter(APPLICATION);

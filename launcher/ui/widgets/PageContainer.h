@@ -116,8 +116,11 @@ class PageContainer : public QWidget, public BasePageContainer {
    private:
     /** Kept decoded: decoding on every paint would stutter while resizing. */
     QImage m_background;
-    /** Resolved once: the setting changes rarely and re-reading it on every paint is waste. */
-    bool m_backgroundResolved = false;
+    /** Set when a caller supplied its own picture; the theme no longer applies to this window. */
+    bool m_hasExplicitBackground = false;
+
+    /** Which theme the current picture came from, so a theme change re-resolves it. */
+    QString m_resolvedTheme;
 
     void createUI();
     void retranslate();
