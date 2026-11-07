@@ -46,6 +46,7 @@
 #include <QGraphicsDropShadowEffect>
 #include <QLabel>
 #include <QMenu>
+#include <QPainter>
 #include <QPalette>
 
 namespace {
@@ -139,30 +140,25 @@ class DialogBackgroundFilter final : public QObject
   protected:
     bool eventFilter(QObject* object, QEvent* event) override
     {
+        auto* dialog = qobject_cast<QDialog*>(object);
+        if (!dialog)
+            return QObject::eventFilter(object, event);
+
         if (event->type() == QEvent::Show) {
-            if (auto* dialog = qobject_cast<QDialog*>(object))
-                dress(dialog);
+            if (!dialog->property("_komorebi_dressed").toBool()) {
+                dialog->setProperty("_komorebi_dressed", true);
+                // QDialog is a QWidget subclass: without this attribute the stylesheet's own
+                // background is not painted for it at all.
+                dialog->setAttribute(Qt::WA_StyledBackground, true);
+            }
+        } else if (event->type() == QEvent::Paint) {
+            // Filled underneath whatever the dialog paints. A rule that says "transparent" leaves
+            // the surface untouched, and an unfilled top-level surface is black; a dialog that
+            // paints its own wallpaper (anything on PageContainer) simply covers this fill.
+            QPainter painter(dialog);
+            painter.fillRect(dialog->rect(), dialog->palette().color(QPalette::Window));
         }
         return QObject::eventFilter(object, event);
-    }
-
-  private:
-    static void dress(QDialog* dialog)
-    {
-        if (dialog->property("_komorebi_dressed").toBool())
-            return;
-        dialog->setProperty("_komorebi_dressed", true);
-
-        // QDialog is a QWidget subclass, and Qt only paints a stylesheet background for those once
-        // this attribute is on.
-        dialog->setAttribute(Qt::WA_StyledBackground, true);
-
-        // The rule is written here too, from the palette, so the backdrop does not depend on the
-        // loaded theme carrying one: a dialog without a background is a black window.
-        if (dialog->styleSheet().isEmpty()) {
-            const QColor paper = dialog->palette().color(QPalette::Window);
-            dialog->setStyleSheet(QStringLiteral("QDialog { background-color: %1; }").arg(paper.name()));
-        }
     }
 };
 
