@@ -120,7 +120,10 @@ class TextOutlineFilter final : public QObject
     bool eventFilter(QObject* object, QEvent* event) override
     {
         if (event->type() == QEvent::Show) {
-            if (auto* label = qobject_cast<QLabel*>(object); label && !label->graphicsEffect()) {
+            // Only labels that sit inside a window: a tooltip is a QLabel too, and it is a window
+            // of its own, so an effect here replaced its styled surface with the halo colour and
+            // every tooltip came out as a dark box.
+            if (auto* label = qobject_cast<QLabel*>(object); label && !label->isWindow() && !label->graphicsEffect()) {
                 auto* halo = new QGraphicsDropShadowEffect(label);
                 halo->setBlurRadius(4);
                 halo->setOffset(0, 0);

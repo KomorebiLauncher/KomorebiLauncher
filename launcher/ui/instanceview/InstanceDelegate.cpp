@@ -34,6 +34,8 @@
  */
 
 #include "InstanceDelegate.h"
+
+#include "ui/kit/KPalette.h"
 #include <QApplication>
 #include <QDebug>
 #include <QPainter>
@@ -96,21 +98,20 @@ void drawSelectionRect(QPainter* painter, const QStyleOptionViewItem& option)
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing, true);
 
-    QColor fill = QColor(252, 250, 245, selected ? 236 : (hovered ? 220 : 200));
-    QColor border = QColor(201, 194, 180, selected ? 150 : 110);
-    if (selected) {
-        fill = QColor(239, 220, 216, 236);
-        border = QColor(139, 36, 58, 150);
-    }
+    // The card follows the control kit: paper, a hairline, the surface radius, and the plum wash
+    // for hover and selection rather than colours of its own.
+    const Komorebi::KColors colors = Komorebi::KColors::fromPalette(option.palette);
+    const QColor paint(colors.paper.red(), colors.paper.green(), colors.paper.blue(), selected ? 230 : (hovered ? 205 : 190));
+    const QColor border = selected ? colors.wash(130) : colors.line;
 
     painter->setPen(QPen(border, 1));
-    painter->setBrush(fill);
-    painter->drawRoundedRect(card, 9, 9);
+    painter->setBrush(selected ? colors.wash(26) : paint);
+    painter->drawRoundedRect(card, Komorebi::Radius::Surface, Komorebi::Radius::Surface);
 
     if (selected) {
         QPainterPath bar;
         bar.addRoundedRect(QRectF(card.left() + 1, card.top() + 12, 3, card.height() - 24), 1.5, 1.5);
-        painter->fillPath(bar, QColor(139, 36, 58));
+        painter->fillPath(bar, colors.plum);
     }
 
     painter->restore();
