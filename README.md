@@ -68,6 +68,7 @@ GPL-3.0-only，见 LICENSE 。
 | `MainWindowBackgroundMode` | `auto`（默认）/ `fit` / `cover` | `auto` 按图片与窗口比例自动选择；`fit` 完整显示、四周留深色边；`cover` 铺满窗口、裁掉超出部分 |
 | `ThemeTextColor` | 任意颜色（如 `#242E4C`） | 全局文字颜色；留空则用主题自己的配色 |
 | `ThemeTextOutline` | `true`（默认）/ `false` | 给标签文字加一圈反色描边，保证压在任何背景图上都能读 |
+| `MainWindowBackgroundDim` | `0` ~ `1`（默认 `0.30`） | 背景图上的压暗程度；亮色素材用 `0.05`，照片类背景用 `0.3` 以上 |
 
 两项都在 `<数据目录>/komorebilauncher.cfg` 的 `[General]` 段里。
 

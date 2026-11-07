@@ -1946,7 +1946,9 @@ void MainWindow::paintEvent(QPaintEvent* event)
     painter.drawImage(QPointF((width() - scaled.width() / devicePixelRatioF()) / 2.0,
                               (height() - scaled.height() / devicePixelRatioF()) / 2.0),
                       scaled);
-    painter.fillRect(rect(), QColor(0, 0, 0, 96));
+    const qreal dim = std::clamp(APPLICATION->settings()->get("MainWindowBackgroundDim").toDouble(), 0.0, 1.0);
+    if (dim > 0.0)
+        painter.fillRect(rect(), QColor(0, 0, 0, qRound(dim * 255)));
 
     static bool logged = false;
     if (!logged) {

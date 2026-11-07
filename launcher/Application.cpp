@@ -933,6 +933,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("MainWindowBackgroundMode", "auto");
         // "sidebar" (default), "topnav" or "rail". Anything else falls back to the default.
         m_settings->registerSetting("MainWindowLayout", "sidebar");
+        // 0 leaves the picture untouched, 1 makes it black. Light artwork wants about 0.05, a photo
+        // needs more so the text stays readable.
+        m_settings->registerSetting("MainWindowBackgroundDim", 0.30);
 
         // Empty means "whatever the theme says". A stylesheet cannot take the colour from a
         // setting, so the value is applied by code when the theme is applied.

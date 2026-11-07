@@ -46,6 +46,8 @@
 
 #include <QDialogButtonBox>
 #include <QDir>
+
+#include <algorithm>
 #include <QFileInfo>
 #include <QGridLayout>
 #include <QLabel>
@@ -350,7 +352,9 @@ void PageContainer::paintEvent(QPaintEvent* event)
         const QRect source((scaled.width() - width()) / 2, (scaled.height() - height()) / 2, width(), height());
         painter.drawImage(rect(), scaled, source);
         // Darken it, or a bright picture makes the pages unreadable.
-        painter.fillRect(rect(), QColor(0, 0, 0, 96));
+        const qreal dim = std::clamp(APPLICATION->settings()->get("MainWindowBackgroundDim").toDouble(), 0.0, 1.0);
+    if (dim > 0.0)
+        painter.fillRect(rect(), QColor(0, 0, 0, qRound(dim * 255)));
     }
     QWidget::paintEvent(event);
 }
