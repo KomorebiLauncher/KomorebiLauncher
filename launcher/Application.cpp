@@ -109,6 +109,7 @@
 #include "MTPixmapCache.h"
 
 #include <minecraft/auth/AccountList.h>
+#include "komorebi/core/InstanceRepository.h"
 #include "icons/IconList.h"
 #include "net/HttpMetaCache.h"
 
@@ -1068,6 +1069,19 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         qInfo() << "Loading Instances...";
         m_instances->loadList();
         qInfo() << "<> Instances loaded.";
+        // The core's own view of the instances: the first caller of the new interface, so the
+        // adapter is exercised on every start rather than only when a page happens to use it.
+        {
+            auto repository = Komorebi::Core::makeLegacyRepository();
+            const auto instances = repository->instances();
+            qInfo() << "<> Komorebi core:" << instances.size() << "instances in" << repository->groups().size() << "groups";
+            for (const auto& instance : instances) {
+                qDebug().nospace() << "    " << instance.id << " | " << instance.name << " | minecraft "
+                                   << (instance.minecraftVersion.isEmpty() ? QStringLiteral("?") : instance.minecraftVersion)
+                                   << " | " << Komorebi::Core::loaderName(instance.loader) << " " << instance.loaderVersion
+                                   << (instance.playable ? "" : " | broken");
+            }
+        }
     }
 
     // and accounts

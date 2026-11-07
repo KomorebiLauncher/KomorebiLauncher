@@ -1204,6 +1204,9 @@ SET(LAUNCHER_SOURCES
     ui/widgets/WideBar.h
     ui/widgets/WideBar.cpp
     ui/widgets/AppearanceWidget.h
+    komorebi/core/Instance.h
+    komorebi/core/InstanceRepository.h
+    komorebi/core/legacy/LegacyInstanceRepository.cpp
     ui/kit/KButton.cpp
     ui/kit/KButton.h
     ui/kit/KCard.cpp
