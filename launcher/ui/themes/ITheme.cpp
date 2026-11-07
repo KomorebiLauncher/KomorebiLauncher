@@ -41,6 +41,7 @@
 #include "HintOverrideProxyStyle.h"
 #include "rainbow.h"
 
+#include <QDialog>
 #include <QEvent>
 #include <QGraphicsDropShadowEffect>
 #include <QLabel>
@@ -121,6 +122,50 @@ class TextOutlineFilter final : public QObject
     }
 };
 
+/**
+ * Lets the stylesheet paint a dialog's background.
+ *
+ * QDialog is a QWidget subclass, and Qt only draws a stylesheet background for those once
+ * WA_StyledBackground is set -- the same rule that made every page inside PageContainer stay
+ * white until it was set there. Without it the dialog's background rule does nothing and the
+ * window comes out black, which is what every dialog that does not paint its own wallpaper used
+ * to look like.
+ */
+class DialogBackgroundFilter final : public QObject
+{
+  public:
+    explicit DialogBackgroundFilter(QObject* parent) : QObject(parent) {}
+
+  protected:
+    bool eventFilter(QObject* object, QEvent* event) override
+    {
+        if (event->type() == QEvent::Show) {
+            if (auto* dialog = qobject_cast<QDialog*>(object))
+                dress(dialog);
+        }
+        return QObject::eventFilter(object, event);
+    }
+
+  private:
+    static void dress(QDialog* dialog)
+    {
+        if (dialog->property("_komorebi_dressed").toBool())
+            return;
+        dialog->setProperty("_komorebi_dressed", true);
+
+        // QDialog is a QWidget subclass, and Qt only paints a stylesheet background for those once
+        // this attribute is on.
+        dialog->setAttribute(Qt::WA_StyledBackground, true);
+
+        // The rule is written here too, from the palette, so the backdrop does not depend on the
+        // loaded theme carrying one: a dialog without a background is a black window.
+        if (dialog->styleSheet().isEmpty()) {
+            const QColor paper = dialog->palette().color(QPalette::Window);
+            dialog->setStyleSheet(QStringLiteral("QDialog { background-color: %1; }").arg(paper.name()));
+        }
+    }
+};
+
 }  // namespace
 void ITheme::apply(bool)
 {
@@ -147,6 +192,13 @@ void ITheme::apply(bool)
     if (!popupFilter) {
         popupFilter = new PopupPaletteFilter(APPLICATION);
         APPLICATION->installEventFilter(popupFilter);
+    }
+
+    // Unconditional: every dialog needs a painted background, whether or not the outline is on.
+    static DialogBackgroundFilter* dialogFilter = nullptr;
+    if (!dialogFilter) {
+        dialogFilter = new DialogBackgroundFilter(APPLICATION);
+        APPLICATION->installEventFilter(dialogFilter);
     }
 
     if (APPLICATION->settings()->get("ThemeTextOutline").toBool()) {

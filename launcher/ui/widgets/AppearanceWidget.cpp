@@ -124,18 +124,23 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
     // Background dimming: a runtime setting rather than part of the stylesheet, because the value
     // is applied while painting and has to work for any theme.
     {
-        auto* row = new QHBoxLayout();
-        auto* label = new QLabel(tr("Background dimming"), this);
-        auto* slider = new QSlider(Qt::Horizontal, this);
+        // The row is a widget, not a bare QHBoxLayout: a layout added straight into the box's
+        // vertical layout reports a far smaller minimum height, and the group box below it is then
+        // squeezed until it draws on top of this row.
+        auto* rowWidget = new QWidget(m_ui->settingsBox);
+        auto* row = new QHBoxLayout(rowWidget);
+        row->setContentsMargins(0, 0, 0, 0);
+        auto* label = new QLabel(tr("Background dimming"), rowWidget);
+        auto* slider = new QSlider(Qt::Horizontal, rowWidget);
         slider->setObjectName("dimSlider");
         slider->setRange(0, 100);
         slider->setValue(qRound(APPLICATION->settings()->get("MainWindowBackgroundDim").toDouble() * 100));
-        auto* value = new QLabel(QStringLiteral("%1%").arg(slider->value()), this);
+        auto* value = new QLabel(QStringLiteral("%1%").arg(slider->value()), rowWidget);
         value->setMinimumWidth(38);
         row->addWidget(label);
         row->addWidget(slider, 1);
         row->addWidget(value);
-        m_ui->settingsBox->layout()->addItem(row);
+        m_ui->settingsBox->layout()->addWidget(rowWidget);
 
         connect(slider, &QSlider::valueChanged, this, [value](int v) {
             value->setText(QStringLiteral("%1%").arg(v));
@@ -148,9 +153,11 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
     // Window layout. Only the arrangement of the list, the content and the actions; every entry
     // shows the same widgets. The main window watches this setting, so a change applies at once.
     {
-        auto* row = new QHBoxLayout();
-        auto* label = new QLabel(tr("Window layout"), this);
-        auto* combo = new QComboBox(this);
+        auto* rowWidget = new QWidget(m_ui->settingsBox);
+        auto* row = new QHBoxLayout(rowWidget);
+        row->setContentsMargins(0, 0, 0, 0);
+        auto* label = new QLabel(tr("Window layout"), rowWidget);
+        auto* combo = new QComboBox(rowWidget);
         combo->setObjectName("layoutComboBox");
         combo->addItem(tr("Sidebar"), QStringLiteral("sidebar"));
         combo->addItem(tr("Top action bar"), QStringLiteral("topnav"));
@@ -161,7 +168,7 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
 
         row->addWidget(label);
         row->addWidget(combo, 1);
-        m_ui->settingsBox->layout()->addItem(row);
+        m_ui->settingsBox->layout()->addWidget(rowWidget);
 
         connect(combo, &QComboBox::currentIndexChanged, this, [combo](int) {
             APPLICATION->settings()->set("MainWindowLayout", combo->currentData().toString());
