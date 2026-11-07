@@ -557,3 +557,40 @@ QToolBar::separator {
     width: 1px;
     margin: 4px 6px;
 }
+/* ============================================================
+ * 菜单最终覆盖 v2
+ *
+ * 用 background 简写而不是 background-color：QMenu 的外层面板由样式系统
+ * 绘制，简写会同时设置调色板画刷，颜色才真正铺满整个弹窗。
+ * ============================================================ */
+
+QMenu {
+    background: #FAF7F0;
+    border: 1px solid #C9C2B4;
+    border-radius: 0px;
+    padding: 4px;
+    color: #242E4C;
+}
+
+QMenu::item {
+    background: #FAF7F0;
+    color: #242E4C;
+    padding: 6px 28px 6px 22px;
+    margin: 1px 2px;
+}
+
+QMenu::item:selected {
+    background: #EFDCD8;
+    color: #242E4C;
+}
+
+QMenu::item:disabled {
+    background: #FAF7F0;
+    color: #A9A296;
+}
+
+QMenu::separator {
+    height: 1px;
+    background: #DBD5C8;
+    margin: 4px 10px;
+}

@@ -2159,23 +2159,28 @@ void Application::installBundledTheme()
         return;
 
     QDir themesDir(QDir(m_dataPath).filePath(QStringLiteral("themes")));
-    if (themesDir.exists(QStringLiteral("komorebi")))
-        return;
 
-    const QStringList files = { QStringLiteral("theme.json"), QStringLiteral("themeStyle.css"),
-                                QStringLiteral("resources/background.png") };
-    for (const auto& file : files) {
-        const auto targetPath = themesDir.filePath(QStringLiteral("komorebi/") + file);
-        QDir().mkpath(QFileInfo(targetPath).absolutePath());
-
-        QFile source(QStringLiteral(":/themes/komorebi/") + file);
-        if (!source.open(QIODevice::ReadOnly))
+    // Each bundled theme is installed once. An existing directory is left alone, so edits a player
+    // made to the shipped theme survive an update.
+    for (const auto& id : { QStringLiteral("komorebi"), QStringLiteral("komorebi-dark") }) {
+        if (themesDir.exists(id))
             continue;
 
-        QFile target(targetPath);
-        if (!target.open(QIODevice::WriteOnly))
-            continue;
+        const QStringList files = { QStringLiteral("theme.json"), QStringLiteral("themeStyle.css"),
+                                    QStringLiteral("resources/background.png") };
+        for (const auto& file : files) {
+            const auto targetPath = themesDir.filePath(id + QLatin1Char('/') + file);
+            QDir().mkpath(QFileInfo(targetPath).absolutePath());
 
-        target.write(source.readAll());
+            QFile source(QStringLiteral(":/themes/") + id + QLatin1Char('/') + file);
+            if (!source.open(QIODevice::ReadOnly))
+                continue;
+
+            QFile target(targetPath);
+            if (!target.open(QIODevice::WriteOnly))
+                continue;
+
+            target.write(source.readAll());
+        }
     }
 }

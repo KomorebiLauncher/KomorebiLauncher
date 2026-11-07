@@ -4,4 +4,9 @@
         <file>komorebi/themeStyle.css</file>
         <file>komorebi/resources/background.png</file>
     </qresource>
+    <qresource prefix="/themes/komorebi-dark">
+        <file>komorebi-dark/theme.json</file>
+        <file>komorebi-dark/themeStyle.css</file>
+        <file>komorebi-dark/resources/background.png</file>
+    </qresource>
 </RCC>
