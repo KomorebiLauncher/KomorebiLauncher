@@ -35,6 +35,8 @@
  */
 #include "CustomTheme.h"
 #include <FileSystem.h>
+#include <QRegularExpression>
+#include <QStringList>
 #include <Json.h>
 #include "ThemeManager.h"
 
@@ -92,6 +94,8 @@ CustomTheme::CustomTheme(ITheme* baseTheme, QFileInfo& fileInfo, bool isManifest
         } else {
             themeDebugLog() << "No theme qss present.";
         }
+
+        expandTokens();
     } else {
         m_id = fileInfo.fileName();
         m_name = fileInfo.baseName();
@@ -127,6 +131,59 @@ QStringList CustomTheme::searchPaths()
     }
 
     return {};
+}
+
+void CustomTheme::expandTokens()
+{
+    if (m_styleSheet.isEmpty())
+        return;
+
+    // A palette role is a token as well, so a sheet can say @Highlight instead of repeating the
+    // colour the manifest already stated.
+    const QVector<QPair<QPalette::ColorRole, const char*>> roles = {
+        { QPalette::Window, "Window" },           { QPalette::WindowText, "WindowText" },
+        { QPalette::Base, "Base" },               { QPalette::AlternateBase, "AlternateBase" },
+        { QPalette::Text, "Text" },               { QPalette::Button, "Button" },
+        { QPalette::ButtonText, "ButtonText" },   { QPalette::Highlight, "Highlight" },
+        { QPalette::HighlightedText, "HighlightedText" }, { QPalette::ToolTipBase, "ToolTipBase" },
+        { QPalette::ToolTipText, "ToolTipText" }, { QPalette::Link, "Link" },
+        { QPalette::BrightText, "BrightText" },
+    };
+    for (const auto& [role, name] : roles) {
+        const auto colour = m_palette.color(role);
+        m_tokens.insert(QString::fromLatin1(name), colour.name(QColor::HexRgb));
+        m_tokens.insert(QString::fromLatin1(name) + "Rgb",
+                        QStringLiteral("%1, %2, %3").arg(colour.red()).arg(colour.green()).arg(colour.blue()));
+    }
+
+    static const QRegularExpression tokenPattern(QStringLiteral("@([A-Za-z][A-Za-z0-9_]*)"));
+    QString expanded;
+    expanded.reserve(m_styleSheet.size());
+    QStringList unknown;
+    int last = 0;
+    auto matches = tokenPattern.globalMatch(m_styleSheet);
+    while (matches.hasNext()) {
+        const auto match = matches.next();
+        expanded += m_styleSheet.mid(last, match.capturedStart() - last);
+        const auto name = match.captured(1);
+        const auto value = m_tokens.value(name);
+        if (value.isEmpty()) {
+            unknown << name;
+            expanded += match.captured(0);
+        } else {
+            expanded += value;
+        }
+        last = match.capturedEnd();
+    }
+    expanded += m_styleSheet.mid(last);
+
+    if (!unknown.isEmpty()) {
+        unknown.removeDuplicates();
+        themeWarningLog() << "Unknown theme token(s) in the stylesheet:" << unknown.join(", ");
+    }
+
+    m_styleSheet = expanded;
+    themeDebugLog() << "[theme] stylesheet expanded with" << m_tokens.size() << "tokens";
 }
 
 QString CustomTheme::id()
@@ -198,6 +255,13 @@ Result<> CustomTheme::read(const QString& path, bool& hasCustomLogColors)
         }
         return {};
     };
+
+    if (root.contains("tokens")) {
+        TRY_INTO(const auto& tokensRoot, Json::requireObject(root, "tokens"))
+        for (auto it = tokensRoot.begin(); it != tokensRoot.end(); ++it) {
+            m_tokens.insert(it.key(), it.value().toVariant().toString());
+        }
+    }
 
     if (root.contains("colors")) {
         TRY_INTO(const auto& colorsRoot, Json::requireObject(root, "colors"))

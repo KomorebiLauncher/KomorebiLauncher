@@ -2,7 +2,27 @@
   "name": "Komorebi Dark",
   "widgets": "Fusion",
   "qssFilePath": "themeStyle.css",
-  "colors": {
+  "tokens": {
+    "paper": "#141922",
+    "paperRgb": "20, 25, 34",
+    "paperDeep": "#1B2230",
+    "paperDeepRgb": "27, 34, 48",
+    "ink": "#EFE7D6",
+    "inkRgb": "239, 231, 214",
+    "plum": "#C25569",
+    "plumRgb": "194, 85, 105",
+    "plumSoft": "#8B243A",
+    "plumSoftRgb": "139, 36, 58",
+    "line": "rgba(239, 231, 214, 0.22)",
+    "raised": "#1E2430",
+    "borderSoft": "#2E3644",
+    "plumDeep": "#33222A",
+    "border": "#39414F",
+    "lineStrong": "#3A4354",
+    "muted": "#7C8494",
+    "mutedSoft": "#9AA3B4",
+    "pure": "#FFFFFF",    "radius": "6px"
+  },  "colors": {
     "Window": "#141922",
     "WindowText": "#EFE7D6",
     "Base": "#1A2030",

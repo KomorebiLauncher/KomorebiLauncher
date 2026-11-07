@@ -36,6 +36,7 @@
 #pragma once
 
 #include <QFileInfo>
+#include <QHash>
 #include "ITheme.h"
 #include "Result.h"
 
@@ -59,10 +60,20 @@ class CustomTheme : public ITheme {
    private:
     Result<> read(const QString& path, bool& hasCustomLogColors);
 
+    /// Replaces @name in the stylesheet with the tokens of the manifest and the palette roles.
+    void expandTokens();
+
     QPalette m_palette;
     QColor m_fadeColor;
     double m_fadeAmount;
     QString m_styleSheet;
+
+    /**
+     * Values a stylesheet can refer to with @name, taken from the "tokens" object of the theme
+     * manifest. The point is that a colour is written down once: the palette, the sheet and the
+     * icons of a theme then cannot drift apart.
+     */
+    QHash<QString, QString> m_tokens;
     QString m_name;
     QString m_id;
     QString m_widgets;

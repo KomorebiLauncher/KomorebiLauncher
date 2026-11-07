@@ -2,7 +2,24 @@
   "name": "Komorebi",
   "widgets": "Fusion",
   "qssFilePath": "themeStyle.css",
-  "colors": {
+  "tokens": {
+    "paper": "#FAF7F0",
+    "paperRgb": "250, 247, 240",
+    "paperDeep": "#F3ECDE",
+    "paperDeepRgb": "243, 236, 222",
+    "ink": "#242E4C",
+    "inkRgb": "36, 46, 76",
+    "plum": "#8B243A",
+    "plumRgb": "139, 36, 58",
+    "plumSoft": "#C25569",
+    "plumSoftRgb": "194, 85, 105",
+    "line": "rgba(36, 46, 76, 0.22)",
+    "muted": "#78786E",
+    "lineStrong": "#A9A296",
+    "border": "#C9C2B4",
+    "paperLine": "#DBD5C8",
+    "pure": "#FFFFFF",    "radius": "6px"
+  },  "colors": {
     "Window": "#FAF7F0",
     "WindowText": "#242E4C",
     "Base": "#FAF7F0",

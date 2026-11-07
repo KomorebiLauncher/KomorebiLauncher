@@ -55,13 +55,13 @@ PageContainer QGroupBox::title {
 PageContainer QTreeView::item:selected,
 PageContainer QListView::item:selected,
 PageContainer QTableView::item:selected {
-    background-color: rgba(194, 85, 105, 0.28);
-    color: #EFE7D6;
+    background-color: rgba(@plumRgb, 0.28);
+    color: @ink;
 }
 
 PageContainer QTreeView::item:hover,
 PageContainer QListView::item:hover {
-    background-color: rgba(194, 85, 105, 0.14);
+    background-color: rgba(@plumRgb, 0.14);
 }
 
 /* ---- 4. 标签页：不要白底，只留选中下划线 ---- */
@@ -153,8 +153,8 @@ PageContainer QToolBar {
     background: transparent;
 }
 
-#instanceView::item:hover { background-color: rgba(194, 85, 105, 0.14); }
-#instanceView::item:selected { background-color: rgba(194, 85, 105, 0.28); color: #EFE7D6; }
+#instanceView::item:hover { background-color: rgba(@plumRgb, 0.14); }
+#instanceView::item:selected { background-color: rgba(@plumRgb, 0.28); color: @ink; }
 
 /* 菜单栏与菜单：保持不透明，否则文字压在图上读不清 */
 
@@ -166,13 +166,13 @@ PageContainer QToolBar {
 /* 卡片上的重命名编辑框：必须是不透明的，否则文字直接压在图和卡片上，看不出这里是输入框 */
 #instanceView QTextEdit,
 InstanceView QTextEdit {
-    background-color: #141922;
-    border: 1px solid rgba(194, 85, 105, 0.65);
+    background-color: @paper;
+    border: 1px solid rgba(@plumRgb, 0.65);
     border-radius: 5px;
     padding: 2px 4px;
-    color: #EFE7D6;
-    selection-background-color: rgba(194, 85, 105, 0.3);
-    selection-color: #EFE7D6;
+    color: @ink;
+    selection-background-color: rgba(@plumRgb, 0.3);
+    selection-color: @ink;
 }
 
 /* 实例列表：保留选中与悬停反馈，其余透明 */
@@ -187,8 +187,8 @@ InstanceView {
 }
 
 #instanceView::item:selected {
-    background-color: rgba(194, 85, 105, 0.28);
-    color: #EFE7D6;
+    background-color: rgba(@plumRgb, 0.28);
+    color: @ink;
 }
 
 /* 工具栏与状态栏：透明，只留一条分隔线 */
@@ -199,7 +199,7 @@ InstanceView {
 /* ============================================================
  * 账户页左侧列表：统一文字色
  *
- * 原因：主题之前只给选中行写了 color: #ffffff，未选中行沿用调色板深色，
+ * 原因：主题之前只给选中行写了 color: @pure，未选中行沿用调色板深色，
  * 压在背景图上就成了黑白掺着。这里给整块加浅色底板 + 统一深色文字。
  * ============================================================ */
 
@@ -207,19 +207,19 @@ PageContainer VersionListView,
 PageContainer VersionListView#listView,
 PageContainer WideBar {
     background-color: transparent;
-    border: 1px solid rgba(194, 85, 105, 0.18);
+    border: 1px solid rgba(@plumRgb, 0.18);
     border-radius: 6px;
 }
 
 PageContainer VersionListView::item,
 PageContainer WideBar::item {
-    color: #EFE7D6;
+    color: @ink;
 }
 
 PageContainer VersionListView::item:selected,
 PageContainer WideBar::item:selected {
-    background-color: rgba(194, 85, 105, 0.22);
-    color: #EFE7D6;
+    background-color: rgba(@plumRgb, 0.22);
+    color: @ink;
 }
 /* ============================================================
  * 交替行（斑马纹）底色
@@ -242,13 +242,13 @@ PageContainer QAbstractItemView::item:alternate {
  * 设置窗口与其它对话框：全透明
  *
  * 不给任何控件加底板 —— 背景图直接透出来。既然图是亮的，文字用深色；
- * 换深色背景图时把下面的 #EFE7D6 改成 #EFE7D6 即可。
+ * 换深色背景图时把下面的 @ink 改成 @ink 即可。
  * ============================================================ */
 
 /* 顶层对话框必须有可见底板：样式表把顶层窗口写成 transparent 时没有东西可画，会变成纯黑。
    有 PageContainer 的窗口仍会在它上面绘制背景图。 */
 QDialog {
-    background-color: #141922;
+    background-color: @paper;
 }
 
 QDialog QWidget,
@@ -276,9 +276,9 @@ QDialog QTableWidget,
 QDialog QPushButton,
 QDialog QToolButton {
     background: transparent;
-    border: 1px solid rgba(239, 231, 214, 0.22);
+    border: 1px solid rgba(@inkRgb, 0.22);
     border-radius: 6px;
-    color: #EFE7D6;
+    color: @ink;
 }
 
 QDialog QLabel,
@@ -286,22 +286,22 @@ QDialog QCheckBox,
 QDialog QRadioButton,
 QDialog QGroupBox::title {
     background: transparent;
-    color: #EFE7D6;
+    color: @ink;
 }
 
 QDialog QLineEdit,
 QDialog QComboBox,
 QDialog QSpinBox {
-    color: #EFE7D6;
-    selection-background-color: rgba(194, 85, 105, 0.55);
-    selection-color: #EFE7D6;
+    color: @ink;
+    selection-background-color: rgba(@plumRgb, 0.55);
+    selection-color: @ink;
 }
 
 QDialog QTreeView::item:selected,
 QDialog QListView::item:selected,
 QDialog QTableView::item:selected {
-    background-color: rgba(194, 85, 105, 0.28);
-    color: #EFE7D6;
+    background-color: rgba(@plumRgb, 0.28);
+    color: @ink;
 }
 
 QDialog QAbstractItemView {
@@ -310,7 +310,7 @@ QDialog QAbstractItemView {
 
 QDialog QPushButton:hover,
 QDialog QToolButton:hover {
-    background-color: rgba(239, 231, 214, 0.18);
+    background-color: rgba(@inkRgb, 0.18);
 }
 /* ============================================================
  * 下拉框弹出列表
@@ -323,23 +323,23 @@ QDialog QToolButton:hover {
 
 QComboBox QAbstractItemView,
 QComboBox QListView {
-    background-color: #EFE7D6;
-    color: #EFE7D6;
-    border: 1px solid rgba(239, 231, 214, 0.28);
+    background-color: @ink;
+    color: @ink;
+    border: 1px solid rgba(@inkRgb, 0.28);
     outline: none;
     padding: 4px;
-    selection-background-color: rgba(194, 85, 105, 0.26);
-    selection-color: #EFE7D6;
+    selection-background-color: rgba(@plumRgb, 0.26);
+    selection-color: @ink;
 }
 
 QComboBox QAbstractItemView::item {
-    color: #EFE7D6;
+    color: @ink;
     padding: 3px 6px;
 }
 
 QComboBox QAbstractItemView::item:selected {
-    background-color: rgba(194, 85, 105, 0.26);
-    color: #EFE7D6;
+    background-color: rgba(@plumRgb, 0.26);
+    color: @ink;
 }
 /* ============================================================
  * 右键菜单
@@ -348,32 +348,32 @@ QComboBox QAbstractItemView::item:selected {
  * ============================================================ */
 
 QMenu {
-    background-color: #1E2430;
-    border: 1px solid #39414F;
+    background-color: @raised;
+    border: 1px solid @border;
     border-radius: 6px;
     padding: 5px;
-    color: #EFE7D6;
+    color: @ink;
 }
 
 QMenu::item {
     background-color: transparent;
     padding: 6px 26px 6px 22px;
     border-radius: 4px;
-    color: #EFE7D6;
+    color: @ink;
 }
 
 QMenu::item:selected {
-    background-color: rgba(194, 85, 105, 0.16);
-    color: #EFE7D6;
+    background-color: rgba(@plumRgb, 0.16);
+    color: @ink;
 }
 
 QMenu::item:disabled {
-    color: rgba(239, 231, 214, 0.38);
+    color: rgba(@inkRgb, 0.38);
 }
 
 QMenu::separator {
     height: 1px;
-    background-color: rgba(239, 231, 214, 0.14);
+    background-color: rgba(@inkRgb, 0.14);
     margin: 4px 8px;
 }
 
@@ -389,12 +389,12 @@ QMenu::indicator {
 
 QMenuBar {
     background-color: transparent;
-    color: #EFE7D6;
+    color: @ink;
 }
 
 QMenuBar::item:selected {
-    background-color: rgba(194, 85, 105, 0.16);
-    color: #EFE7D6;
+    background-color: rgba(@plumRgb, 0.16);
+    color: @ink;
 }
 /* ============================================================
  * 工具提示
@@ -404,9 +404,9 @@ QMenuBar::item:selected {
  * ============================================================ */
 
 QToolTip {
-    background-color: #1E2430;
-    color: #EFE7D6;
-    border: 1px solid rgba(239, 231, 214, 0.22);
+    background-color: @raised;
+    color: @ink;
+    border: 1px solid rgba(@inkRgb, 0.22);
     border-radius: 4px;
     padding: 4px 8px;
 }
@@ -424,13 +424,13 @@ QScrollBar:vertical {
 }
 
 QScrollBar::handle:vertical {
-    background-color: rgba(239, 231, 214, 0.28);
+    background-color: rgba(@inkRgb, 0.28);
     border-radius: 5px;
     min-height: 24px;
 }
 
 QScrollBar::handle:vertical:hover {
-    background-color: rgba(239, 231, 214, 0.45);
+    background-color: rgba(@inkRgb, 0.45);
 }
 
 QScrollBar:horizontal {
@@ -440,13 +440,13 @@ QScrollBar:horizontal {
 }
 
 QScrollBar::handle:horizontal {
-    background-color: rgba(239, 231, 214, 0.28);
+    background-color: rgba(@inkRgb, 0.28);
     border-radius: 5px;
     min-width: 24px;
 }
 
 QScrollBar::handle:horizontal:hover {
-    background-color: rgba(239, 231, 214, 0.45);
+    background-color: rgba(@inkRgb, 0.45);
 }
 
 QScrollBar::add-line,
@@ -469,22 +469,22 @@ QScrollBar::sub-page {
 QComboBoxPrivateContainer,
 QComboBoxPrivateContainer QListView,
 QComboBoxPrivateContainer QAbstractItemView {
-    background-color: #1E2430;
-    color: #EFE7D6;
-    border: 1px solid #39414F;
+    background-color: @raised;
+    color: @ink;
+    border: 1px solid @border;
     border-radius: 4px;
 }
 
 QComboBoxPrivateContainer::item,
 QComboBoxPrivateContainer QListView::item {
-    color: #EFE7D6;
+    color: @ink;
     padding: 3px 6px;
 }
 
 QComboBoxPrivateContainer::item:selected,
 QComboBoxPrivateContainer QListView::item:selected {
-    background-color: #33222A;
-    color: #EFE7D6;
+    background-color: @plumDeep;
+    color: @ink;
 }
 /* ============================================================
  * 右键菜单与菜单栏 —— 放在最后，保证优先级
@@ -492,37 +492,37 @@ QComboBoxPrivateContainer QListView::item:selected {
  * ============================================================ */
 
 QMenu {
-    background-color: #1E2430;
-    border: 1px solid #39414F;
+    background-color: @raised;
+    border: 1px solid @border;
     border-radius: 6px;
     padding: 5px;
-    color: #EFE7D6;
+    color: @ink;
 }
 
 QMenu::item {
     /* 必须是实色：弹窗窗口的底色是黑的，条目透明就等于露出黑底 */
-    background-color: #1E2430;
-    color: #EFE7D6;
+    background-color: @raised;
+    color: @ink;
     padding: 6px 26px 6px 22px;
     border-radius: 4px;
 }
 
 QMenu::item:hover {
-    background-color: #33222A;
+    background-color: @plumDeep;
 }
 
 QMenu::item:selected {
-    background-color: #33222A;
-    color: #EFE7D6;
+    background-color: @plumDeep;
+    color: @ink;
 }
 
 QMenu::item:disabled {
-    color: #7C8494;
+    color: @muted;
 }
 
 QMenu::separator {
     height: 1px;
-    background-color: #2E3644;
+    background-color: @borderSoft;
     margin: 4px 8px;
 }
 
@@ -531,8 +531,8 @@ QMenuBar {
 }
 
 QMenuBar::item:selected {
-    background-color: #33222A;
-    color: #EFE7D6;
+    background-color: @plumDeep;
+    color: @ink;
 }/* ============================================================
  * 工具栏按钮
  *
@@ -548,8 +548,8 @@ QToolBar {
 
 /* 顶部主工具栏：一块很淡的板 + 一条细线，让它在壁纸上读起来是"栏"而不是一排浮字 */
 #mainToolBar {
-    background: rgba(20, 25, 34, 0.66);
-    border-bottom: 1px solid rgba(239, 231, 214, 0.10);
+    background: rgba(@paperRgb, 0.66);
+    border-bottom: 1px solid rgba(@inkRgb, 0.10);
     padding: 4px 10px;
     spacing: 6px;
 }
@@ -557,13 +557,13 @@ QToolBar {
 #mainToolBar QToolButton {
     padding: 6px 12px;
     border-radius: 6px;
-    color: #EFE7D6;
+    color: @ink;
     font-size: 13px;
 }
 
 #mainToolBar::separator {
     width: 1px;
-    background: rgba(239, 231, 214, 0.16);
+    background: rgba(@inkRgb, 0.16);
     margin: 8px 10px;
 }
 
@@ -571,15 +571,15 @@ QToolBar {
 QMainWindow QPushButton,
 QMainWindow QToolButton {
     background: transparent;
-    border: 1px solid rgba(239, 231, 214, 0.24);
+    border: 1px solid rgba(@inkRgb, 0.24);
     border-radius: 6px;
-    color: #EFE7D6;
+    color: @ink;
     padding: 5px 14px;
 }
 
 QMainWindow QPushButton:hover,
 QMainWindow QToolButton:hover {
-    background-color: rgba(139, 36, 58, 0.12);
+    background-color: rgba(@plumSoftRgb, 0.12);
 }
 
 QToolBar QToolButton {
@@ -587,26 +587,26 @@ QToolBar QToolButton {
     border: 1px solid transparent;
     border-radius: 5px;
     padding: 4px 8px;
-    color: #EFE7D6;
+    color: @ink;
 }
 
 QToolBar QToolButton:hover {
-    background-color: rgba(194, 85, 105, 0.16);
-    border-color: rgba(194, 85, 105, 0.22);
+    background-color: rgba(@plumRgb, 0.16);
+    border-color: rgba(@plumRgb, 0.22);
 }
 
 QToolBar QToolButton:pressed,
 QToolBar QToolButton:checked {
-    background-color: rgba(194, 85, 105, 0.26);
-    border-color: rgba(194, 85, 105, 0.32);
+    background-color: rgba(@plumRgb, 0.26);
+    border-color: rgba(@plumRgb, 0.32);
 }
 
 QToolBar QToolButton:disabled {
-    color: #7C8494;
+    color: @muted;
 }
 
 QToolBar::separator {
-    background-color: rgba(239, 231, 214, 0.18);
+    background-color: rgba(@inkRgb, 0.18);
     width: 1px;
     margin: 4px 6px;
 }
@@ -618,33 +618,33 @@ QToolBar::separator {
  * ============================================================ */
 
 QMenu {
-    background: #1E2430;
-    border: 1px solid #39414F;
+    background: @raised;
+    border: 1px solid @border;
     border-radius: 0px;
     padding: 4px;
-    color: #EFE7D6;
+    color: @ink;
 }
 
 QMenu::item {
-    background: #1E2430;
-    color: #EFE7D6;
+    background: @raised;
+    color: @ink;
     padding: 6px 28px 6px 22px;
     margin: 1px 2px;
 }
 
 QMenu::item:selected {
-    background: #33222A;
-    color: #EFE7D6;
+    background: @plumDeep;
+    color: @ink;
 }
 
 QMenu::item:disabled {
-    background: #1E2430;
-    color: #7C8494;
+    background: @raised;
+    color: @muted;
 }
 
 QMenu::separator {
     height: 1px;
-    background: #2E3644;
+    background: @borderSoft;
     margin: 4px 10px;
 }
 /* ============================================================
@@ -653,27 +653,27 @@ QMenu::separator {
 
 #contentTitle {
     background: transparent;
-    color: #EFE7D6;
+    color: @ink;
     font-size: 22px;
     font-weight: 600;
 }
 
 #contentSubtitle {
     background: transparent;
-    color: #9AA3B4;
+    color: @mutedSoft;
     font-size: 13px;
 }
 
 #contentAction {
     background-color: transparent;
-    border: 1px solid #39414F;
+    border: 1px solid @border;
     border-radius: 6px;
     padding: 5px 14px;
-    color: #EFE7D6;
+    color: @ink;
 }
 
 #contentAction:hover {
-    background-color: rgba(194, 85, 105, 0.18);
+    background-color: rgba(@plumRgb, 0.18);
 }
 
 /* 卡片容器：标题与新闻各一块，和左侧实例卡片同一套圆角与底色。
@@ -693,17 +693,17 @@ QMenu::separator {
 #newsEntry {
     background: transparent;
     border: none;
-    color: #EFE7D6;
+    color: @ink;
     font-size: 13px;
     padding: 2px 0;
 }
 
 #newsEntry:hover {
-    color: #C25569;
+    color: @plum;
 }
 
 #newsEntry:disabled {
-    color: #7C8494;
+    color: @muted;
 }
 
 /* 对话框挂在主窗口下时，会同时命中上面的 `QMainWindow QWidget` 透明规则 ——
@@ -711,18 +711,18 @@ QMenu::separator {
    这条放在文件末尾，同优先级下后写的胜出。 */
 QMainWindow QDialog,
 QDialog {
-    background-color: #141922;
+    background-color: @paper;
 }
 
 /* 滑块：不依赖系统样式绘制，槽与柄都写死，免得在自定义调色板下画成一块黑条 */
 QSlider::groove:horizontal {
     height: 4px;
-    background: rgba(239, 231, 214, 0.22);
+    background: rgba(@inkRgb, 0.22);
     border-radius: 2px;
 }
 
 QSlider::sub-page:horizontal {
-    background: rgba(194, 85, 105, 0.75);
+    background: rgba(@plumRgb, 0.75);
     border-radius: 2px;
 }
 
@@ -730,7 +730,7 @@ QSlider::handle:horizontal {
     width: 14px;
     margin: -6px 0;
     border-radius: 7px;
-    background: #C25569;
+    background: @plum;
 }
 
 QSlider::handle:horizontal:disabled {
@@ -747,27 +747,27 @@ QSlider::handle:horizontal:disabled {
 
 QMainWindow QToolTip,
 QDialog QToolTip {
-    background-color: #1B2230;
-    color: #EFE7D6;
-    border: 1px solid rgba(239, 231, 214, 0.30);
+    background-color: @paperDeep;
+    color: @ink;
+    border: 1px solid rgba(@inkRgb, 0.30);
     border-radius: 5px;
     padding: 4px 8px;
 }
 
 QMainWindow QMenu,
 QDialog QMenu {
-    background-color: #1B2230;
-    border: 1px solid #3A4354;
+    background-color: @paperDeep;
+    border: 1px solid @lineStrong;
     border-radius: 6px;
     padding: 5px;
-    color: #EFE7D6;
+    color: @ink;
 }
 
 QMainWindow QComboBox QAbstractItemView,
 QDialog QComboBox QAbstractItemView,
 QMainWindow QComboBox QListView,
 QDialog QComboBox QListView {
-    background-color: #1B2230;
-    color: #EFE7D6;
-    border: 1px solid rgba(239, 231, 214, 0.30);
+    background-color: @paperDeep;
+    color: @ink;
+    border: 1px solid rgba(@inkRgb, 0.30);
 }
