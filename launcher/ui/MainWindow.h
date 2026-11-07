@@ -45,7 +45,10 @@
 #include <QTimer>
 
 #include "minecraft/auth/MinecraftAccount.h"
+#include "ui/window/IWindowShell.h"
 #include "ui/window/WindowParts.h"
+
+#include <memory>
 
 class LaunchController;
 class NewsChecker;
@@ -241,6 +244,9 @@ class MainWindow : public QMainWindow {
     Ui::MainWindow* ui;
     // these are managed by Qt's memory management model!
     InstanceView* view = nullptr;
+
+    /** The layout in use; swapped when the player picks another one. */
+    std::unique_ptr<IWindowShell> m_shell;
 
     /** The widgets a layout shell arranges; filled once, never replaced. */
     WindowParts m_windowParts;

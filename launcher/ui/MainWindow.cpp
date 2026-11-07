@@ -114,6 +114,7 @@
 #include "ui/instanceview/InstanceDelegate.h"
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
+#include "ui/window/SidebarShell.h"
 #include "ui/themes/ITheme.h"
 #include "ui/themes/ThemeManager.h"
 
@@ -358,7 +359,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->setSourceOfGroupCollapseStatus(
             [](const QString& groupName) -> bool { return APPLICATION->instances()->isGroupCollapsed(groupName); });
         connect(view, &InstanceView::groupStateChanged, APPLICATION->instances(), &InstanceList::on_GroupStateChanged);
-        ui->horizontalLayout->addWidget(view);
+        // Placement is the shell's job; the window only owns the widget.
+        m_shell = std::make_unique<SidebarShell>();
     }
     // The cat background
     {
@@ -470,6 +472,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     m_windowParts.mainToolBar = ui->mainToolBar;
     m_windowParts.newsToolBar = ui->newsToolBar;
     m_windowParts.statusBar = statusBar();
+
+    m_shell->adopt(m_windowParts);
 }
 
 // macOS always has a native menu bar, so these fixes are not applicable
