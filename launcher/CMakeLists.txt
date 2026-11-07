@@ -1542,7 +1542,11 @@ else()
     # sfinae-incomplete is a new GCC warning and triggers in Qt headers
     # no-unknown-warning-option so that compilers that don't have sfinae-incomplete don't error
     target_compile_options(Launcher_logic PRIVATE -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unknown-warning-option -Wno-sfinae-incomplete)
+    # Clang alone reports unused private fields. With warnings as errors that turns a leftover
+    # member into a failure only macOS sees, which is confusing to diagnose from a Windows machine.
+    target_compile_options(Launcher_logic PRIVATE -Wno-unused-private-field)
     target_compile_options(${Launcher_Name} PRIVATE -Wno-unused-parameter -Wno-missing-field-initializers -Wno-unknown-warning-option -Wno-sfinae-incomplete)
+    target_compile_options(${Launcher_Name} PRIVATE -Wno-unused-private-field)
 endif()
 
 #### The bundle mess! ####

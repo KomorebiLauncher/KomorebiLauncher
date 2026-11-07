@@ -72,7 +72,17 @@ runs:
           ENTITLEMENTS_FILE='../program_info/AdhocSignedApp.entitlements'
         fi
 
-        sudo codesign --sign "$APPLE_CODESIGN_ID" --deep --force --entitlements "$ENTITLEMENTS_FILE" --options runtime "KomorebiLauncher.app/Contents/MacOS/komorebilauncher"
+        # Nested executables have to be signed before the bundle. Signing only the main binary with
+        # --deep leaves the jars in Contents/MacOS unsigned and the verification step fails with
+        # "code object is not signed at all".
+        if [ -d "KomorebiLauncher.app/Contents/MacOS/jars" ]; then
+          find "KomorebiLauncher.app/Contents/MacOS/jars" -type f \( -name '*.jar' -o -name '*.dylib' -o -name '*.so' -o -name '*.jnilib' \) -print0 |
+            xargs -0 -r -I{} sudo codesign --sign "$APPLE_CODESIGN_ID" --force --options runtime {}
+        fi
+
+        sudo codesign --sign "$APPLE_CODESIGN_ID" --force --entitlements "$ENTITLEMENTS_FILE" --options runtime "KomorebiLauncher.app"
+        sudo codesign --verify --verbose=2 "KomorebiLauncher.app"
+
         mv "KomorebiLauncher.app" "Komorebi Launcher.app"
 
     - name: Notarize
@@ -108,11 +118,25 @@ runs:
 
         ln -s /Applications src/
 
-        hdiutil create \
-            -volname "Komorebi Launcher ${{ inputs.version }}" \
-            -srcfolder src \
-            -ov -format ULMO \
-            "../KomorebiLauncher.dmg"
+        # A leftover mount from an earlier attempt keeps hdiutil from creating the image
+        # ("Resource busy"), so detach anything with that name and retry a few times.
+        VOLUME="/Volumes/Komorebi Launcher ${{ inputs.version }}"
+        hdiutil detach "$VOLUME" -force >/dev/null 2>&1 || true
+
+        for attempt in 1 2 3; do
+          if hdiutil create \
+              -volname "Komorebi Launcher ${{ inputs.version }}" \
+              -srcfolder src \
+              -ov -format ULMO \
+              "../KomorebiLauncher.dmg"; then
+            break
+          fi
+          echo "hdiutil create failed (attempt $attempt), retrying after detach" >&2
+          hdiutil detach "$VOLUME" -force >/dev/null 2>&1 || true
+          sleep 5
+        done
+
+        test -f ../KomorebiLauncher.dmg
 
     - name: Make Sparkle signature
       shell: bash
