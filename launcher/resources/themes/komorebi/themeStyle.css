@@ -665,3 +665,26 @@ QMainWindow QDialog,
 QDialog {
     background-color: #FAF7F0;
 }
+
+/* 滑块：不依赖系统样式绘制，槽与柄都写死，免得在自定义调色板下画成一块黑条 */
+QSlider::groove:horizontal {
+    height: 4px;
+    background: rgba(36, 46, 76, 0.20);
+    border-radius: 2px;
+}
+
+QSlider::sub-page:horizontal {
+    background: rgba(139, 36, 58, 0.55);
+    border-radius: 2px;
+}
+
+QSlider::handle:horizontal {
+    width: 14px;
+    margin: -6px 0;
+    border-radius: 7px;
+    background: #8B243A;
+}
+
+QSlider::handle:horizontal:disabled {
+    background: rgba(120, 120, 110, 0.5);
+}
