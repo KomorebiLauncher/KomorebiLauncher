@@ -67,6 +67,12 @@ int main(int argc, char* argv[])
             Q_INIT_RESOURCE(flat);
             Q_INIT_RESOURCE(flat_white);
 
+            // The Taisho icon sets, and the bundled themes: the resource objects live in a static
+            // library, so nothing links them unless they are named here.
+            Q_INIT_RESOURCE(taisho);
+            Q_INIT_RESOURCE(taisho_dark);
+            Q_INIT_RESOURCE(themes);
+
             Q_INIT_RESOURCE(shaders);
             return app.exec();
         }
