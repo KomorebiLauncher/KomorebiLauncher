@@ -65,7 +65,9 @@ GPL-3.0-only，见 LICENSE 。
 | 配置项 | 值 | 说明 |
 | --- | --- | --- |
 | `MainWindowBackground` | 图片绝对路径（正斜杠） | 指定另一张背景图；留空则用主题自带的那张 |
-| `MainWindowBackgroundMode` | `fit`（默认）/ `cover` | `fit` 完整显示图片、四周留深色边；`cover` 铺满窗口、裁掉超出部分 |
+| `MainWindowBackgroundMode` | `auto`（默认）/ `fit` / `cover` | `auto` 按图片与窗口比例自动选择；`fit` 完整显示、四周留深色边；`cover` 铺满窗口、裁掉超出部分 |
+| `ThemeTextColor` | 任意颜色（如 `#242E4C`） | 全局文字颜色；留空则用主题自己的配色 |
+| `ThemeTextOutline` | `true`（默认）/ `false` | 给标签文字加一圈反色描边，保证压在任何背景图上都能读 |
 
 两项都在 `<数据目录>/komorebilauncher.cfg` 的 `[General]` 段里。
 

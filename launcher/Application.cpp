@@ -928,6 +928,12 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // do; "fit" shows the whole picture and leaves a band of colour around it.
         m_settings->registerSetting("MainWindowBackgroundMode", "cover");
 
+        // Empty means "whatever the theme says". A stylesheet cannot take the colour from a
+        // setting, so the value is applied by code when the theme is applied.
+        m_settings->registerSetting("ThemeTextColor", "");
+        // A thin halo in the opposite shade behind label text, so it stays readable on any picture.
+        m_settings->registerSetting("ThemeTextOutline", true);
+
         m_settings->registerSetting("MetaRefreshOnLaunch", true);
         m_settings->registerSetting("CloseAfterLaunch", false);
         m_settings->registerSetting("QuitAfterGameStop", false);

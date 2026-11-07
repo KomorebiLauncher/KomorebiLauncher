@@ -40,13 +40,72 @@
 #include "HintOverrideProxyStyle.h"
 #include "rainbow.h"
 
+#include <QEvent>
+#include <QGraphicsDropShadowEffect>
+#include <QLabel>
+#include <QPalette>
+
+namespace {
+
+/** The opposite shade of the given text colour, used for the halo behind it. */
+auto haloFor(const QColor& text) -> QColor
+{
+    const int luma = (299 * text.red() + 587 * text.green() + 114 * text.blue()) / 1000;
+    return luma < 128 ? QColor(255, 255, 255, 230) : QColor(0, 0, 0, 210);
+}
+
+/**
+ * Gives every label a faint outline in the opposite shade.
+ *
+ * A stylesheet has no text-shadow, so the halo has to come from an effect. The filter sits on the
+ * application and acts when a label is first shown, which covers labels built lazily by pages far
+ * from here.
+ */
+class TextOutlineFilter final : public QObject
+{
+  public:
+    explicit TextOutlineFilter(QObject* parent) : QObject(parent) {}
+
+  protected:
+    bool eventFilter(QObject* object, QEvent* event) override
+    {
+        if (event->type() == QEvent::Show) {
+            if (auto* label = qobject_cast<QLabel*>(object); label && !label->graphicsEffect()) {
+                auto* halo = new QGraphicsDropShadowEffect(label);
+                halo->setBlurRadius(4);
+                halo->setOffset(0, 0);
+                halo->setColor(haloFor(label->palette().color(QPalette::WindowText)));
+                label->setGraphicsEffect(halo);
+            }
+        }
+        return QObject::eventFilter(object, event);
+    }
+};
+
+}  // namespace
 void ITheme::apply(bool)
 {
     APPLICATION->setStyleSheet(QString());
     QApplication::setStyle(new HintOverrideProxyStyle(QStyleFactory::create(qtTheme())));
     QApplication::setPalette(colorScheme());
-    APPLICATION->setStyleSheet(appStyleSheet());
+    auto sheet = appStyleSheet();
+
+    // The text colour cannot come from a stylesheet, so it is appended here when one was chosen.
+    // The bare "*" selector wins over the theme's own rules by being later in the same sheet.
+    const auto textColor = APPLICATION->settings()->get("ThemeTextColor").toString();
+    if (!textColor.isEmpty())
+        sheet += QStringLiteral("\n* { color: %1; }\n").arg(textColor);
+
+    APPLICATION->setStyleSheet(sheet);
     QDir::setSearchPaths("theme", searchPaths());
+
+    if (APPLICATION->settings()->get("ThemeTextOutline").toBool()) {
+        static TextOutlineFilter* outlineFilter = nullptr;
+        if (!outlineFilter) {
+            outlineFilter = new TextOutlineFilter(APPLICATION);
+            APPLICATION->installEventFilter(outlineFilter);
+        }
+    }
 }
 
 QPalette ITheme::fadeInactive(QPalette in, qreal bias, QColor color)
