@@ -469,3 +469,46 @@ QComboBoxPrivateContainer QListView::item:selected {
     background-color: #EFDCD8;
     color: #242E4C;
 }
+/* ============================================================
+ * 右键菜单与菜单栏 —— 放在最后，保证优先级
+ * 弹窗窗口不做半透明合成，一律用实色。
+ * ============================================================ */
+
+QMenu {
+    background-color: #FAF7F0;
+    border: 1px solid #C9C2B4;
+    border-radius: 6px;
+    padding: 5px;
+    color: #242E4C;
+}
+
+QMenu::item {
+    background-color: transparent;
+    color: #242E4C;
+    padding: 6px 26px 6px 22px;
+    border-radius: 4px;
+}
+
+QMenu::item:selected {
+    background-color: #EFDCD8;
+    color: #242E4C;
+}
+
+QMenu::item:disabled {
+    color: #A9A296;
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: #DBD5C8;
+    margin: 4px 8px;
+}
+
+QMenuBar {
+    background-color: transparent;
+}
+
+QMenuBar::item:selected {
+    background-color: #EFDCD8;
+    color: #242E4C;
+}
