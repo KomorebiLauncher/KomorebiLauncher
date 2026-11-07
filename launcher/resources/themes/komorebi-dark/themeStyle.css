@@ -622,3 +622,33 @@ QMenu::separator {
 #contentAction:hover {
     background-color: rgba(194, 85, 105, 0.18);
 }
+
+/* 卡片容器：标题与新闻各一块，和左侧实例卡片同一套圆角与底色。
+ *
+ * 选择器写成 `#centralWidget #contentCard` 而不是 `#contentCard` 是有意的：上面那条
+ * `#centralWidget QWidget { background: transparent; }` 多一个类型选择器，优先级更高，
+ * 只写 id 会被它压过去，卡片就永远是透明的。
+ */
+#centralWidget #contentCard,
+#centralWidget #newsCard {
+    background-color: rgba(26, 32, 48, 0.72);
+    border: 1px solid rgba(57, 65, 79, 0.85);
+    border-radius: 10px;
+}
+
+/* 新闻标题：一行文字，不是按钮 */
+#newsEntry {
+    background: transparent;
+    border: none;
+    color: #EFE7D6;
+    font-size: 13px;
+    padding: 2px 0;
+}
+
+#newsEntry:hover {
+    color: #C25569;
+}
+
+#newsEntry:disabled {
+    color: #7C8494;
+}

@@ -1,5 +1,20 @@
 {
   "name": "Komorebi",
   "widgets": "Fusion",
-  "qssFilePath": "themeStyle.css"
+  "qssFilePath": "themeStyle.css",
+  "colors": {
+    "Window": "#FAF7F0",
+    "WindowText": "#242E4C",
+    "Base": "#FAF7F0",
+    "AlternateBase": "#EFE7DA",
+    "Text": "#242E4C",
+    "Button": "#F3ECDE",
+    "ButtonText": "#242E4C",
+    "ToolTipBase": "#FAF7F0",
+    "ToolTipText": "#242E4C",
+    "Highlight": "#EFDCD8",
+    "HighlightedText": "#242E4C",
+    "Link": "#8B243A",
+    "BrightText": "#FFFFFF"
+  }
 }

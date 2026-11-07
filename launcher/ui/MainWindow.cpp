@@ -275,7 +275,8 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
 
     // add the toolbar toggles to the view menu
     ui->viewMenu->addAction(ui->instanceToolBar->toggleViewAction());
-    ui->viewMenu->addAction(ui->newsToolBar->toggleViewAction());
+    // No toggle for the news strip: its content moved into the panel, so offering a switch that
+    // brings back an empty bar would only be a way to undo the removal by accident.
 
     updateThemeMenu();
     updateMainToolBar();
@@ -303,15 +304,17 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         connect(secretEventFilter, &KonamiCode::triggered, this, &MainWindow::konamiTriggered);
     }
 
-    // Add the news label to the news toolbar.
+    // The news headline. It used to live in the news toolbar; the strip is gone, so the content
+    // panel hosts it instead and the toolbar is not given it at all -- a toolbar that still owned
+    // the widget would take it back the moment the strip was shown again.
     {
         m_newsChecker.reset(new NewsChecker(APPLICATION->network(), BuildConfig.NEWS_RSS_URL));
         newsLabel = new QToolButton();
+        newsLabel->setObjectName(QStringLiteral("newsEntry"));
         newsLabel->setIcon(QIcon::fromTheme("news"));
-        newsLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        newsLabel->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
         newsLabel->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
         newsLabel->setFocusPolicy(Qt::NoFocus);
-        ui->newsToolBar->insertWidget(ui->actionMoreNews, newsLabel);
 
         connect(newsLabel, &QAbstractButton::clicked, this, &MainWindow::newsButtonClicked);
         connect(m_newsChecker.get(), &NewsChecker::newsLoaded, this, &MainWindow::updateNewsLabel);

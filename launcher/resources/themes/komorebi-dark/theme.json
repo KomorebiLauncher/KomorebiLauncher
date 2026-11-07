@@ -1,1 +1,20 @@
-{ "name": "Komorebi Dark", "widgets": "Fusion", "qssFilePath": "themeStyle.css" }
+{
+  "name": "Komorebi Dark",
+  "widgets": "Fusion",
+  "qssFilePath": "themeStyle.css",
+  "colors": {
+    "Window": "#141922",
+    "WindowText": "#EFE7D6",
+    "Base": "#1A2030",
+    "AlternateBase": "#1E2430",
+    "Text": "#EFE7D6",
+    "Button": "#1E2430",
+    "ButtonText": "#EFE7D6",
+    "ToolTipBase": "#1E2430",
+    "ToolTipText": "#EFE7D6",
+    "Highlight": "#33222A",
+    "HighlightedText": "#EFE7D6",
+    "Link": "#C25569",
+    "BrightText": "#FFFFFF"
+  }
+}

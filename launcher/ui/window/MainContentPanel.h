@@ -13,9 +13,10 @@
 
 class BaseInstance;
 class QAction;
+class QFrame;
+class QHBoxLayout;
 class QLabel;
-class QVBoxLayout;
-class QVBoxLayout;
+class QToolButton;
 
 /**
  * The area beside the instance list: which instance is selected, and the news.
@@ -39,8 +40,13 @@ class MainContentPanel final : public QWidget {
     void setMoreNewsAction(QAction* action);
 
    private:
+    /** Mirrors the action's own visibility -- it hides itself while there is no news to open. */
+    void updateMoreNewsVisibility();
+
     QLabel* m_title = nullptr;
     QLabel* m_subtitle = nullptr;
-    QVBoxLayout* m_newsSlot = nullptr;
-    QVBoxLayout* m_actionsRow = nullptr;
+    QFrame* m_summaryCard = nullptr;
+    QFrame* m_newsCard = nullptr;
+    QHBoxLayout* m_newsRow = nullptr;
+    QToolButton* m_moreNewsButton = nullptr;
 };
