@@ -246,9 +246,11 @@ QSize ListViewDelegate::sizeHint(const QStyleOptionViewItem& option, const QMode
     int height = 48 + textMargin * 2 + 18;  // extra room for the card padding
     QSize szz = viewItemTextSize(&opt);
     height += szz.height();
-    // FIXME: maybe the icon items could scale and keep proportions?
-    QSize sz(100, height);
-    return sz;
+    // The width follows the list, not a constant: a card that is 100px wide cannot show a name and
+    // was what made the list look like a column of slivers.
+    const int available = option.widget ? option.widget->width() : 240;
+    const int width = qMax(180, available - 16);
+    return QSize(width, height);
 }
 
 class NoReturnTextEdit : public QTextEdit {
