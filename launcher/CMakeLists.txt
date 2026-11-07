@@ -1271,6 +1271,8 @@ qt_add_resources(LAUNCHER_RESOURCES
     resources/documents/documents.qrc
     resources/shaders/shaders.qrc
     resources/themes/themes.qrc
+    resources/taisho/taisho.qrc
+    resources/taisho-dark/taisho-dark.qrc
     "${CMAKE_CURRENT_BINARY_DIR}/../${Launcher_Branding_LogoQRC}"
 )
 
