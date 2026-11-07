@@ -72,6 +72,7 @@ int main(int argc, char* argv[])
             Q_INIT_RESOURCE(taisho);
             Q_INIT_RESOURCE(taisho_dark);
             Q_INIT_RESOURCE(themes);
+            Q_INIT_RESOURCE(komorebi_instances);
 
             Q_INIT_RESOURCE(shaders);
             return app.exec();

@@ -1015,8 +1015,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     // Instance icons
     {
         auto setting = APPLICATION->settings()->getSetting("IconsDir");
-        QStringList instFolders = { ":/icons/multimc/32x32/instances/", ":/icons/multimc/50x50/instances/",
-                                    ":/icons/multimc/128x128/instances/", ":/icons/multimc/scalable/instances/" };
+        // The launcher draws its own instance icons; the MultiMC set is no longer offered, because
+        // the picker is the one place a Prism-era icon would still be visible in a themed window.
+        QStringList instFolders = { ":/icons/komorebi-instances/" };
         m_icons.reset(new IconList(instFolders, setting->get().toString()));
         connect(setting.get(), &Setting::SettingChanged, this,
                 [this](const Setting&, const QVariant& value) { m_icons->directoryChanged(value.toString()); });

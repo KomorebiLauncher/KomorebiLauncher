@@ -163,6 +163,18 @@ PageContainer QToolBar {
     background: transparent;
 }
 
+/* 卡片上的重命名编辑框：必须是不透明的，否则文字直接压在图和卡片上，看不出这里是输入框 */
+#instanceView QTextEdit,
+InstanceView QTextEdit {
+    background-color: #141922;
+    border: 1px solid rgba(194, 85, 105, 0.65);
+    border-radius: 5px;
+    padding: 2px 4px;
+    color: #EFE7D6;
+    selection-background-color: rgba(194, 85, 105, 0.3);
+    selection-color: #EFE7D6;
+}
+
 /* 实例列表：保留选中与悬停反馈，其余透明 */
 #instanceView,
 #instanceView QWidget,

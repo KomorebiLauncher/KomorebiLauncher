@@ -326,10 +326,13 @@ void ListViewDelegate::updateEditorGeometry(QWidget* editor,
                                             const QStyleOptionViewItem& option,
                                             [[maybe_unused]] const QModelIndex& index) const
 {
-    // Same box the painter uses for the label, so the editor appears exactly where the text was.
-    QRect textRect = option.rect;
-    textRect.setTop(option.rect.top() + cardInset + cardPadTop + iconSize + iconTextGap);
-    textRect.adjust(cardInset, 0, -cardInset, -cardInset - cardPadBottom);
+    // Same box the painter uses for the label, so the editor appears exactly where the text was --
+    // and inside the card: the label box sits on the seam between the icon and the bottom padding,
+    // so using it directly put part of the editor outside the card and over whatever is below.
+    const int top = option.rect.top() + cardInset + cardPadTop + iconSize + iconTextGap;
+    const int bottom = option.rect.bottom() - cardInset - cardPadBottom;
+    const int height = qMax(22, bottom - top);
+    const QRect textRect(option.rect.left() + cardInset + 2, top, option.rect.width() - 2 * (cardInset + 2), height);
     editor->setGeometry(textRect);
 }
 

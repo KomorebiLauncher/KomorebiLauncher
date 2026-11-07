@@ -1273,6 +1273,7 @@ qt_add_resources(LAUNCHER_RESOURCES
     resources/themes/themes.qrc
     resources/taisho/taisho.qrc
     resources/taisho-dark/taisho-dark.qrc
+    resources/komorebi-instances/komorebi-instances.qrc
     "${CMAKE_CURRENT_BINARY_DIR}/../${Launcher_Branding_LogoQRC}"
 )
 
