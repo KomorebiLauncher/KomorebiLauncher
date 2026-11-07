@@ -169,6 +169,10 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // background leaves a dark patch in the middle of the picture. This is what the instance view,
     // the news list and the status widgets needed.
     for (auto* child : findChildren<QWidget*>()) {
+        // Buttons keep their background handling: they draw a hover state, and without a
+        // background to clear it the highlight stays painted after the pointer leaves.
+        if (qobject_cast<QAbstractButton*>(child))
+            continue;
         child->setAutoFillBackground(false);
         child->setAttribute(Qt::WA_NoSystemBackground, true);
     }
