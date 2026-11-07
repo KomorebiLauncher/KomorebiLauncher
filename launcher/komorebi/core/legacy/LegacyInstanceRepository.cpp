@@ -5,6 +5,7 @@
 
 #include "Application.h"
 #include "BaseInstance.h"
+#include "InstanceList.h"
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/PackProfile.h"
 
@@ -31,8 +32,13 @@ QString loaderName(Loader loader)
 
 namespace {
 
-/// Reads one instance through the old types. This is the only place that knows about them.
-InstanceInfo describe(BaseInstance* instance)
+/**
+ * Reads one instance through the old types.
+ *
+ * This is the only place in the new layer that knows they exist: everything above works with
+ * InstanceInfo, so the day the implementation is replaced this file is what goes away.
+ */
+InstanceInfo describe(MinecraftInstance* instance, const QString& group)
 {
     InstanceInfo info;
     if (!instance)
@@ -40,31 +46,29 @@ InstanceInfo describe(BaseInstance* instance)
 
     info.id = instance->id();
     info.name = instance->name();
-    info.group = instance->group();
+    info.group = group;
     info.iconKey = instance->iconKey();
     info.path = instance->instanceRoot();
-    info.playable = !instance->hasVersionBroken();
+    info.playable = instance->canLaunch();
 
-    if (auto* minecraft = dynamic_cast<MinecraftInstance*>(instance)) {
-        if (auto* profile = minecraft->getPackProfile()) {
-            info.minecraftVersion = profile->getComponentVersion(QStringLiteral("net.minecraft"));
-            const struct {
-                const char* uid;
-                Loader loader;
-            } loaders[] = {
-                { "net.minecraftforge", Loader::Forge },
-                { "net.neoforged", Loader::NeoForge },
-                { "net.fabricmc.fabric-loader", Loader::Fabric },
-                { "org.quiltmc.quilt-loader", Loader::Quilt },
-            };
-            info.loader = Loader::Vanilla;
-            for (const auto& candidate : loaders) {
-                const auto version = profile->getComponentVersion(QString::fromLatin1(candidate.uid));
-                if (!version.isEmpty()) {
-                    info.loader = candidate.loader;
-                    info.loaderVersion = version;
-                    break;
-                }
+    if (auto* profile = instance->getPackProfile()) {
+        info.minecraftVersion = profile->getComponentVersion(QStringLiteral("net.minecraft"));
+
+        const struct {
+            const char* uid;
+            Loader loader;
+        } loaders[] = {
+            { "net.minecraftforge", Loader::Forge },
+            { "net.neoforged", Loader::NeoForge },
+            { "net.fabricmc.fabric-loader", Loader::Fabric },
+            { "org.quiltmc.quilt-loader", Loader::Quilt },
+        };
+        for (const auto& candidate : loaders) {
+            const auto version = profile->getComponentVersion(QString::fromLatin1(candidate.uid));
+            if (!version.isEmpty()) {
+                info.loader = candidate.loader;
+                info.loaderVersion = version;
+                break;
             }
         }
     }
@@ -81,10 +85,13 @@ class LegacyRepository final : public InstanceRepository {
         auto* app = APPLICATION_DYN;
         if (!app || !app->instances())
             return result;
-        for (auto* instance : app->instances()->getInstances()) {
-            auto info = describe(instance);
-            if (!info.id.isEmpty())
-                result.append(info);
+
+        auto* list = app->instances();
+        for (int index = 0; index < list->count(); ++index) {
+            auto* instance = list->at(index);
+            if (!instance)
+                continue;
+            result.append(describe(instance, list->getInstanceGroup(instance->id())));
         }
         return result;
     }
@@ -94,10 +101,12 @@ class LegacyRepository final : public InstanceRepository {
         auto* app = APPLICATION_DYN;
         if (!app || !app->instances())
             return std::nullopt;
-        auto* instance = app->instances()->getInstanceById(id);
+
+        auto* list = app->instances();
+        auto* instance = list->getInstanceById(id);
         if (!instance)
             return std::nullopt;
-        return describe(instance);
+        return describe(instance, list->getInstanceGroup(id));
     }
 
     QStringList groups() const override
