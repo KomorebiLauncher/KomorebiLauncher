@@ -37,6 +37,13 @@
 #include "AppearanceWidget.h"
 #include "ui_AppearanceWidget.h"
 
+#include "Application.h"
+
+#include <QApplication>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QSlider>
+
 #include <DesktopServices.h>
 #include <QGraphicsOpacityEffect>
 #include "BuildConfig.h"
@@ -61,7 +68,7 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
         m_ui->catPackLabel->hide();
         m_ui->catPackComboBox->hide();
         m_ui->catPackFolder->hide();
-        m_ui->settingsBox->hide();
+    m_ui->settingsBox->hide();
         m_ui->consolePreview->hide();
         m_ui->catPreview->hide();
         loadThemeSettings();
@@ -88,6 +95,29 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
     connect(m_ui->catPackFolder, &QPushButton::clicked, this,
             [] { DesktopServices::openPath(APPLICATION->themeManager()->getCatPacksFolder().path()); });
     connect(m_ui->reloadThemesButton, &QPushButton::pressed, this, &AppearanceWidget::loadThemeSettings);
+    // Background dimming: a runtime setting rather than part of the stylesheet, because the value
+    // is applied while painting and has to work for any theme.
+    {
+        auto* row = new QHBoxLayout();
+        auto* label = new QLabel(tr("Background dimming"), this);
+        auto* slider = new QSlider(Qt::Horizontal, this);
+        slider->setObjectName("dimSlider");
+        slider->setRange(0, 100);
+        slider->setValue(qRound(APPLICATION->settings()->get("MainWindowBackgroundDim").toDouble() * 100));
+        auto* value = new QLabel(QStringLiteral("%1%").arg(slider->value()), this);
+        value->setMinimumWidth(38);
+        row->addWidget(label);
+        row->addWidget(slider, 1);
+        row->addWidget(value);
+        m_ui->settingsBox->layout()->addItem(row);
+
+        connect(slider, &QSlider::valueChanged, this, [value](int v) {
+            value->setText(QStringLiteral("%1%").arg(v));
+            APPLICATION->settings()->set("MainWindowBackgroundDim", v / 100.0);
+            for (auto* widget : QApplication::topLevelWidgets())
+                widget->update();
+        });
+    }
 }
 
 AppearanceWidget::~AppearanceWidget()
