@@ -10,8 +10,6 @@
 #include "SidebarShell.h"
 
 #include <QHBoxLayout>
-#include <QSizePolicy>
-#include <QSpacerItem>
 #include <QWidget>
 
 #include "MainContentPanel.h"
