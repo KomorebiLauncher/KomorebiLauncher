@@ -12,7 +12,9 @@
 #include <QWidget>
 
 class BaseInstance;
+class QAction;
 class QLabel;
+class QVBoxLayout;
 class QVBoxLayout;
 
 /**
@@ -33,8 +35,12 @@ class MainContentPanel final : public QWidget {
     /** Puts the news strip this panel should host. Takes ownership by re-parenting. */
     void setNewsWidget(QWidget* news);
 
+    /** Adds a button that triggers the given action, for the "more news" entry. */
+    void setMoreNewsAction(QAction* action);
+
    private:
     QLabel* m_title = nullptr;
     QLabel* m_subtitle = nullptr;
     QVBoxLayout* m_newsSlot = nullptr;
+    QVBoxLayout* m_actionsRow = nullptr;
 };

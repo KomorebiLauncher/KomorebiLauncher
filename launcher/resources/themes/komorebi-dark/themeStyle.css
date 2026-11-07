@@ -594,3 +594,31 @@ QMenu::separator {
     background: #2E3644;
     margin: 4px 10px;
 }
+/* ============================================================
+ * 内容区（中间那块）
+ * ============================================================ */
+
+#contentTitle {
+    background: transparent;
+    color: #EFE7D6;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+#contentSubtitle {
+    background: transparent;
+    color: #9AA3B4;
+    font-size: 13px;
+}
+
+#contentAction {
+    background-color: transparent;
+    border: 1px solid #39414F;
+    border-radius: 6px;
+    padding: 5px 14px;
+    color: #EFE7D6;
+}
+
+#contentAction:hover {
+    background-color: rgba(194, 85, 105, 0.18);
+}

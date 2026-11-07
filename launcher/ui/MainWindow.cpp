@@ -366,6 +366,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         m_shell = std::make_unique<SidebarShell>();
         m_contentPanel = new MainContentPanel(ui->centralWidget);
         m_contentPanel->setNewsWidget(newsLabel);
+        m_contentPanel->setMoreNewsAction(ui->actionMoreNews);
+        // The strip that used to hold them is empty now; keeping it would leave a bare row.
+        ui->newsToolBar->hide();
     }
     // The cat background
     {
