@@ -657,3 +657,11 @@ QMenu::separator {
 #newsEntry:disabled {
     color: #7C8494;
 }
+
+/* 对话框挂在主窗口下时，会同时命中上面的 `QMainWindow QWidget` 透明规则 ——
+   那个选择器比 `QDialog` 更具体，会把底板压成 transparent，顶层窗口就成了纯黑。
+   这条放在文件末尾，同优先级下后写的胜出。 */
+QMainWindow QDialog,
+QDialog {
+    background-color: #141922;
+}

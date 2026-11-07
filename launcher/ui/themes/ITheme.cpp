@@ -60,6 +60,20 @@ auto haloFor(const QColor& text) -> QColor
 }
 
 /**
+ * The dialog a window is parented to does not decide its background -- except that a child window
+ * still answers to its parent's type in the selector: the theme's `QMainWindow QWidget` rule for
+ * the main window's transparent chrome used to match every dialog opened from it, and being more
+ * specific than `QDialog` it won, leaving the dialog with no fill at all -- a black window.
+ *
+ * The rule is appended after the theme's own, so it wins wherever that file puts its rule, and it
+ * names the parented form explicitly so the more specific match above cannot take it back.
+ */
+QString dialogBackdropRule(const QColor& paper)
+{
+    return QStringLiteral("\nQDialog, QMainWindow QDialog { background-color: %1; }\n").arg(paper.name());
+}
+
+/**
  * Gives every label a faint outline in the opposite shade.
  *
  * A stylesheet has no text-shadow, so the halo has to come from an effect. The filter sits on the
@@ -141,23 +155,13 @@ class DialogBackgroundFilter final : public QObject
   protected:
     bool eventFilter(QObject* object, QEvent* event) override
     {
-        auto* dialog = qobject_cast<QDialog*>(object);
-        if (!dialog)
-            return QObject::eventFilter(object, event);
-
         if (event->type() == QEvent::Show) {
-            if (!dialog->property("_komorebi_dressed").toBool()) {
+            if (auto* dialog = qobject_cast<QDialog*>(object); dialog && !dialog->property("_komorebi_dressed").toBool()) {
                 dialog->setProperty("_komorebi_dressed", true);
                 // QDialog is a QWidget subclass: without this attribute the stylesheet's own
                 // background is not painted for it at all.
                 dialog->setAttribute(Qt::WA_StyledBackground, true);
             }
-        } else if (event->type() == QEvent::Paint) {
-            // Filled underneath whatever the dialog paints. A rule that says "transparent" leaves
-            // the surface untouched, and an unfilled top-level surface is black; a dialog that
-            // paints its own wallpaper (anything on PageContainer) simply covers this fill.
-            QPainter painter(dialog);
-            painter.fillRect(dialog->rect(), dialog->palette().color(QPalette::Window));
         }
         return QObject::eventFilter(object, event);
     }
@@ -178,11 +182,9 @@ void ITheme::apply(bool)
         sheet += QStringLiteral("\n* { color: %1; }\n").arg(textColor);
 
     // A dialog is a top-level window: a rule that leaves it transparent has no desktop to show
-    // through, and the window comes out black. Appended last so it wins over the theme's own
-    // dialog rule wherever in that file it sits, and derived from the palette so it matches the
-    // theme that is actually in use.
+    // through, and the window comes out black.
     const auto paper = colorScheme().color(QPalette::Window);
-    sheet += QStringLiteral("\nQDialog { background-color: %1; }\n").arg(paper.name());
+    sheet += dialogBackdropRule(paper);
 
     qDebug() << "[theme] stylesheet" << sheet.size() << "bytes; dialog rule present:"
              << sheet.contains(QLatin1String("QDialog { background-color"))
