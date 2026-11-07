@@ -1,0 +1,443 @@
+/*
+ * Komorebi 示例主题 v3 —— 全透明
+ *
+ * 不给任何控件加底板，背景图直接透到每一层。可读性靠两件事兜底：
+ *   1. 实例背景在绘制时会叠一层暗色遮罩（代码里 30%），图越暗字越清楚；
+ *   2. 选中行仍用半透明色标出，否则看不出选了什么。
+ *
+ * 改完重启启动器生效，不需要重新编译。
+ */
+
+/* ---- 1. 容器与所有子控件：全部透明 ---- */
+
+PageContainer,
+PageContainer QWidget {
+    background: transparent;
+}
+
+/* 抽象滚动区域（列表、日志框）的视口是独立控件，显式再写一遍 */
+PageContainer QAbstractScrollArea,
+PageContainer QAbstractScrollArea > QWidget {
+    background: transparent;
+}
+
+/* ---- 2. 保留边框与圆角，否则完全看不出控件边界 ---- */
+
+PageContainer QTreeView,
+PageContainer QListView,
+PageContainer QTableView,
+PageContainer QPlainTextEdit,
+PageContainer QTextEdit,
+PageContainer QTextBrowser,
+PageContainer QLineEdit,
+PageContainer QComboBox,
+PageContainer QSpinBox {
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 6px;
+    padding: 3px;
+}
+
+PageContainer QGroupBox {
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 8px;
+    margin-top: 10px;
+    padding-top: 8px;
+}
+
+PageContainer QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 10px;
+    padding: 0 4px;
+}
+
+/* ---- 3. 选中态：唯一的实色，没有它就看不出选中了什么 ---- */
+
+PageContainer QTreeView::item:selected,
+PageContainer QListView::item:selected,
+PageContainer QTableView::item:selected {
+    background-color: rgba(110, 168, 214, 0.55);
+    color: #ffffff;
+}
+
+PageContainer QTreeView::item:hover,
+PageContainer QListView::item:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ---- 4. 标签页：不要白底，只留选中下划线 ---- */
+
+QTabWidget::pane {
+    border: none;
+    background: transparent;
+}
+
+QTabBar::tab {
+    background: transparent;
+    padding: 6px 14px;
+}
+
+QTabBar::tab:selected {
+    border-bottom: 2px solid rgba(255, 255, 255, 0.75);
+}
+
+/* ---- 5. 表头：透明 + 一条分隔线 ---- */
+
+QHeaderView::section {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+    padding: 4px 6px;
+}
+
+/* ---- 6. 按钮：只留描边，不填色 ---- */
+
+PageContainer QPushButton,
+PageContainer QToolButton {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 6px;
+    padding: 5px 14px;
+}
+
+PageContainer QPushButton:hover,
+PageContainer QToolButton:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+PageContainer QPushButton:pressed,
+PageContainer QToolButton:pressed {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* ---- 7. 工具栏与滚动条：也不要实底 ---- */
+
+PageContainer QToolBar {
+    background: transparent;
+    border: none;
+}
+/* ============================================================
+ * 主窗口背景图
+ *
+ * 用法：
+ *   1. 把图片放到  themes\komorebi\resources\background.png
+ *   2. 下面这段的 url() 保持原样（theme: 指向 resources 目录）
+ *   3. 重启启动器
+ *
+ * 想换图就换文件，不用改 QSS。
+ * ============================================================ */
+
+/* ============================================================
+ * ⚠️ 临时：给旧构建用的 QSS 贴图
+ *
+ * 装上 4b7d00fe1 之后的构建时，把下面这段 background-image 删掉，
+ * 只保留 background: transparent，否则贴图会盖在代码绘制的背景上。
+ * ============================================================ */
+#centralWidget {
+    /* 背景由代码绘制，这里保持透明 */
+    background: transparent;
+}
+
+/* 主窗口背景在 4b7d00fe1 之后改由代码绘制（可按窗口缩放、覆盖工具栏） */
+#centralWidget,
+#centralWidget QWidget {
+    background: transparent;
+}
+
+/* 工具栏、状态栏、实例列表：必须透明，否则它们各自的底色会盖住背景 */
+#mainToolBar, #instanceToolBar, #newsToolBar, #statusBar {
+    background: transparent;
+    border: none;
+}
+
+#instanceView, #instanceView QWidget {
+    background: transparent;
+}
+
+#instanceView::item:hover { background-color: rgba(255,255,255,0.10); }
+#instanceView::item:selected { background-color: rgba(110,168,214,0.55); color: #ffffff; }
+
+/* 菜单栏与菜单：保持不透明，否则文字压在图上读不清 */
+
+/* 主窗口里的所有子控件也要透明，否则它们会用不透明底色把图盖住 */
+#centralWidget QWidget {
+    background: transparent;
+}
+
+/* 实例列表：保留选中与悬停反馈，其余透明 */
+#instanceView,
+#instanceView QWidget,
+InstanceView {
+    background: transparent;
+}
+
+#instanceView::item:hover {
+    background-color: rgba(255, 255, 255, 0.10);
+}
+
+#instanceView::item:selected {
+    background-color: rgba(110, 168, 214, 0.55);
+    color: #ffffff;
+}
+
+/* 工具栏与状态栏：透明，只留一条分隔线 */
+#mainToolBar, #instanceToolBar, #newsToolBar, #statusBar {
+    background: transparent;
+    border: none;
+}
+/* ============================================================
+ * 账户页左侧列表：统一文字色
+ *
+ * 原因：主题之前只给选中行写了 color: #ffffff，未选中行沿用调色板深色，
+ * 压在背景图上就成了黑白掺着。这里给整块加浅色底板 + 统一深色文字。
+ * ============================================================ */
+
+PageContainer VersionListView,
+PageContainer VersionListView#listView,
+PageContainer WideBar {
+    background-color: transparent;
+    border: 1px solid rgba(139, 36, 58, 0.18);
+    border-radius: 6px;
+}
+
+PageContainer VersionListView::item,
+PageContainer WideBar::item {
+    color: #242E4C;
+}
+
+PageContainer VersionListView::item:selected,
+PageContainer WideBar::item:selected {
+    background-color: rgba(139, 36, 58, 0.22);
+    color: #242E4C;
+}
+/* ============================================================
+ * 交替行（斑马纹）底色
+ *
+ * 列表控件默认开启 alternatingRowColors，奇数行用调色板的 AlternateBase 画深色，
+ * 而偶数行被 background: transparent 变成了透的 —— 结果是"一行黑一行透"。
+ * 这里把交替底色也设成透明，让整块统一透出背景图。
+ * ============================================================ */
+
+PageContainer QAbstractItemView {
+    alternate-background-color: transparent;
+}
+
+PageContainer QAbstractItemView::item:alternate {
+    background: transparent;
+}
+
+
+/* ============================================================
+ * 设置窗口与其它对话框：全透明
+ *
+ * 不给任何控件加底板 —— 背景图直接透出来。既然图是亮的，文字用深色；
+ * 换深色背景图时把下面的 #242E4C 改成 #F3ECDE 即可。
+ * ============================================================ */
+
+QDialog,
+QDialog QWidget,
+QMainWindow QWidget,
+QDialog QScrollArea,
+QDialog QScrollArea > QWidget,
+QDialog QAbstractScrollArea,
+QDialog QAbstractScrollArea > QWidget {
+    background: transparent;
+}
+
+QDialog QGroupBox,
+QDialog QTabWidget::pane,
+QDialog QLineEdit,
+QDialog QComboBox,
+QDialog QSpinBox,
+QDialog QDoubleSpinBox,
+QDialog QPlainTextEdit,
+QDialog QTextEdit,
+QDialog QTreeView,
+QDialog QListView,
+QDialog QTableView,
+QDialog QListWidget,
+QDialog QTableWidget,
+QDialog QPushButton,
+QDialog QToolButton {
+    background: transparent;
+    border: 1px solid rgba(36, 46, 76, 0.22);
+    border-radius: 6px;
+    color: #242E4C;
+}
+
+QDialog QLabel,
+QDialog QCheckBox,
+QDialog QRadioButton,
+QDialog QGroupBox::title {
+    background: transparent;
+    color: #242E4C;
+}
+
+QDialog QLineEdit,
+QDialog QComboBox,
+QDialog QSpinBox {
+    color: #242E4C;
+    selection-background-color: rgba(139, 36, 58, 0.55);
+    selection-color: #F3ECDE;
+}
+
+QDialog QTreeView::item:selected,
+QDialog QListView::item:selected,
+QDialog QTableView::item:selected {
+    background-color: rgba(139, 36, 58, 0.28);
+    color: #242E4C;
+}
+
+QDialog QAbstractItemView {
+    alternate-background-color: transparent;
+}
+
+QDialog QPushButton:hover,
+QDialog QToolButton:hover {
+    background-color: rgba(243, 236, 222, 0.18);
+}
+/* ============================================================
+ * 下拉框弹出列表
+ *
+ * 它是独立顶层弹窗，不在 QDialog 的子树里，所以上面那些 QDialog 规则够不到，
+ * 结果是基础主题的黑底 + 绿色选中条。这里单独覆盖。
+ *
+ * 弹窗必须有可见底板，纯透明会和窗口自身的黑底混在一起，反而更难读。
+ * ============================================================ */
+
+QComboBox QAbstractItemView,
+QComboBox QListView {
+    background-color: rgba(243, 236, 222, 0.94);
+    color: #242E4C;
+    border: 1px solid rgba(36, 46, 76, 0.28);
+    outline: none;
+    padding: 4px;
+    selection-background-color: rgba(139, 36, 58, 0.26);
+    selection-color: #242E4C;
+}
+
+QComboBox QAbstractItemView::item {
+    color: #242E4C;
+    padding: 3px 6px;
+}
+
+QComboBox QAbstractItemView::item:selected {
+    background-color: rgba(139, 36, 58, 0.26);
+    color: #242E4C;
+}
+/* ============================================================
+ * 右键菜单
+ *
+ * 和下拉弹层一样是独立顶层窗口，需要单独给底板。用浅白纸色，深蓝文字。
+ * ============================================================ */
+
+QMenu {
+    background-color: rgba(250, 247, 240, 0.97);
+    border: 1px solid rgba(36, 46, 76, 0.20);
+    border-radius: 6px;
+    padding: 5px;
+    color: #242E4C;
+}
+
+QMenu::item {
+    background-color: transparent;
+    padding: 6px 26px 6px 22px;
+    border-radius: 4px;
+    color: #242E4C;
+}
+
+QMenu::item:selected {
+    background-color: rgba(139, 36, 58, 0.16);
+    color: #242E4C;
+}
+
+QMenu::item:disabled {
+    color: rgba(36, 46, 76, 0.38);
+}
+
+QMenu::separator {
+    height: 1px;
+    background-color: rgba(36, 46, 76, 0.14);
+    margin: 4px 8px;
+}
+
+QMenu::icon {
+    padding-left: 6px;
+}
+
+QMenu::indicator {
+    width: 14px;
+    height: 14px;
+    margin-left: 6px;
+}
+
+QMenuBar {
+    background-color: transparent;
+    color: #242E4C;
+}
+
+QMenuBar::item:selected {
+    background-color: rgba(139, 36, 58, 0.16);
+    color: #242E4C;
+}
+/* ============================================================
+ * 工具提示
+ *
+ * 默认是黑底黄字。改成与右键菜单一致的浅白纸色 + 深蓝文字，
+ * 这样压在任何背景图上都不刺眼。
+ * ============================================================ */
+
+QToolTip {
+    background-color: rgba(250, 247, 240, 0.97);
+    color: #242E4C;
+    border: 1px solid rgba(36, 46, 76, 0.22);
+    border-radius: 4px;
+    padding: 4px 8px;
+}
+
+/* 状态栏里的临时提示 */
+QStatusBar QLabel {
+    background: transparent;
+}
+
+/* 滚动条：默认在深色底上几乎看不见，这里做成极淡的一根 */
+QScrollBar:vertical {
+    background: transparent;
+    width: 10px;
+    margin: 0;
+}
+
+QScrollBar::handle:vertical {
+    background-color: rgba(36, 46, 76, 0.28);
+    border-radius: 5px;
+    min-height: 24px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: rgba(36, 46, 76, 0.45);
+}
+
+QScrollBar:horizontal {
+    background: transparent;
+    height: 10px;
+    margin: 0;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: rgba(36, 46, 76, 0.28);
+    border-radius: 5px;
+    min-width: 24px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background-color: rgba(36, 46, 76, 0.45);
+}
+
+QScrollBar::add-line,
+QScrollBar::sub-line,
+QScrollBar::add-page,
+QScrollBar::sub-page {
+    background: none;
+    border: none;
+    height: 0;
+    width: 0;
+}

@@ -455,6 +455,10 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     }
     m_dataPath = dataPath;
 
+    // Before the theme manager scans the directory: a first run has no themes yet, and the one
+    // that ships with the program has to be on disk by then to be found.
+    installBundledTheme();
+
     /*
      * Establish the mechanism for communication with an already running PrismLauncher that uses the same data path.
      * If there is one, tell it what the user actually wanted to do and exit.
@@ -2145,4 +2149,31 @@ bool Application::checkQSavePath(const QString& path)
     return std::ranges::any_of(m_qsaveResources.keys(), [&path, this](const auto& partialPath) {
         return path.startsWith(partialPath) && m_qsaveResources.value(partialPath, 0) > 0;
     });
+}
+
+void Application::installBundledTheme()
+{
+    if (m_dataPath.isEmpty())
+        return;
+
+    QDir themesDir(QDir(m_dataPath).filePath(QStringLiteral("themes")));
+    if (themesDir.exists(QStringLiteral("komorebi")))
+        return;
+
+    const QStringList files = { QStringLiteral("theme.json"), QStringLiteral("themeStyle.css"),
+                                QStringLiteral("resources/background.png") };
+    for (const auto& file : files) {
+        const auto targetPath = themesDir.filePath(QStringLiteral("komorebi/") + file);
+        QDir().mkpath(QFileInfo(targetPath).absolutePath());
+
+        QFile source(QStringLiteral(":/themes/komorebi/") + file);
+        if (!source.open(QIODevice::ReadOnly))
+            continue;
+
+        QFile target(targetPath);
+        if (!target.open(QIODevice::WriteOnly))
+            continue;
+
+        target.write(source.readAll());
+    }
 }

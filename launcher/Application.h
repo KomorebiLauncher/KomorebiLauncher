@@ -172,6 +172,12 @@ class Application : public QApplication {
     /// the data path the application is using
     const QString& dataRoot() { return m_dataPath; }
 
+    /**
+     * Copies the theme that ships in the binary into the data directory the first time it runs.
+     * Without this the theme would only exist on the machine it was written on.
+     */
+    void installBundledTheme();
+
     /// the java installed path the application is using
     QString javaPath();
 

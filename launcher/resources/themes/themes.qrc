@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/themes/komorebi">
+        <file>komorebi/theme.json</file>
+        <file>komorebi/themeStyle.css</file>
+        <file>komorebi/resources/background.png</file>
+    </qresource>
+</RCC>
