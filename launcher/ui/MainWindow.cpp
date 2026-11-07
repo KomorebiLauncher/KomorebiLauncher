@@ -433,6 +433,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     ui->mainToolBar->insertWidget(ui->actionAccountsButton, spacer);
 
+    // The help and update entries say nothing about the instance in front of you, so they move over
+    // to the right edge, where the account button already is: what is left of the gap is about this
+    // instance, what is right of it is about the launcher.
+    ui->mainToolBar->insertAction(ui->actionAccountsButton, ui->actionCheckUpdate);
+    ui->mainToolBar->insertAction(ui->actionAccountsButton, ui->actionHelpButton);
+
     // Use undocumented property... https://stackoverflow.com/questions/7121718/create-a-scrollbar-in-a-submenu-qt
     ui->accountsMenu->setStyleSheet("QMenu { menu-scrollable: 1; }");
 
