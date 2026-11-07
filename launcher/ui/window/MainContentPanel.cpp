@@ -10,7 +10,7 @@
 #include "MainContentPanel.h"
 
 #include <QAction>
-#include <QPushButton>
+#include <QToolButton>
 #include <QLabel>
 #include <QVBoxLayout>
 
@@ -58,8 +58,11 @@ void MainContentPanel::setMoreNewsAction(QAction* action)
     if (!action || !m_actionsRow)
         return;
 
-    auto* button = new QPushButton(this);
+    // QToolButton, not QPushButton: only the former can adopt an action and its text/icon/enabled
+    // state, which is what this button is supposed to mirror.
+    auto* button = new QToolButton(this);
     button->setDefaultAction(action);
+    button->setToolButtonStyle(Qt::ToolButtonTextOnly);
     button->setObjectName("contentAction");
     button->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     m_actionsRow->addWidget(button);
