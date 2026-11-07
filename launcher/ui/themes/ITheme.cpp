@@ -45,7 +45,6 @@
 #include <QGraphicsDropShadowEffect>
 #include <QLabel>
 #include <QMenu>
-#include <QToolTip>
 #include <QPalette>
 
 namespace {
@@ -80,8 +79,10 @@ class PopupPaletteFilter final : public QObject
     bool eventFilter(QObject* object, QEvent* event) override
     {
         if (event->type() == QEvent::Show) {
-            const bool isPopup = qobject_cast<QMenu*>(object) || qobject_cast<QToolTip*>(object) ||
-                                 (object->inherits("QComboBoxPrivateContainer"));
+            // QToolTip is not a QObject, so it cannot be tested with qobject_cast; the class name
+            // covers it and the drop-down container, whose type is private to Qt.
+            const bool isPopup = qobject_cast<QMenu*>(object) || object->inherits("QToolTip") ||
+                                 object->inherits("QComboBoxPrivateContainer");
             if (isPopup) {
                 auto palette = QApplication::palette();
                 palette.setColor(QPalette::Window, QColor(0xFA, 0xF7, 0xF0));
