@@ -100,7 +100,9 @@ void drawSelectionRect(QPainter* painter, const QStyleOptionViewItem& option)
 
     // The card follows the control kit: paper, a hairline, the surface radius, and the plum wash
     // for hover and selection rather than colours of its own.
-    const Komorebi::KColors colors = Komorebi::KColors::fromPalette(option.palette);
+    // The application palette, not the view's: the stylesheet makes the view's own surface
+    // transparent, and a transparent Window colour reads as black.
+    const Komorebi::KColors colors = Komorebi::KColors::fromPalette(QApplication::palette());
     const QColor paint(colors.paper.red(), colors.paper.green(), colors.paper.blue(), selected ? 230 : (hovered ? 205 : 190));
     const QColor border = selected ? colors.wash(130) : colors.line;
 
