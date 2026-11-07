@@ -77,6 +77,12 @@ class MainWindow : public QMainWindow {
     void closeEvent(QCloseEvent* event) override;
     void changeEvent(QEvent* event) override;
 
+    /**
+     * The saved window state is restored after the constructor, which can bring back toolbars
+     * that the window no longer uses; this puts them away again once that has happened.
+     */
+    void showEvent(QShowEvent* event) override;
+
     void checkInstancePathForProblems();
 
     void updatesAllowedChanged(bool allowed);

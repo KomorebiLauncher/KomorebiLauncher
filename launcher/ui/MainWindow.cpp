@@ -1663,6 +1663,16 @@ void MainWindow::closeEvent(QCloseEvent* event)
     emit isClosing();
 }
 
+void MainWindow::showEvent(QShowEvent* event)
+{
+    QMainWindow::showEvent(event);
+
+    // restoreState() runs between the constructor and the first show, and it restores which
+    // toolbars were visible. The news strip is no longer used -- its content moved into the
+    // panel -- so it is put away again here rather than in the constructor, where the state
+    // restore would simply undo it.
+    ui->newsToolBar->hide();
+}
 void MainWindow::changeEvent(QEvent* event)
 {
     if (event->type() == QEvent::LanguageChange) {
