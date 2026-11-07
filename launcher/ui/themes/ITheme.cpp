@@ -44,6 +44,8 @@
 #include <QEvent>
 #include <QGraphicsDropShadowEffect>
 #include <QLabel>
+#include <QMenu>
+#include <QToolTip>
 #include <QPalette>
 
 namespace {
@@ -62,6 +64,41 @@ auto haloFor(const QColor& text) -> QColor
  * application and acts when a label is first shown, which covers labels built lazily by pages far
  * from here.
  */
+/**
+ * Gives popup windows a light palette.
+ *
+ * Menus, drop-down lists and tooltips are separate top-level windows whose colours come from the
+ * palette, not from the stylesheet; the theme's dark palette is what made them look black no matter
+ * what the sheet said.
+ */
+class PopupPaletteFilter final : public QObject
+{
+  public:
+    explicit PopupPaletteFilter(QObject* parent) : QObject(parent) {}
+
+  protected:
+    bool eventFilter(QObject* object, QEvent* event) override
+    {
+        if (event->type() == QEvent::Show) {
+            const bool isPopup = qobject_cast<QMenu*>(object) || qobject_cast<QToolTip*>(object) ||
+                                 (object->inherits("QComboBoxPrivateContainer"));
+            if (isPopup) {
+                auto palette = QApplication::palette();
+                palette.setColor(QPalette::Window, QColor(0xFA, 0xF7, 0xF0));
+                palette.setColor(QPalette::Base, QColor(0xFA, 0xF7, 0xF0));
+                palette.setColor(QPalette::WindowText, QColor(0x24, 0x2E, 0x4C));
+                palette.setColor(QPalette::Text, QColor(0x24, 0x2E, 0x4C));
+                palette.setColor(QPalette::Button, QColor(0xFA, 0xF7, 0xF0));
+                palette.setColor(QPalette::ButtonText, QColor(0x24, 0x2E, 0x4C));
+                palette.setColor(QPalette::Highlight, QColor(0xEF, 0xDC, 0xD8));
+                palette.setColor(QPalette::HighlightedText, QColor(0x24, 0x2E, 0x4C));
+                if (auto* widget = qobject_cast<QWidget*>(object))
+                    widget->setPalette(palette);
+            }
+        }
+        return QObject::eventFilter(object, event);
+    }
+};
 class TextOutlineFilter final : public QObject
 {
   public:
@@ -99,6 +136,12 @@ void ITheme::apply(bool)
 
     APPLICATION->setStyleSheet(sheet);
     QDir::setSearchPaths("theme", searchPaths());
+
+    static PopupPaletteFilter* popupFilter = nullptr;
+    if (!popupFilter) {
+        popupFilter = new PopupPaletteFilter(APPLICATION);
+        APPLICATION->installEventFilter(popupFilter);
+    }
 
     if (APPLICATION->settings()->get("ThemeTextOutline").toBool()) {
         static TextOutlineFilter* outlineFilter = nullptr;
