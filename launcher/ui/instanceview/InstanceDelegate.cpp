@@ -43,9 +43,21 @@
 #include <QtMath>
 
 #include <QIcon>
+#include <QPoint>
 #include <QTextEdit>
 #include "BaseInstance.h"
 #include "InstanceList.h"
+
+namespace {
+// Geometry of an instance card, in the item's own coordinates. The plate covers the whole item, so
+// everything drawn on it has to keep clear of the rounded top edge -- the icon used to start at the
+// very top and was painted over the border, which read as the icon being stuck through the card.
+constexpr int cardInset = 3;      // plate distance from the item rect
+constexpr int cardPadTop = 10;    // plate's top edge to the icon
+constexpr int iconSize = 48;
+constexpr int iconTextGap = 6;    // icon to the label
+constexpr int cardPadBottom = 12;
+}  // namespace
 
 // Origin: Qt
 static void viewItemTextLayout(QTextLayout& textLayout, int lineWidth, qreal& height, qreal& widthUsed)
@@ -70,7 +82,7 @@ static void viewItemTextLayout(QTextLayout& textLayout, int lineWidth, qreal& he
 
 ListViewDelegate::ListViewDelegate(QObject* parent) : QStyledItemDelegate(parent) {}
 
-void drawSelectionRect(QPainter* painter, const QStyleOptionViewItem& option, const QRect& rect)
+void drawSelectionRect(QPainter* painter, const QStyleOptionViewItem& option)
 {
     // Each instance is a card rather than a row: a translucent plate with a soft outline, and the
     // selected one gets a warm wash plus a bar on its left edge. Drawn in the item delegate because
@@ -78,7 +90,7 @@ void drawSelectionRect(QPainter* painter, const QStyleOptionViewItem& option, co
     const bool selected = option.state & QStyle::State_Selected;
     const bool hovered = option.state & QStyle::State_MouseOver;
 
-    QRect card = option.rect.adjusted(3, 3, -3, -3);
+    QRect card = option.rect.adjusted(cardInset, cardInset, -cardInset, -cardInset);
 
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing, true);
@@ -117,7 +129,7 @@ void drawBadges(QPainter* painter, const QStyleOptionViewItem& option, BaseInsta
     const int itemsPerRow = qMax(1, qFloor(double(option.rect.width() + spacing) / double(itemSide + spacing)));
     const int rows = qCeil((double)pixmaps.size() / (double)itemsPerRow);
     QListIterator<QString> it(pixmaps);
-    painter->translate(option.rect.topLeft());
+    painter->translate(option.rect.topLeft() + QPoint(-cardInset, cardInset));
     for (int y = 0; y < rows; ++y) {
         for (int x = 0; x < itemsPerRow; ++x) {
             if (!it.hasNext()) {
@@ -133,7 +145,7 @@ void drawBadges(QPainter* painter, const QStyleOptionViewItem& option, BaseInsta
             icon.paint(painter, badgeRect, Qt::AlignCenter, mode, state);
         }
     }
-    painter->translate(-option.rect.topLeft());
+    painter->translate(-(option.rect.topLeft() + QPoint(-cardInset, cardInset)));
 }
 
 static QSize viewItemTextSize(const QStyleOptionViewItem* option)
@@ -167,18 +179,19 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
 
     QStyle* style = opt.widget ? opt.widget->style() : QApplication::style();
 
-    const int iconSize = 48;
-    QRect iconbox = opt.rect;
     const int textMargin = style->pixelMetric(QStyle::PM_FocusFrameHMargin, 0, opt.widget) + 1;
-    QRect textRect = opt.rect;
-    QRect textHighlightRect = textRect;
-    // clip the decoration on top, remove width padding
-    textRect.adjust(textMargin, iconSize + textMargin + 5, -textMargin, 0);
 
-    textHighlightRect.adjust(0, iconSize + 5, 0, 0);
+    // Everything on the plate starts below its rounded top edge: the icon first, the label under
+    // it, with the same breathing room at the bottom.
+    const int iconTop = opt.rect.top() + cardInset + cardPadTop;
+    QRect iconbox(opt.rect.left(), iconTop, opt.rect.width(), iconSize);
+
+    QRect textRect = opt.rect;
+    textRect.setTop(iconTop + iconSize + iconTextGap);
+    textRect.adjust(textMargin, 0, -textMargin, -cardInset - cardPadBottom);
 
     // draw background
-    drawSelectionRect(painter, opt, textHighlightRect);
+    drawSelectionRect(painter, opt);
 
     // icon mode and state, also used for badges
     QIcon::Mode mode = QIcon::Normal;
@@ -189,10 +202,7 @@ void ListViewDelegate::paint(QPainter* painter, const QStyleOptionViewItem& opti
     QIcon::State state = opt.state & QStyle::State_Open ? QIcon::On : QIcon::Off;
 
     // draw the icon
-    {
-        iconbox.setHeight(iconSize);
-        opt.icon.paint(painter, iconbox, Qt::AlignCenter, mode, state);
-    }
+    opt.icon.paint(painter, iconbox, Qt::AlignCenter, mode, state);
     // set the text colors
     QPalette::ColorGroup cg = opt.state & QStyle::State_Enabled ? QPalette::Normal : QPalette::Disabled;
     if (cg == QPalette::Normal && !(opt.state & QStyle::State_Active))
@@ -241,9 +251,9 @@ QSize ListViewDelegate::sizeHint(const QStyleOptionViewItem& option, const QMode
     opt.textElideMode = Qt::ElideRight;
     opt.displayAlignment = Qt::AlignTop | Qt::AlignHCenter;
 
-    QStyle* style = opt.widget ? opt.widget->style() : QApplication::style();
-    const int textMargin = style->pixelMetric(QStyle::PM_FocusFrameHMargin, &option, opt.widget) + 1;
-    int height = 48 + textMargin * 2 + 18;  // extra room for the card padding
+    // The plate covers the item, and everything inside it is placed from the same offsets the
+    // painter uses, so the height stays in step with what is actually drawn.
+    int height = 2 * cardInset + cardPadTop + iconSize + iconTextGap + cardPadBottom;
     QSize szz = viewItemTextSize(&opt);
     height += szz.height();
     // The width follows the list, not a constant: a card that is 100px wide cannot show a name and
@@ -286,9 +296,10 @@ void ListViewDelegate::updateEditorGeometry(QWidget* editor,
                                             const QStyleOptionViewItem& option,
                                             [[maybe_unused]] const QModelIndex& index) const
 {
-    const int iconSize = 48;
+    // Same box the painter uses for the label, so the editor appears exactly where the text was.
     QRect textRect = option.rect;
-    textRect.adjust(0, iconSize + 5, 0, 0);
+    textRect.setTop(option.rect.top() + cardInset + cardPadTop + iconSize + iconTextGap);
+    textRect.adjust(cardInset, 0, -cardInset, -cardInset - cardPadBottom);
     editor->setGeometry(textRect);
 }
 

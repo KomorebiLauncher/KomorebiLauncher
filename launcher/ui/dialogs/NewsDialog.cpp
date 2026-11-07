@@ -3,11 +3,13 @@
 #include "Application.h"
 #include "settings/SettingsObject.h"
 
+#include "ui/widgets/LauncherBackground.h"
 #include "ui_NewsDialog.h"
 
 NewsDialog::NewsDialog(QList<NewsEntryPtr> entries, QWidget* parent) : QDialog(parent), ui(new Ui::NewsDialog())
 {
     ui->setupUi(this);
+    m_background = LauncherBackground::resolve();
 
     for (auto entry : entries) {
         ui->articleListWidget->addItem(entry->title);
@@ -38,6 +40,14 @@ NewsDialog::NewsDialog(QList<NewsEntryPtr> entries, QWidget* parent) : QDialog(p
 NewsDialog::~NewsDialog()
 {
     delete ui;
+}
+
+void NewsDialog::paintEvent(QPaintEvent* event)
+{
+    // This window is not built on PageContainer, so nothing else paints the wallpaper -- and the
+    // theme makes dialogs transparent, which on a top-level window means a black surface.
+    QDialog::paintEvent(event);
+    LauncherBackground::paint(this, m_background);
 }
 
 void NewsDialog::selectedArticleChanged(const QString& new_title)

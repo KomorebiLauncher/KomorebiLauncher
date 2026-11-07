@@ -63,6 +63,7 @@
 #include "settings/SettingsObject.h"
 
 #include "ui/widgets/IconLabel.h"
+#include "ui/widgets/LauncherBackground.h"
 
 #include "Application.h"
 #include "DesktopServices.h"
@@ -300,32 +301,6 @@ void PageContainer::changeEvent(QEvent* event)
     QWidget::changeEvent(event);
 }
 
-namespace {
-
-/**
- * The picture the launcher should use when nothing was set for this particular window: the
- * explicit setting first, then the artwork the active theme ships.
- */
-auto resolveDefaultBackground() -> QImage
-{
-    auto* app = APPLICATION_DYN;
-    if (!app)
-        return {};
-
-    auto path = app->settings()->get("MainWindowBackground").toString();
-    if (path.isEmpty()) {
-        const auto theme = app->settings()->get("ApplicationTheme").toString();
-        if (!theme.isEmpty()) {
-            const auto candidate = QDir(app->dataRoot()).filePath(QStringLiteral("themes/%1/resources/background.png").arg(theme));
-            if (QFileInfo::exists(candidate))
-                path = QDir::fromNativeSeparators(candidate);
-        }
-    }
-    return path.isEmpty() ? QImage() : QImage(path);
-}
-
-}  // namespace
-
 void PageContainer::setBackgroundImage(const QString& path)
 {
     m_hasExplicitBackground = true;
@@ -345,21 +320,13 @@ void PageContainer::paintEvent(QPaintEvent* event)
         const auto theme = APPLICATION->settings()->get("ApplicationTheme").toString();
         if (theme != m_resolvedTheme) {
             m_resolvedTheme = theme;
-            m_background = resolveDefaultBackground();
+            m_background = LauncherBackground::resolve();
         }
     }
 
     if (!m_background.isNull()) {
         enableStyledBackgrounds();
-        QPainter painter(this);
-        // Cover rather than letterbox, so the picture does not end in bars.
-        const auto scaled = m_background.scaled(size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
-        const QRect source((scaled.width() - width()) / 2, (scaled.height() - height()) / 2, width(), height());
-        painter.drawImage(rect(), scaled, source);
-        // Darken it, or a bright picture makes the pages unreadable.
-        const qreal dim = std::clamp(APPLICATION->settings()->get("MainWindowBackgroundDim").toDouble(), 0.0, 1.0);
-    if (dim > 0.0)
-        painter.fillRect(rect(), QColor(0, 0, 0, qRound(dim * 255)));
+        LauncherBackground::paint(this, m_background);
     }
     QWidget::paintEvent(event);
 }
