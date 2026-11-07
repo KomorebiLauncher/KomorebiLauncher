@@ -31,6 +31,14 @@ class InstanceListPage : public QWidget {
     /// Re-reads the repository; called on show and when it reports a change.
     void reload();
 
+   signals:
+    /// The player asked for something that belongs to the shell, not to the list: the page says
+    /// what was wanted and the window decides what that means.
+    void instanceActivated(const QString& id);
+    void launchRequested(const QString& id);
+    void editRequested(const QString& id);
+    void openFolderRequested(const QString& id);
+
    protected:
     void paintEvent(QPaintEvent* event) override;
 

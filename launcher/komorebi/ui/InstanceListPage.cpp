@@ -10,6 +10,10 @@
 #include <QPainterPath>
 #include <QStyledItemDelegate>
 #include <QVBoxLayout>
+#include "minecraft/MinecraftInstance.h"
+#include "InstanceList.h"
+#include <DesktopServices.h>
+#include <QMenu>
 
 #include "Application.h"
 #include "icons/IconList.h"
@@ -154,6 +158,26 @@ InstanceListPage::InstanceListPage(QWidget* parent) : QWidget(parent)
 
     m_repository = Komorebi::Core::makeLegacyRepository(this);
     connect(m_repository.get(), &InstanceRepository::changed, this, &InstanceListPage::reload);
+
+    // Double click opens the instance the way a double click does anywhere else in the launcher;
+    // the context menu offers the three things one does to an instance most often.
+    connect(m_view, &QListView::doubleClicked, this, [this](const QModelIndex& index) {
+        emit instanceActivated(m_model->at(index.row()).id);
+    });
+    m_view->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_view, &QListView::customContextMenuRequested, this, [this](const QPoint& pos) {
+        const QModelIndex index = m_view->indexAt(pos);
+        if (!index.isValid())
+            return;
+        const auto instance = m_model->at(index.row());
+
+        QMenu menu(this);
+        menu.addAction(tr("Launch"), this, [this, id = instance.id] { emit launchRequested(id); });
+        menu.addAction(tr("Edit"), this, [this, id = instance.id] { emit editRequested(id); });
+        menu.addAction(tr("Instance folder"), this, [this, id = instance.id] { emit openFolderRequested(id); });
+        menu.exec(m_view->viewport()->mapToGlobal(pos));
+    });
+
     reload();
 }
 
@@ -182,7 +206,30 @@ void showCoreInstanceList(QWidget* parent)
 
     auto* layout = new QVBoxLayout(dialog);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->addWidget(new InstanceListPage(dialog));
+    auto* page = new InstanceListPage(dialog);
+    layout->addWidget(page);
+
+    // The page only knows what was wanted; the shell knows what to do about it.
+    const auto find = [page](const QString& id) -> MinecraftInstance* {
+        auto* instances = APPLICATION->instances();
+        return instances ? instances->getInstanceById(id) : nullptr;
+    };
+    QObject::connect(page, &InstanceListPage::instanceActivated, dialog, [find](const QString& id) {
+        if (auto* instance = find(id))
+            APPLICATION->showInstanceWindow(instance);
+    });
+    QObject::connect(page, &InstanceListPage::editRequested, dialog, [find](const QString& id) {
+        if (auto* instance = find(id))
+            APPLICATION->showInstanceWindow(instance, QStringLiteral("settings"));
+    });
+    QObject::connect(page, &InstanceListPage::launchRequested, dialog, [find](const QString& id) {
+        if (auto* instance = find(id))
+            APPLICATION->launch(instance);
+    });
+    QObject::connect(page, &InstanceListPage::openFolderRequested, dialog, [find](const QString& id) {
+        if (auto* instance = find(id))
+            DesktopServices::openPath(instance->instanceRoot());
+    });
 
     dialog->show();
 }
