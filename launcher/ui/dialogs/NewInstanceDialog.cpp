@@ -48,6 +48,7 @@
 #include "IconPickerDialog.h"
 #include "VersionSelectDialog.h"
 #include "ui/dialogs/CustomMessageBox.h"
+#include "ui/widgets/LauncherBackground.h"
 
 #include <QDialogButtonBox>
 #include <QFileDialog>
@@ -75,6 +76,7 @@ NewInstanceDialog::NewInstanceDialog(const QString& initialGroup,
     : QDialog(parent), ui(new Ui::NewInstanceDialog), m_instIconKey("default")
 {
     ui->setupUi(this);
+    m_background = LauncherBackground::resolve();
 
     ui->instNameTextBox->installEventFilter(this);
 
@@ -174,8 +176,15 @@ void NewInstanceDialog::reject()
     QDialog::reject();
 }
 
-void NewInstanceDialog::accept()
+void NewInstanceDialog::paintEvent(QPaintEvent* event)
 {
+    // The header strip -- name, group, version -- is outside the page container that paints the
+    // wallpaper, so without this it is the one black band in an otherwise papered window.
+    QDialog::paintEvent(event);
+    LauncherBackground::paint(this, m_background);
+}
+
+void NewInstanceDialog::accept(){
     auto chosenDir = instDir();
     if (!QDir(chosenDir).exists()) {
         CustomMessageBox::selectable(

@@ -233,7 +233,12 @@ PageContainer QAbstractItemView::item:alternate {
  * 换深色背景图时把下面的 #EFE7D6 改成 #EFE7D6 即可。
  * ============================================================ */
 
-QDialog,
+/* 顶层对话框必须有可见底板：样式表把顶层窗口写成 transparent 时没有东西可画，会变成纯黑。
+   有 PageContainer 的窗口仍会在它上面绘制背景图。 */
+QDialog {
+    background-color: #141922;
+}
+
 QDialog QWidget,
 QMainWindow QWidget,
 QDialog QScrollArea,

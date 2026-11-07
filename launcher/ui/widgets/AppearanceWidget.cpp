@@ -43,7 +43,9 @@
 #include <QComboBox>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QScrollArea>
 #include <QSlider>
+#include <QVBoxLayout>
 
 #include <DesktopServices.h>
 #include <QGraphicsOpacityEffect>
@@ -58,6 +60,29 @@ AppearanceWidget::AppearanceWidget(bool themesOnly, QWidget* parent)
     : QWidget(parent), m_ui(new Ui::AppearanceWidget), m_themesOnly(themesOnly)
 {
     m_ui->setupUi(this);
+
+    // The page carries more than a small settings window has room for, and a box layout that runs
+    // out of height squeezes its rows until their labels are drawn on top of each other. Scrolling
+    // keeps every option reachable at any window size instead.
+    {
+        auto* scroll = new QScrollArea(this);
+        scroll->setWidgetResizable(true);
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+        auto* content = new QWidget(scroll);
+        auto* contentLayout = new QVBoxLayout(content);
+        contentLayout->setContentsMargins(0, 0, 0, 0);
+        contentLayout->addWidget(m_ui->themingBox);
+        contentLayout->addWidget(m_ui->settingsBox);
+        contentLayout->addWidget(m_ui->previewBox);
+        contentLayout->addStretch(1);
+
+        scroll->setWidget(content);
+
+        if (auto* root = qobject_cast<QVBoxLayout*>(layout()))
+            root->addWidget(scroll);
+    }
 
     connect(m_ui->enableCatCheckBox, &QCheckBox::toggled, m_ui->catSettingsBox, &QWidget::setEnabled);
 

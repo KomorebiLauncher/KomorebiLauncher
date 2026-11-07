@@ -36,6 +36,7 @@
 #pragma once
 
 #include <QDialog>
+#include <QImage>
 
 #include "InstanceTask.h"
 #include "ui/pages/BasePageProvider.h"
@@ -81,6 +82,9 @@ class NewInstanceDialog : public QDialog, public BasePageProvider {
     void accept() override;
     void reject() override;
 
+   protected:
+    void paintEvent(QPaintEvent* event) override;
+
    private slots:
     void on_iconButton_clicked();
     void on_instNameTextBox_textChanged(const QString& arg1);
@@ -94,6 +98,10 @@ class NewInstanceDialog : public QDialog, public BasePageProvider {
     Ui::NewInstanceDialog* ui = nullptr;
     PageContainer* m_container = nullptr;
     QDialogButtonBox* m_buttons = nullptr;
+
+    /// The wallpaper, resolved once: the header sits outside the page container, which is what
+    /// paints it, so the dialog has to carry the picture for that strip too.
+    QImage m_background;
 
     QString m_instIconKey;
     ImportPage* m_importPage = nullptr;
