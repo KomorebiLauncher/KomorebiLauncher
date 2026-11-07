@@ -343,6 +343,7 @@ void PageContainer::paintEvent(QPaintEvent* event)
     }
 
     if (!m_background.isNull()) {
+        enableStyledBackgrounds();
         QPainter painter(this);
         // Cover rather than letterbox, so the picture does not end in bars.
         const auto scaled = m_background.scaled(size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
@@ -352,4 +353,20 @@ void PageContainer::paintEvent(QPaintEvent* event)
         painter.fillRect(rect(), QColor(0, 0, 0, 96));
     }
     QWidget::paintEvent(event);
+}
+void PageContainer::enableStyledBackgrounds()
+{
+    // Runs over the whole subtree because the pages are built lazily; a widget created after this
+    // call is covered by the next pass, which the child-added event triggers.
+    for (auto* child : findChildren<QWidget*>()) {
+        if (!(child->testAttribute(Qt::WA_StyledBackground)))
+            child->setAttribute(Qt::WA_StyledBackground, true);
+    }
+}
+
+bool PageContainer::event(QEvent* e)
+{
+    if (e->type() == QEvent::ChildAdded && !m_background.isNull())
+        enableStyledBackgrounds();
+    return QWidget::event(e);
 }

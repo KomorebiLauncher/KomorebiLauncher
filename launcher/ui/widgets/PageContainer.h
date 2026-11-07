@@ -73,7 +73,17 @@ class PageContainer : public QWidget, public BasePageContainer {
      * still cover their own rectangles.
      */
     void setBackgroundImage(const QString& path);
+
+    /**
+     * Turns on stylesheet backgrounds for every child that is a QWidget subclass.
+     *
+     * A plain stylesheet cannot make those transparent: Qt only paints a stylesheet background
+     * for subclasses that call PE_Widget themselves, which the settings pages do not. Setting the
+     * attribute is what makes a transparent background mean anything for them.
+     */
+    void enableStyledBackgrounds();
     void paintEvent(QPaintEvent* event) override;
+    bool event(QEvent* e) override;
 
     /*
      * Save any unsaved state and prepare to be closed.
