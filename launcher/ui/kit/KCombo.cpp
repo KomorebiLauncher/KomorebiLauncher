@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "KCombo.h"
 
+#include <QAbstractItemView>
 #include <QPainter>
 #include <QPainterPath>
 
