@@ -44,6 +44,7 @@
 #include "settings/SettingsObject.h"
 #include "PageContainer_p.h"
 
+#include <QAbstractItemView>
 #include <QDialogButtonBox>
 #include <QDir>
 
@@ -334,9 +335,21 @@ void PageContainer::enableStyledBackgrounds()
 {
     // Runs over the whole subtree because the pages are built lazily; a widget created after this
     // call is covered by the next pass, which the child-added event triggers.
+    const QColor paper = palette().color(QPalette::Window);
     for (auto* child : findChildren<QWidget*>()) {
         if (!(child->testAttribute(Qt::WA_StyledBackground)))
             child->setAttribute(Qt::WA_StyledBackground, true);
+
+        // A view draws its check indicators from the palette, and the stylesheet makes the view
+        // transparent, which leaves the base colour black: a checked box in an account or mod
+        // list then came out as a black square.
+        if (auto* view = qobject_cast<QAbstractItemView*>(child)) {
+            QPalette viewPalette = view->palette();
+            if (viewPalette.color(QPalette::Base) != paper) {
+                viewPalette.setColor(QPalette::Base, paper);
+                view->setPalette(viewPalette);
+            }
+        }
     }
 }
 
