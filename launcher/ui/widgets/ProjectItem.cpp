@@ -187,6 +187,13 @@ QStyleOptionViewItem ProjectItemDelegate::makeCheckboxStyleOption(const QStyleOp
 {
     QStyleOptionViewItem checkboxOpt = opt;
 
+    // The view's own base colour is transparent (the stylesheet draws the view and leaves the
+    // palette entry black), and the indicator would fill itself with that black. The application
+    // palette still carries the theme's paper and ink, so the box gets those.
+    const QPalette appPalette = QApplication::palette();
+    checkboxOpt.palette.setColor(QPalette::Base, appPalette.color(QPalette::Window));
+    checkboxOpt.palette.setColor(QPalette::Text, appPalette.color(QPalette::Text));
+
     checkboxOpt.state &= ~QStyle::State_HasFocus;
 
     if (checkboxOpt.checkState == Qt::Checked)

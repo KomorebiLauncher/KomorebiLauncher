@@ -55,13 +55,13 @@ PageContainer QGroupBox::title {
 PageContainer QTreeView::item:selected,
 PageContainer QListView::item:selected,
 PageContainer QTableView::item:selected {
-    background-color: rgba(110, 168, 214, 0.55);
-    color: #ffffff;
+    background-color: rgba(194, 85, 105, 0.28);
+    color: #EFE7D6;
 }
 
 PageContainer QTreeView::item:hover,
 PageContainer QListView::item:hover {
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(194, 85, 105, 0.14);
 }
 
 /* ---- 4. 标签页：不要白底，只留选中下划线 ---- */
@@ -153,8 +153,8 @@ PageContainer QToolBar {
     background: transparent;
 }
 
-#instanceView::item:hover { background-color: rgba(255,255,255,0.10); }
-#instanceView::item:selected { background-color: rgba(110,168,214,0.55); color: #ffffff; }
+#instanceView::item:hover { background-color: rgba(194, 85, 105, 0.14); }
+#instanceView::item:selected { background-color: rgba(194, 85, 105, 0.28); color: #EFE7D6; }
 
 /* 菜单栏与菜单：保持不透明，否则文字压在图上读不清 */
 
@@ -175,8 +175,8 @@ InstanceView {
 }
 
 #instanceView::item:selected {
-    background-color: rgba(110, 168, 214, 0.55);
-    color: #ffffff;
+    background-color: rgba(194, 85, 105, 0.28);
+    color: #EFE7D6;
 }
 
 /* 工具栏与状态栏：透明，只留一条分隔线 */
