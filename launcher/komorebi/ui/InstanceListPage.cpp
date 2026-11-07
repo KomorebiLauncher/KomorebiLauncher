@@ -73,7 +73,8 @@ class InstanceCardDelegate final : public QStyledItemDelegate {
 
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override
     {
-        const auto* model = qobject_cast<const InstanceListModel*>(index.model());
+        // The model has no Q_OBJECT -- it needs no signals of its own -- so this is a plain RTTI cast.
+        const auto* model = dynamic_cast<const InstanceListModel*>(index.model());
         if (!model)
             return;
         const auto& instance = model->at(index.row());
