@@ -167,8 +167,9 @@ InstanceListPage::InstanceListPage(QWidget* parent) : QWidget(parent)
             emit selectionChanged(m_model->at(index.row()).id);
     });
 
-    // Double click opens the instance the way a double click does anywhere else in the launcher;
-    // the context menu offers the three things one does to an instance most often.
+    // Double click opens the instance the way a double click does anywhere else in the launcher. The
+    // context menu is the window's: it already holds every instance action, and a second menu here
+    // would drift away from it the first time an action is added.
     connect(m_view, &QListView::doubleClicked, this, [this](const QModelIndex& index) {
         emit instanceActivated(m_model->at(index.row()).id);
     });
@@ -177,13 +178,7 @@ InstanceListPage::InstanceListPage(QWidget* parent) : QWidget(parent)
         const QModelIndex index = m_view->indexAt(pos);
         if (!index.isValid())
             return;
-        const auto instance = m_model->at(index.row());
-
-        QMenu menu(this);
-        menu.addAction(tr("Launch"), this, [this, id = instance.id] { emit launchRequested(id); });
-        menu.addAction(tr("Edit"), this, [this, id = instance.id] { emit editRequested(id); });
-        menu.addAction(tr("Instance folder"), this, [this, id = instance.id] { emit openFolderRequested(id); });
-        menu.exec(m_view->viewport()->mapToGlobal(pos));
+        emit contextMenuRequested(m_model->at(index.row()).id, m_view->viewport()->mapToGlobal(pos));
     });
 
     reload();

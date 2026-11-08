@@ -11,6 +11,7 @@
 
 #include <memory>
 
+#include <QPoint>
 #include <QWidget>
 
 namespace Komorebi::Core {
@@ -41,6 +42,8 @@ class InstanceListPage : public QWidget {
     void launchRequested(const QString& id);
     void editRequested(const QString& id);
     void openFolderRequested(const QString& id);
+    /// The player asked for the context menu; the window owns the actions it should contain.
+    void contextMenuRequested(const QString& id, const QPoint& globalPos);
 
     /// The card under the cursor changed; the window keeps the toolbar and the details in step.
     void selectionChanged(const QString& id);

@@ -190,6 +190,14 @@ class MainWindow : public QMainWindow {
 
     void showInstanceContextMenu(const QPoint&);
 
+    /// The instance menu the launcher's own list shows, for the core-backed list: it selects the
+    /// instance and opens the same actions at the pointer, so the two lists cannot drift apart.
+    void showCoreInstanceContextMenu(const QString& id, const QPoint& globalPos);
+
+    /// The actions an instance's context menu offers, rebuilt each time because some of them depend on
+    /// which instance is selected.
+    QList<QAction*> instanceMenuActions();
+
     void updateMainToolBar();
 
     void updateLaunchButton();

@@ -389,6 +389,9 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         view->hide();
 
         connect(m_coreInstanceList, &InstanceListPage::selectionChanged, this, &MainWindow::setSelectedInstanceById);
+        // The new list does not keep a menu of its own: the window already has one for an instance,
+        // and two menus would drift apart the moment an action is added.
+        connect(m_coreInstanceList, &InstanceListPage::contextMenuRequested, this, &MainWindow::showCoreInstanceContextMenu);
         connect(m_coreInstanceList, &InstanceListPage::instanceActivated, this, [this](const QString& id) {
             setSelectedInstanceById(id);
             instanceActivated(view->currentIndex());
@@ -633,32 +636,53 @@ void MainWindow::konamiTriggered()
     }
 }
 
+QList<QAction*> MainWindow::instanceMenuActions()
+{
+    // Reuse the file menu: it already holds launch, edit, delete, export, copy and the folder
+    // entries, with their shortcuts and translations.
+    QList<QAction*> actions = ui->fileMenu->actions();
+
+    // Remove the create-instance action at the top and the launcher settings / close actions at the
+    // bottom: none of them is about an instance.
+    actions.removeFirst();
+    actions.removeLast();
+    actions.removeLast();
+
+    actions.prepend(ui->actionChangeInstIcon);
+    actions.prepend(ui->actionRenameInstance);
+
+    auto* separator = new QAction(this);
+    separator->setSeparator(true);
+    actions.prepend(separator);
+
+    auto* header = new QAction(m_selectedInstance->name(), this);
+    header->setEnabled(false);
+    actions.prepend(header);
+    return actions;
+}
+
+void MainWindow::showCoreInstanceContextMenu(const QString& id, const QPoint& globalPos)
+{
+    setSelectedInstanceById(id);
+    if (!m_selectedInstance)
+        return;
+
+    QMenu menu(this);
+    menu.addActions(instanceMenuActions());
+    menu.exec(globalPos);
+}
+
 void MainWindow::showInstanceContextMenu(const QPoint& pos)
 {
     QList<QAction*> actions;
 
-    QAction* actionSep = new QAction("", this);
-    actionSep->setSeparator(true);
-
     bool onInstance = view->indexAt(pos).isValid();
     if (onInstance) {
-        // reuse the file menu actions
-        actions = ui->fileMenu->actions();
-
-        // remove the add instance action, launcher settings action and close action
-        actions.removeFirst();
-        actions.removeLast();
-        actions.removeLast();
-
-        actions.prepend(ui->actionChangeInstIcon);
-        actions.prepend(ui->actionRenameInstance);
-
-        // add header
-        actions.prepend(actionSep);
-        QAction* actionVoid = new QAction(m_selectedInstance->name(), this);
-        actionVoid->setEnabled(false);
-        actions.prepend(actionVoid);
+        actions = instanceMenuActions();
     } else {
+        QAction* actionSep = new QAction("", this);
+        actionSep->setSeparator(true);
+
         auto group = view->groupNameAt(pos);
 
         QAction* actionVoid = new QAction(group.isNull() ? BuildConfig.LAUNCHER_DISPLAYNAME : group, this);
