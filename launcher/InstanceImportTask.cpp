@@ -38,6 +38,7 @@
 
 #include "Application.h"
 #include "FileSystem.h"
+#include <QDebug>
 #include "NullInstance.h"
 
 #include "QObjectPtr.h"
@@ -665,13 +666,25 @@ void InstanceImportTask::processDomestic()
                     auto destination = file.path;
                     if (destination.isEmpty())
                         destination = QStringLiteral("mods/") + nameByFileId.value(id);
-                    auto download = Net::Request::makeFile(url, FS::PathCombine(m_stagingPath, destination));
+                    // `destination` comes from the pack's own manifest; a "../" in it must not
+                    // decide where the launcher writes.
+                    const auto safeTarget = FS::getSafePathInRoot(m_stagingPath, destination);
+                    if (!safeTarget) {
+                        qWarning() << "[import] refusing a file outside the instance folder:" << destination;
+                        continue;
+                    }
+                    auto download = Net::Request::makeFile(url, *safeTarget);
                     if (!file.sha1.isEmpty())
                         download->addValidator(
                             new Net::ChecksumValidator(QCryptographicHash::Sha1, QByteArray::fromHex(file.sha1.toLatin1())));
                     job->addNetAction(download);
                 } else if (!file.url.isEmpty()) {
-                    auto download = Net::Request::makeFile(QUrl(file.url, QUrl::TolerantMode), FS::PathCombine(m_stagingPath, file.path));
+                    const auto safeTarget = FS::getSafePathInRoot(m_stagingPath, file.path);
+                    if (!safeTarget) {
+                        qWarning() << "[import] refusing a file outside the instance folder:" << file.path;
+                        continue;
+                    }
+                    auto download = Net::Request::makeFile(QUrl(file.url, QUrl::TolerantMode), *safeTarget);
                     if (!file.sha1.isEmpty())
                         download->addValidator(
                             new Net::ChecksumValidator(QCryptographicHash::Sha1, QByteArray::fromHex(file.sha1.toLatin1())));
@@ -715,7 +728,12 @@ void InstanceImportTask::processDomestic()
     for (const auto& file : pack.files) {
         if (file.url.isEmpty())
             continue;
-        auto download = Net::Request::makeFile(QUrl(file.url, QUrl::TolerantMode), FS::PathCombine(m_stagingPath, file.path));
+        const auto safeTarget = FS::getSafePathInRoot(m_stagingPath, file.path);
+        if (!safeTarget) {
+            qWarning() << "[import] refusing a file outside the instance folder:" << file.path;
+            continue;
+        }
+        auto download = Net::Request::makeFile(QUrl(file.url, QUrl::TolerantMode), *safeTarget);
         if (!file.sha1.isEmpty())
             download->addValidator(new Net::ChecksumValidator(QCryptographicHash::Sha1, QByteArray::fromHex(file.sha1.toLatin1())));
         job->addNetAction(download);

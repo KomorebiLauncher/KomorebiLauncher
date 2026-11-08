@@ -136,6 +136,8 @@ class InstanceView : public QAbstractItemView {
     QPersistentModelIndex m_pressedIndex;
     bool m_pressedAlreadySelected;
     VisualGroup* m_pressedCategory;
+    /// The group under the press, by name: the pointers do not survive a relayout.
+    QString m_pressedCategoryName;
     QItemSelectionModel::SelectionFlag m_ctrlDragSelectionFlag;
     QPoint m_lastDragPosition;
 

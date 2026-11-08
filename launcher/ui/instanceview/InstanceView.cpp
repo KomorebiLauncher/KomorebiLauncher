@@ -298,6 +298,7 @@ void InstanceView::mousePressEvent(QMouseEvent* event)
     if (event->button() == Qt::LeftButton) {
         VisualGroup::HitResults hitResult;
         m_pressedCategory = categoryAt(geometryPos, hitResult);
+        m_pressedCategoryName = m_pressedCategory ? m_pressedCategory->text : QString();
         if (m_pressedCategory && hitResult & VisualGroup::CheckboxHit) {
             setState(m_pressedCategory->collapsed ? ExpandingState : CollapsingState);
             event->accept();
@@ -385,25 +386,32 @@ void InstanceView::mouseReleaseEvent(QMouseEvent* event)
 
     VisualGroup::HitResults hitResult;
 
-    if (event->button() == Qt::LeftButton && m_pressedCategory != nullptr && m_pressedCategory == categoryAt(geometryPos, hitResult)) {
+    // executeDelayedItemsLayout() above may have rebuilt the groups, so the pointer saved on press
+    // can be dangling; the name is what identifies the group across that.
+    VisualGroup* pressed = categoryAt(geometryPos, hitResult);
+    if (pressed && pressed->text != m_pressedCategoryName)
+        pressed = nullptr;
+    if (event->button() == Qt::LeftButton && pressed != nullptr) {
         if (state() == ExpandingState) {
-            m_pressedCategory->collapsed = false;
-            emit groupStateChanged(m_pressedCategory->text, false);
+            pressed->collapsed = false;
+            emit groupStateChanged(pressed->text, false);
 
             updateGeometries();
             viewport()->update();
             event->accept();
             m_pressedCategory = nullptr;
+            m_pressedCategoryName.clear();
             setState(NoState);
             return;
         } else if (state() == CollapsingState) {
-            m_pressedCategory->collapsed = true;
-            emit groupStateChanged(m_pressedCategory->text, true);
+            pressed->collapsed = true;
+            emit groupStateChanged(pressed->text, true);
 
             updateGeometries();
             viewport()->update();
             event->accept();
             m_pressedCategory = nullptr;
+            m_pressedCategoryName.clear();
             setState(NoState);
             return;
         }

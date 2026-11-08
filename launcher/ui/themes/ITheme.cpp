@@ -126,7 +126,9 @@ class NoTooltipFilter final : public QObject
   protected:
     bool eventFilter(QObject* object, QEvent* event) override
     {
-        if (event->type() == QEvent::ToolTip)
+        // Lists are the exception: the compact rail hides the instance name and keeps it in the
+        // tooltip, so swallowing the hint there would leave no way to tell instances apart.
+        if (event->type() == QEvent::ToolTip && !qobject_cast<QAbstractItemView*>(object))
             return true;
         return QObject::eventFilter(object, event);
     }

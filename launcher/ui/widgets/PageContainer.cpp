@@ -160,7 +160,8 @@ const QList<BasePage*>& PageContainer::getPages() const
 void PageContainer::refreshContainer()
 {
     m_proxyModel->invalidate();
-    if (!m_currentPage->shouldDisplay()) {
+    // No page is a valid state (see currentChanged), so the check has to be on the pair.
+    if (m_currentPage && !m_currentPage->shouldDisplay()) {
         auto index = m_proxyModel->index(0, 0);
         if (index.isValid()) {
             m_pageList->setCurrentIndex(index);
@@ -261,9 +262,19 @@ void PageContainer::help()
 
 void PageContainer::currentChanged(const QModelIndex& current)
 {
-    int selectedIndex = current.isValid() ? m_proxyModel->mapToSource(current).row() : -1;
+    // The proxy can hide every page -- a page whose shouldDisplay() turned false while it was the
+    // current one -- and then there is no index to map. That used to be an assertion, which is
+    // compiled out of release builds, followed by at(-1).
+    if (!current.isValid()) {
+        showPage(-1);
+        return;
+    }
 
-    Q_ASSERT(selectedIndex < m_model->pages().size() && selectedIndex >= 0);
+    const int selectedIndex = m_proxyModel->mapToSource(current).row();
+    if (selectedIndex < 0 || selectedIndex >= m_model->pages().size()) {
+        showPage(-1);
+        return;
+    }
 
     auto* selected = m_model->pages().at(selectedIndex);
     auto* previous = m_currentPage;
