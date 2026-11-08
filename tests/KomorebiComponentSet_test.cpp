@@ -15,6 +15,7 @@ class KomorebiComponentSetTest : public QObject {
     void loadsEveryComponentsManifest();
     void mergesGameFieldsAndAllLibraries();
     void reportsAMissingComponent();
+    void loaderReplacesHowTheGameStarts();
 
    private:
     static void write(const QString& directory, const QString& relative, const QString& text);
@@ -84,6 +85,40 @@ void KomorebiComponentSetTest::mergesGameFieldsAndAllLibraries()
     QCOMPARE(merged->legacyArguments.first(), QStringLiteral("--username"));
 }
 
+void KomorebiComponentSetTest::loaderReplacesHowTheGameStarts()
+{
+    QTemporaryDir temp;
+    QVERIFY(temp.isValid());
+    write(temp.path(), QStringLiteral("net.minecraft/1.20.1.json"), QStringLiteral(R"({
+        "uid": "net.minecraft",
+        "version": "1.20.1",
+        "mainClass": "net.minecraft.client.main.Main",
+        "minecraftArguments": "--username ${auth_player_name}",
+        "libraries": [ { "name": "com.mojang:brigadier:1.0.18" } ]
+    })"));
+    write(temp.path(), QStringLiteral("net.minecraftforge/47.4.0.json"), QStringLiteral(R"({
+        "uid": "net.minecraftforge",
+        "version": "47.4.0",
+        "mainClass": "io.github.zekerzhayard.forgewrapper.installer.Main",
+        "minecraftArguments": "--username ${auth_player_name} --launchTarget forgeclient",
+        "libraries": [ { "name": "cpw.mods:securejarhandler:2.1.10" } ],
+        "mavenFiles": [ { "name": "net.minecraftforge:forge:1.20.1-47.4.0:installer" } ]
+    })"));
+
+    const QList<ComponentRef> refs{ { QStringLiteral("net.minecraft"), QStringLiteral("1.20.1") },
+                                    { QStringLiteral("net.minecraftforge"), QStringLiteral("47.4.0") } };
+    QString error;
+    const auto loaded = loadComponents(temp.path(), refs, &error);
+    QVERIFY2(loaded.has_value(), qPrintable(error));
+    const auto merged = mergeComponents(*loaded, &error);
+    QVERIFY2(merged.has_value(), qPrintable(error));
+
+    QCOMPARE(merged->mainClass, QStringLiteral("io.github.zekerzhayard.forgewrapper.installer.Main"));
+    QCOMPARE(merged->libraries.size(), 2);
+    QCOMPARE(merged->mavenFiles.size(), 1);
+    QVERIFY(merged->legacyArguments.contains(QStringLiteral("--launchTarget")));
+    QVERIFY(merged->legacyArguments.contains(QStringLiteral("forgeclient")));
+}
 void KomorebiComponentSetTest::reportsAMissingComponent()
 {
     QTemporaryDir temp;

@@ -176,11 +176,6 @@ int probeInstance(const QStringList& arguments, QTextStream& out)
     }
     say(out, QStringLiteral("probe: instance %1 (%2), game %3").arg(folder->name, folder->id, folder->minecraftVersion()));
 
-    if (const auto loader = folder->loaderUid(); !loader.isEmpty()) {
-        say(out, QStringLiteral("probe: this instance uses %1; the core cannot read loader manifests yet").arg(loader));
-        return 2;
-    }
-
     // An instance is a set of components, each with its own manifest: the game does not list the
     // graphics library's jars, that component does.
     const auto components = Core::loadComponents(data.filePath(QStringLiteral("meta")), folder->components, &error);

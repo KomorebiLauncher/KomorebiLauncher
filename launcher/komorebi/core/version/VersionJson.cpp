@@ -187,6 +187,12 @@ std::optional<VersionJson> VersionJson::parse(const QJsonObject& object, QString
             manifest.libraries.append(library);
     }
 
+    for (const auto& entry : object.value(QStringLiteral("mavenFiles")).toArray()) {
+        const auto library = readLibrary(entry.toObject());
+        if (!library.name.isEmpty())
+            manifest.mavenFiles.append(library);
+    }
+
     const auto arguments = object.value(QStringLiteral("arguments")).toObject();
     manifest.gameArguments = readArgumentArray(arguments.value(QStringLiteral("game")));
     manifest.jvmArguments += readArgumentArray(arguments.value(QStringLiteral("jvm")));

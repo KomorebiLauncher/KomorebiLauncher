@@ -79,6 +79,8 @@ struct VersionJson {
     QString javaComponent;      ///< javaVersion.component, the runtime Mojang publishes
 
     QList<LibraryEntry> libraries;
+    /// Libraries a loader needs on disk but not on the class path (its installer, for instance).
+    QList<LibraryEntry> mavenFiles;
     QStringList gameArguments;  ///< plain strings from arguments.game
     QStringList jvmArguments;   ///< plain strings from arguments.jvm
     QStringList legacyArguments;  ///< minecraftArguments, split on spaces, for old versions

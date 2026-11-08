@@ -77,8 +77,19 @@ std::optional<VersionJson> mergeComponents(const QList<LoadedComponent>& compone
 
     QStringList seenLibraries;
     QList<LibraryEntry> libraries;
+    QList<LibraryEntry> mavenFiles;
     QStringList jvmArguments;
     for (const auto& component : components) {
+        // A loader replaces the way the game starts: its main class and, when it still writes one, the
+        // whole old-style argument line. That is what makes Forge's wrapper the thing that runs.
+        if (component.uid != QLatin1String("net.minecraft")) {
+            if (!component.manifest.mainClass.isEmpty())
+                merged.mainClass = component.manifest.mainClass;
+            if (!component.manifest.legacyArguments.isEmpty())
+                merged.legacyArguments = component.manifest.legacyArguments;
+            mavenFiles << component.manifest.mavenFiles;
+        }
+
         jvmArguments << component.manifest.jvmArguments;
         for (const auto& library : component.manifest.libraries) {
             const QString key = libraryKey(library);
@@ -90,6 +101,7 @@ std::optional<VersionJson> mergeComponents(const QList<LoadedComponent>& compone
     }
 
     merged.libraries = libraries;
+    merged.mavenFiles = mavenFiles;
     merged.jvmArguments = jvmArguments;
     merged.inheritsFrom.clear();
     return merged;
