@@ -1226,6 +1226,8 @@ SET(LAUNCHER_SOURCES
     komorebi/services/download/DownloadQueue.h
     komorebi/services/download/InstanceFiles.cpp
     komorebi/services/download/InstanceFiles.h
+    komorebi/services/download/AssetFiles.cpp
+    komorebi/services/download/AssetFiles.h
     komorebi/services/launch/InstanceLaunch.cpp
     komorebi/services/launch/InstanceLaunch.h
     komorebi/legacy/CoreLaunchAdapter.cpp
@@ -1234,6 +1236,8 @@ SET(LAUNCHER_SOURCES
     komorebi/core/version/VersionChain.h
     komorebi/core/version/ComponentSet.cpp
     komorebi/core/version/ComponentSet.h
+    komorebi/core/asset/AssetIndex.cpp
+    komorebi/core/asset/AssetIndex.h
     komorebi/app/LaunchProbe.cpp
     komorebi/app/LaunchProbe.h
     komorebi/core/legacy/LegacyInstanceRepository.cpp

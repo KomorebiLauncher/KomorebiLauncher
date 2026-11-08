@@ -42,6 +42,9 @@ ecm_add_test(KomorebiInstanceFiles_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT
 ecm_add_test(KomorebiNatives_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME KomorebiNatives)
 
+ecm_add_test(KomorebiAssetFiles_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME KomorebiAssetFiles)
+
 ecm_add_test(MojangVersionFormat_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME MojangVersionFormat)
 
