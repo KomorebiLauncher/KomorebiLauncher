@@ -419,8 +419,25 @@ if(UNIX AND APPLE)
     set(MACOSX_BUNDLE_LONG_VERSION_STRING "${Launcher_VERSION_NAME}")
     set(MACOSX_BUNDLE_ICON_FILE ${Launcher_Name}.icns)
     set(MACOSX_BUNDLE_COPYRIGHT "${Launcher_Copyright_Mac}")
-    set(MACOSX_SPARKLE_UPDATE_PUBLIC_KEY "v55ZWWD6QlPoXGV6VLzOTZxZUggWeE51X8cRQyQh6vA=" CACHE STRING "Public key for Sparkle update feed")
-    set(MACOSX_SPARKLE_UPDATE_FEED_URL "https://prismlauncher.org/feed/appcast.xml" CACHE STRING "URL for Sparkle update feed")
+    # The Sparkle feed is empty on purpose.
+    #
+    # These two values used to carry Prism Launcher's appcast and its EdDSA public key, so a macOS
+    # build of this launcher would ask Prism's feed for updates and happily accept the result: the
+    # "update" is a different application, signed with a key that matched. Until this project
+    # publishes and signs an appcast of its own, a build without them simply has no self-updater --
+    # which is the honest state, not a Prism-shaped one. A release that does have a feed passes both
+    # with -D when configuring.
+    set(MACOSX_SPARKLE_UPDATE_PUBLIC_KEY "" CACHE STRING "Public key for Sparkle update feed")
+    set(MACOSX_SPARKLE_UPDATE_FEED_URL "" CACHE STRING "URL for Sparkle update feed")
+
+    # A cache written before the defaults were emptied still holds Prism's appcast, and a build that
+    # asks Prism for updates installs Prism. Refuse the value rather than trusting the cache.
+    if(MACOSX_SPARKLE_UPDATE_FEED_URL MATCHES "prismlauncher"
+       OR MACOSX_SPARKLE_UPDATE_PUBLIC_KEY STREQUAL "v55ZWWD6QlPoXGV6VLzOTZxZUggWeE51X8cRQyQh6vA=")
+        message(FATAL_ERROR "The Sparkle feed still points at Prism Launcher. Set MACOSX_SPARKLE_UPDATE_FEED_URL and "
+                            "MACOSX_SPARKLE_UPDATE_PUBLIC_KEY to this project's own appcast and key, or leave both empty "
+                            "to build without a macOS self-updater.")
+    endif()
 
     set(MACOSX_SPARKLE_DOWNLOAD_URL "https://github.com/sparkle-project/Sparkle/releases/download/2.9.6/Sparkle-2.9.6.tar.xz" CACHE STRING "URL to Sparkle release archive")
     set(MACOSX_SPARKLE_SHA256 "52bf9e88cdd972fc0c81501377a880e90d47031bd8ca5462488f843e2609e192" CACHE STRING "SHA256 checksum for Sparkle release archive")
