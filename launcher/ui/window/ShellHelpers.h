@@ -66,6 +66,17 @@ inline void placeToolBar(QMainWindow* window, QToolBar* bar, Qt::ToolBarArea are
     if (!window || !bar)
         return;
 
+    /*
+     * A toolbar put into a vertical area is turned upright by Qt while it is being laid out, and for
+     * the instance toolbar -- a WideBar that lays its buttons out itself -- that conversion crashed
+     * inside QMainWindow::addToolBar the moment an account made the window show it. Handing Qt a
+     * toolbar that already has the orientation the area wants means no conversion happens mid-layout.
+     */
+    const bool verticalArea = area == Qt::LeftToolBarArea || area == Qt::RightToolBarArea;
+    const Qt::Orientation orientation = verticalArea ? Qt::Vertical : Qt::Horizontal;
+    if (bar->orientation() != orientation)
+        bar->setOrientation(orientation);
+
     auto* toggle = bar->toggleViewAction();
     const bool wanted = bar->isVisible() || (toggle && toggle->isChecked());
 

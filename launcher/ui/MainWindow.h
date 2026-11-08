@@ -284,6 +284,15 @@ class MainWindow : public QMainWindow {
     MinecraftInstance* m_selectedInstance = nullptr;
     QString m_currentInstIcon;
 
+    /**
+     * True while a layout shell is placing the widgets.
+     *
+     * Placing a toolbar makes QMainWindow lay it out, and that emits the toolbar's own signals; a
+     * handler that rearranges the toolbar from inside that signal re-enters the layout that is still
+     * running. Anything a player's drag would normally trigger is held back until placement is done.
+     */
+    bool m_applyingLayout = false;
+
     // managed by the application object
     Task* m_versionLoadTask = nullptr;
 };

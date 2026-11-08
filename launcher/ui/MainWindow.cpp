@@ -1731,7 +1731,18 @@ void MainWindow::applyWindowLayout()
     else
         m_shell = std::make_unique<SidebarShell>();
 
+    /*
+     * Placing a toolbar in an area makes QMainWindow lay it out, and a horizontal toolbar put on the
+     * right is turned upright by that: the toolbar then emits orientationChanged in the middle of the
+     * layout that is still running. Our handler rearranges its actions and resizes it, which re-enters
+     * a layout half way through and crashed inside QMainWindow::addToolBar. The work is not lost -- the
+     * handler is called once more below, with the orientation the shell actually gave the toolbar.
+     */
+    m_applyingLayout = true;
     m_shell->adopt(m_windowParts);
+    m_applyingLayout = false;
+
+    updateInstanceToolBarOrientation(ui->instanceToolBar->orientation());
 }
 
 void MainWindow::showEvent(QShowEvent* event)
@@ -1975,6 +1986,11 @@ void MainWindow::updateNameLabel()
 
 void MainWindow::updateInstanceToolBarOrientation(Qt::Orientation orientation)
 {
+    // A toolbar that is being placed is inside QMainWindow's own layout; rearranging it now would
+    // re-enter that layout. applyWindowLayout calls this again once placement is done.
+    if (m_applyingLayout)
+        return;
+
     ui->instanceToolBar->removeAction(ui->actionChangeInstIcon);
 
     if (orientation == Qt::Vertical) {
