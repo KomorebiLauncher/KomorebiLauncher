@@ -33,6 +33,12 @@ ecm_add_test(KomorebiDownloadSource_test.cpp LINK_LIBRARIES Launcher_logic Qt${Q
 ecm_add_test(KomorebiFileDownloader_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test Qt${QT_VERSION_MAJOR}::Network
     TEST_NAME KomorebiFileDownloader)
 
+ecm_add_test(KomorebiDownloadQueue_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test Qt${QT_VERSION_MAJOR}::Network
+    TEST_NAME KomorebiDownloadQueue)
+
+ecm_add_test(KomorebiInstanceFiles_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME KomorebiInstanceFiles)
+
 ecm_add_test(MojangVersionFormat_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME MojangVersionFormat)
 

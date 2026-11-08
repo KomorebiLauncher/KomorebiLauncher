@@ -1220,6 +1220,10 @@ SET(LAUNCHER_SOURCES
     komorebi/services/download/DownloadSource.h
     komorebi/services/download/FileDownloader.cpp
     komorebi/services/download/FileDownloader.h
+    komorebi/services/download/DownloadQueue.cpp
+    komorebi/services/download/DownloadQueue.h
+    komorebi/services/download/InstanceFiles.cpp
+    komorebi/services/download/InstanceFiles.h
     komorebi/services/launch/InstanceLaunch.cpp
     komorebi/services/launch/InstanceLaunch.h
     komorebi/legacy/CoreLaunchAdapter.cpp
