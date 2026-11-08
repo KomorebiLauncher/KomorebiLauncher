@@ -14,7 +14,7 @@ GPL-3.0-only，见 LICENSE 。
 
 - 实例隔离：每个实例独立的 .minecraft 目录、独立设置与独立图标
 - 组件系统：Minecraft 本体与 Fabric 、 Forge 、 NeoForge 、 Quilt 等加载器按组件装拆
-- 整合包来源：Modrinth 、 CurseForge 、 ATLauncher 、 FTB 、 Legacy FTB 、 Technic ，以及导入 .mrpack 、 MultiMC 与 PolyMC 导出的压缩包、HMCL 整合包与 MCBBS 格式整合包（清单里另需下载的文件，即 MCBBS 以 CurseForge 文件 ID 声明的与两种格式里的直链，会在建立实例前取回并按 SHA-1 校验；CurseForge 已不再提供的文件会计数并在导入时报告）
+- 整合包来源：Modrinth 、 CurseForge 、 ATLauncher 、 FTB 、 Legacy FTB 、 Technic ，以及导入 .mrpack 、 MultiMC 与 PolyMC 导出的压缩包、HMCL 整合包与 MCBBS 格式整合包（MCBBS 的 packmeta 里以 CurseForge 文件 ID 或直链声明的文件，会在建立实例前取回，清单带 SHA-1 的会校验；CurseForge 已不再提供的文件会计数并在导入时报告）
 - 模组与整合包更新检查：对已安装的 Mod 逐个比对来源站点的版本
 - 模组、资源包、光影包、数据包、存档、截图在实例内直接管理，可从 Modrinth 搜索并安装
 - 皮肤上传与披风选择
