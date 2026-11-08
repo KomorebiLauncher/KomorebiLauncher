@@ -1210,6 +1210,8 @@ SET(LAUNCHER_SOURCES
     komorebi/core/InstanceRepository.h
     komorebi/core/version/VersionJson.cpp
     komorebi/core/version/VersionJson.h
+    komorebi/core/launch/LaunchPlan.cpp
+    komorebi/core/launch/LaunchPlan.h
     komorebi/core/legacy/LegacyInstanceRepository.cpp
     ui/kit/KButton.cpp
     ui/kit/KButton.h

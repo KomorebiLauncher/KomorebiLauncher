@@ -12,6 +12,9 @@ ecm_add_test(GradleSpecifier_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSI
 ecm_add_test(KomorebiVersionJson_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME KomorebiVersionJson)
 
+ecm_add_test(KomorebiLaunchPlan_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME KomorebiLaunchPlan)
+
 ecm_add_test(MojangVersionFormat_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME MojangVersionFormat)
 
