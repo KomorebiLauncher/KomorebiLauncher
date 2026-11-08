@@ -18,6 +18,9 @@ ecm_add_test(KomorebiLaunchPlan_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VE
 ecm_add_test(KomorebiJavaRuntime_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME KomorebiJavaRuntime)
 
+ecm_add_test(KomorebiVersionChain_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME KomorebiVersionChain)
+
 ecm_add_test(MojangVersionFormat_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME MojangVersionFormat)
 

@@ -343,6 +343,26 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
     parser.addHelpOption();
     parser.addVersionOption();
 
+    /*
+     * A development hook, not something a player runs: see komorebi/app/LaunchProbe. The parser
+     * rejects options it does not know, so the probe's arguments have to be declared even though the
+     * probe itself reads them from arguments() rather than from here.
+     */
+    {
+        QCommandLineOption probe{ QStringLiteral("komorebi-probe-launch"),
+                                  QStringLiteral("Run the core's launch path for one version, without the window") };
+        probe.setFlags(QCommandLineOption::HiddenFromHelp);
+        parser.addOption(probe);
+
+        for (const auto& name : { QStringLiteral("komorebi-data"), QStringLiteral("komorebi-version"),
+                                  QStringLiteral("komorebi-game-dir"), QStringLiteral("komorebi-username"),
+                                  QStringLiteral("komorebi-timeout") }) {
+            QCommandLineOption option{ name, QStringLiteral("Used by --komorebi-probe-launch"), QStringLiteral("value") };
+            option.setFlags(QCommandLineOption::HiddenFromHelp);
+            parser.addOption(option);
+        }
+    }
+
     parser.process(arguments());
 
     m_instanceIdToLaunch = parser.value("launch");

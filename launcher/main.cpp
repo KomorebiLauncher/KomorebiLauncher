@@ -35,7 +35,10 @@
 
 #include <iostream>
 
+#include <QCoreApplication>
+
 #include "Application.h"
+#include "komorebi/app/LaunchProbe.h"
 
 #if defined Q_OS_WIN32
 #include "console/WindowsConsole.h"
@@ -47,6 +50,18 @@ int main(int argc, char* argv[])
     // used on Windows to attach the standard IO streams
     console::WindowsConsoleGuard _consoleGuard;
 #endif
+
+    /*
+     * The development probe has to run before Application is constructed: that constructor builds the
+     * window, and the point of the probe is to exercise the launch core without one. A plain
+     * QCoreApplication is enough for it -- it starts a process and reads what it says.
+     */
+    for (int index = 1; index < argc; ++index) {
+        if (qstrcmp(argv[index], "--komorebi-probe-launch") != 0)
+            continue;
+        QCoreApplication probeApp(argc, argv);
+        return Komorebi::App::probeLaunch(probeApp.arguments());
+    }
 
     // initialize Qt
     Application app(argc, argv);
@@ -74,6 +89,7 @@ int main(int argc, char* argv[])
             Q_INIT_RESOURCE(themes);
 
             Q_INIT_RESOURCE(shaders);
+
             return app.exec();
         }
         case Application::Failed:
