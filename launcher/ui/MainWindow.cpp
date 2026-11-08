@@ -379,6 +379,35 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
         // The strip that used to hold them is empty now; keeping it would leave a bare row.
         ui->newsToolBar->hide();
     }
+    // The list written against the core's repository takes the place the launcher's own view held.
+    // The old view stays alive but out of sight: the toolbar, the menus and the shortcuts all act on
+    // what is selected in it, so selecting a card here selects the same instance there. Everything
+    // below this line keeps working unchanged, which is what makes this a replacement rather than a
+    // second list to keep in step.
+    {
+        m_coreInstanceList = new InstanceListPage(ui->centralWidget);
+        view->hide();
+
+        connect(m_coreInstanceList, &InstanceListPage::selectionChanged, this, &MainWindow::setSelectedInstanceById);
+        connect(m_coreInstanceList, &InstanceListPage::instanceActivated, this, [this](const QString& id) {
+            setSelectedInstanceById(id);
+            instanceActivated(view->currentIndex());
+        });
+        connect(m_coreInstanceList, &InstanceListPage::launchRequested, this, [this](const QString& id) {
+            setSelectedInstanceById(id);
+            ui->actionLaunchInstance->trigger();
+        });
+        connect(m_coreInstanceList, &InstanceListPage::editRequested, this, [this](const QString& id) {
+            setSelectedInstanceById(id);
+            on_actionEditInstance_triggered();
+        });
+        connect(m_coreInstanceList, &InstanceListPage::openFolderRequested, this, [this](const QString& id) {
+            setSelectedInstanceById(id);
+            if (auto* instance = APPLICATION->instances()->getInstanceById(id)) {
+                DesktopServices::openUrl(QUrl::fromLocalFile(instance->instanceRoot()));
+            }
+        });
+    }
     // The cat background
     {
         // set the cat action priority here so you can still see the action in qt designer
@@ -495,6 +524,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), ui(new Ui::MainWi
     // from here; nothing else should create these widgets a second time.
     m_windowParts.window = this;
     m_windowParts.centralWidget = ui->centralWidget;
+    m_windowParts.instanceList = m_coreInstanceList;
     m_windowParts.instanceView = view;
     m_windowParts.instanceToolBar = ui->instanceToolBar;
     m_windowParts.mainToolBar = ui->mainToolBar;
@@ -1804,6 +1834,10 @@ void MainWindow::instanceChanged(const QModelIndex& current, [[maybe_unused]] co
         disconnect(m_selectedInstance, &BaseInstance::profilerChanged, this, &MainWindow::refreshCurrentInstance);
     }
     QString id = current.data(InstanceList::InstanceIDRole).toString();
+    // A selection can come from the toolbar, a shortcut or the list itself; the card for it has to
+    // follow, or the window would be about one instance while the list shows another.
+    if (m_coreInstanceList)
+        m_coreInstanceList->selectInstance(id);
     m_selectedInstance = APPLICATION->instances()->getInstanceById(id);
     if (m_selectedInstance) {
         ui->instanceToolBar->setEnabled(true);

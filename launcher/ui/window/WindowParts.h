@@ -27,6 +27,12 @@ struct WindowParts {
     /** The window itself, needed to place toolbars. */
     QMainWindow* window = nullptr;
     QWidget* centralWidget = nullptr;
+    /** The list the player sees. When set, it takes the place the old view used to hold. */
+    QWidget* instanceList = nullptr;
+    /**
+     * The launcher's own list. It stays alive -- the toolbar and the menus act on its selection --
+     * but a shell drops it from the layout once the core-backed list is there.
+     */
     InstanceView* instanceView = nullptr;
     /** The bar of instance actions: a WideBar (a QToolBar that lays its buttons out as rows). */
     QToolBar* instanceToolBar = nullptr;

@@ -33,17 +33,18 @@ namespace WindowShell {
  */
 inline void adoptColumns(const WindowParts& parts, int listWidth)
 {
-    if (!parts.centralWidget || !parts.instanceView)
+    QWidget* list = parts.instanceList ? parts.instanceList : static_cast<QWidget*>(parts.instanceView);
+    if (!parts.centralWidget || !list)
         return;
 
     if (auto* layout = qobject_cast<QHBoxLayout*>(parts.centralWidget->layout())) {
-        if (parts.instanceView->parentWidget() != parts.centralWidget)
-            parts.instanceView->setParent(parts.centralWidget);
+        if (list->parentWidget() != parts.centralWidget)
+            list->setParent(parts.centralWidget);
 
-        parts.instanceView->setFixedWidth(listWidth);
+        list->setFixedWidth(listWidth);
 
-        if (layout->indexOf(parts.instanceView) < 0)
-            layout->addWidget(parts.instanceView);
+        if (layout->indexOf(list) < 0)
+            layout->addWidget(list);
 
         if (parts.contentPanel) {
             if (parts.contentPanel->parentWidget() != parts.centralWidget)

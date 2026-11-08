@@ -13,7 +13,9 @@
 #include "minecraft/MinecraftInstance.h"
 #include "InstanceList.h"
 #include <DesktopServices.h>
+#include <QItemSelectionModel>
 #include <QMenu>
+#include <QSignalBlocker>
 
 #include "Application.h"
 #include "icons/IconList.h"
@@ -159,6 +161,12 @@ InstanceListPage::InstanceListPage(QWidget* parent) : QWidget(parent)
     m_repository = Komorebi::Core::makeLegacyRepository(this);
     connect(m_repository.get(), &InstanceRepository::changed, this, &InstanceListPage::reload);
 
+    // A single click is a selection: it says which instance the rest of the window is about.
+    connect(m_view->selectionModel(), &QItemSelectionModel::currentChanged, this, [this](const QModelIndex& index) {
+        if (index.isValid())
+            emit selectionChanged(m_model->at(index.row()).id);
+    });
+
     // Double click opens the instance the way a double click does anywhere else in the launcher;
     // the context menu offers the three things one does to an instance most often.
     connect(m_view, &QListView::doubleClicked, this, [this](const QModelIndex& index) {
@@ -189,6 +197,24 @@ void InstanceListPage::reload()
     m_model->setInstances(instances);
     m_empty->setVisible(instances.isEmpty());
     m_view->setVisible(!instances.isEmpty());
+}
+
+void InstanceListPage::selectInstance(const QString& id)
+{
+    if (id.isEmpty() || !m_view->selectionModel())
+        return;
+
+    for (int row = 0; row < m_model->rowCount(); ++row) {
+        if (m_model->at(row).id != id)
+            continue;
+        if (m_view->currentIndex().row() == row)
+            return;
+        // This selection came from the window, not from the player: reporting it back would bounce
+        // between the two lists forever.
+        const QSignalBlocker blocked(m_view->selectionModel());
+        m_view->setCurrentIndex(m_model->index(row));
+        return;
+    }
 }
 
 void InstanceListPage::paintEvent(QPaintEvent* event)

@@ -31,6 +31,9 @@ class InstanceListPage : public QWidget {
     /// Re-reads the repository; called on show and when it reports a change.
     void reload();
 
+    /// Marks the card for this instance, without reporting it back as a new selection.
+    void selectInstance(const QString& id);
+
    signals:
     /// The player asked for something that belongs to the shell, not to the list: the page says
     /// what was wanted and the window decides what that means.
@@ -38,6 +41,9 @@ class InstanceListPage : public QWidget {
     void launchRequested(const QString& id);
     void editRequested(const QString& id);
     void openFolderRequested(const QString& id);
+
+    /// The card under the cursor changed; the window keeps the toolbar and the details in step.
+    void selectionChanged(const QString& id);
 
    protected:
     void paintEvent(QPaintEvent* event) override;

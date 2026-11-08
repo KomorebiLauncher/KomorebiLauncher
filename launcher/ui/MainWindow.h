@@ -59,6 +59,7 @@ class MinecraftInstance;
 class MinecraftLauncher;
 class BaseProfilerFactory;
 class InstanceView;
+class InstanceListPage;
 class MainContentPanel;
 class KonamiCode;
 class InstanceTask;
@@ -263,6 +264,11 @@ class MainWindow : public QMainWindow {
 
     /** The area beside the instance list; owned by the window, placed by the shell. */
     MainContentPanel* m_contentPanel = nullptr;
+    /**
+     * The core-backed instance list. It is what the player sees; the launcher's own view stays alive
+     * behind it, out of sight, because the toolbar, the menus and the shortcuts act on its selection.
+     */
+    InstanceListPage* m_coreInstanceList = nullptr;
     InstanceProxyModel* proxymodel = nullptr;
     QToolButton* newsLabel = nullptr;
     QLabel* m_statusLeft = nullptr;
