@@ -57,7 +57,7 @@ int main(int argc, char* argv[])
      * QCoreApplication is enough for it -- it starts a process and reads what it says.
      */
     for (int index = 1; index < argc; ++index) {
-        if (qstrcmp(argv[index], "--komorebi-probe-launch") != 0)
+        if (qstrcmp(argv[index], "--komorebi-probe-launch") != 0 && qstrcmp(argv[index], "--komorebi-probe-instance") != 0)
             continue;
         QCoreApplication probeApp(argc, argv);
         return Komorebi::App::probeLaunch(probeApp.arguments());
