@@ -1,0 +1,98 @@
+// SPDX-License-Identifier: GPL-3.0-only
+#include "komorebi/core/version/ComponentSet.h"
+
+#include <QDir>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonParseError>
+#include <QJsonObject>
+
+namespace Komorebi::Core {
+
+namespace {
+
+/// "natives-windows" and the name are what make two entries different libraries.
+QString libraryKey(const LibraryEntry& library)
+{
+    return library.name + QLatin1Char('|') + library.natives.value(QStringLiteral("windows")).toString();
+}
+
+}  // namespace
+
+std::optional<QList<LoadedComponent>> loadComponents(const QString& metaRoot, const QList<ComponentRef>& components,
+                                                     QString* error)
+{
+    const auto fail = [error](const QString& reason) -> std::optional<QList<LoadedComponent>> {
+        if (error)
+            *error = reason;
+        return std::nullopt;
+    };
+
+    if (metaRoot.isEmpty())
+        return fail(QStringLiteral("no metadata directory was given"));
+    if (components.isEmpty())
+        return fail(QStringLiteral("the instance names no components"));
+
+    QList<LoadedComponent> loaded;
+    for (const auto& ref : components) {
+        const QString path = QDir(metaRoot).filePath(ref.uid + QLatin1Char('/') + ref.version + QStringLiteral(".json"));
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly))
+            return fail(QStringLiteral("no metadata for component %1 %2 (%3)").arg(ref.uid, ref.version, path));
+
+        QJsonParseError parseError{};
+        const auto document = QJsonDocument::fromJson(file.readAll(), &parseError);
+        if (parseError.error != QJsonParseError::NoError || !document.isObject())
+            return fail(QStringLiteral("%1 is not readable: %2").arg(path, parseError.errorString()));
+
+        QString manifestError;
+        auto manifest = VersionJson::parse(document.object(), &manifestError);
+        if (!manifest)
+            return fail(QStringLiteral("%1: %2").arg(path, manifestError));
+
+        loaded.append(LoadedComponent{ ref.uid, ref.version, std::move(*manifest) });
+    }
+    return loaded;
+}
+
+std::optional<VersionJson> mergeComponents(const QList<LoadedComponent>& components, QString* error)
+{
+    const auto fail = [error](const QString& reason) -> std::optional<VersionJson> {
+        if (error)
+            *error = reason;
+        return std::nullopt;
+    };
+
+    const LoadedComponent* game = nullptr;
+    for (const auto& component : components) {
+        if (component.uid == QLatin1String("net.minecraft")) {
+            game = &component;
+            break;
+        }
+    }
+    if (!game)
+        return fail(QStringLiteral("the component set has no net.minecraft to launch"));
+
+    VersionJson merged = game->manifest;
+
+    QStringList seenLibraries;
+    QList<LibraryEntry> libraries;
+    QStringList jvmArguments;
+    for (const auto& component : components) {
+        jvmArguments << component.manifest.jvmArguments;
+        for (const auto& library : component.manifest.libraries) {
+            const QString key = libraryKey(library);
+            if (seenLibraries.contains(key))
+                continue;
+            seenLibraries << key;
+            libraries.append(library);
+        }
+    }
+
+    merged.libraries = libraries;
+    merged.jvmArguments = jvmArguments;
+    merged.inheritsFrom.clear();
+    return merged;
+}
+
+}  // namespace Komorebi::Core

@@ -103,13 +103,21 @@ LaunchPlan buildLaunchPlan(const VersionJson& merged, const LaunchOptions& optio
     plan.arguments << QStringLiteral("-Xms%1m").arg(options.minMemoryMb)
                    << QStringLiteral("-Xmx%1m").arg(options.maxMemoryMb);
 
-    if (!merged.jvmArguments.isEmpty()) {
+    /*
+     * Whether the manifest already tells Java where the class path is decides the shape of the
+     * arguments: a Mojang-style `arguments.jvm` names it with a placeholder, while component metadata
+     * only lists extra JVM flags and expects the launcher to supply the class path and the natives.
+     */
+    const auto jvmText = merged.jvmArguments.join(QLatin1Char(' '));
+    const bool manifestNamesClasspath = jvmText.contains(QLatin1String("${classpath}")) || merged.jvmArguments.contains(QStringLiteral("-cp"));
+
+    if (manifestNamesClasspath) {
         plan.arguments << substituteAll(merged.jvmArguments, values);
     } else {
-        // Versions from before the arguments array need the class path and the natives told to them.
         plan.arguments << QStringLiteral("-Djava.library.path=%1").arg(options.nativesDirectory) << QStringLiteral("-cp")
                        << classpath << QStringLiteral("-Dminecraft.launcher.brand=%1").arg(values.value(QStringLiteral("launcher_name")))
-                       << QStringLiteral("-Dminecraft.launcher.version=%1").arg(values.value(QStringLiteral("launcher_version")));
+                       << QStringLiteral("-Dminecraft.launcher.version=%1").arg(values.value(QStringLiteral("launcher_version")))
+                       << substituteAll(merged.jvmArguments, values);
     }
 
     plan.arguments << options.extraJvmArguments;

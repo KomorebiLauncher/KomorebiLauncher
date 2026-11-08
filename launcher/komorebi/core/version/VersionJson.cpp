@@ -141,8 +141,15 @@ std::optional<VersionJson> VersionJson::parse(const QJsonObject& object, QString
 
     VersionJson manifest;
     manifest.id = object.value(QStringLiteral("id")).toString();
-    if (manifest.id.isEmpty())
-        return fail(QStringLiteral("the manifest has no id"));
+    if (manifest.id.isEmpty()) {
+        // Component metadata (what this launcher keeps for every version) names the version as a
+        // uid/version pair instead of an id; the game version is what a manifest is known by.
+        const auto uid = object.value(QStringLiteral("uid")).toString();
+        const auto version = object.value(QStringLiteral("version")).toString();
+        if (uid.isEmpty() || version.isEmpty())
+            return fail(QStringLiteral("the manifest has neither an id nor a uid/version pair"));
+        manifest.id = uid == QLatin1String("net.minecraft") ? version : uid + QLatin1Char('-') + version;
+    }
 
     manifest.inheritsFrom = object.value(QStringLiteral("inheritsFrom")).toString();
     manifest.mainClass = object.value(QStringLiteral("mainClass")).toString();
@@ -155,10 +162,24 @@ std::optional<VersionJson> VersionJson::parse(const QJsonObject& object, QString
         manifest.assetIndexId = manifest.assetIndex.value(QStringLiteral("id")).toString();
     }
     manifest.downloads = object.value(QStringLiteral("downloads")).toObject();
+    manifest.mainJarName = object.value(QStringLiteral("mainJar")).toObject().value(QStringLiteral("name")).toString();
 
     const auto javaVersion = object.value(QStringLiteral("javaVersion")).toObject();
     manifest.javaMajor = javaVersion.value(QStringLiteral("majorVersion")).toInt();
     manifest.javaComponent = javaVersion.value(QStringLiteral("component")).toString();
+    if (manifest.javaMajor == 0) {
+        // Component metadata carries the majors instead of one javaVersion object, and a version that
+        // only works on one major lists it as a number rather than an array.
+        const auto majors = object.value(QStringLiteral("compatibleJavaMajors"));
+        if (majors.isArray()) {
+            if (const auto list = majors.toArray(); !list.isEmpty())
+                manifest.javaMajor = list.first().toInt();
+        } else if (majors.isDouble()) {
+            manifest.javaMajor = majors.toInt();
+        }
+    }
+    // Component metadata also names the JVM arguments it adds; they belong after the manifest's own.
+    manifest.jvmArguments = readArgumentArray(object.value(QStringLiteral("+jvmArgs")));
 
     for (const auto& entry : object.value(QStringLiteral("libraries")).toArray()) {
         const auto library = readLibrary(entry.toObject());
@@ -168,7 +189,7 @@ std::optional<VersionJson> VersionJson::parse(const QJsonObject& object, QString
 
     const auto arguments = object.value(QStringLiteral("arguments")).toObject();
     manifest.gameArguments = readArgumentArray(arguments.value(QStringLiteral("game")));
-    manifest.jvmArguments = readArgumentArray(arguments.value(QStringLiteral("jvm")));
+    manifest.jvmArguments += readArgumentArray(arguments.value(QStringLiteral("jvm")));
     manifest.legacyArguments = splitLegacyArguments(object.value(QStringLiteral("minecraftArguments")).toString());
 
     return manifest;

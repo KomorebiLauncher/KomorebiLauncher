@@ -73,6 +73,7 @@ struct VersionJson {
     QString assetIndexId;       ///< assetIndex.id
     QJsonObject assetIndex;     ///< the whole assetIndex object, for its url and checksum
     QJsonObject downloads;      ///< client/server objects, kept raw
+    QString mainJarName;        ///< component metadata names the client jar it wants, as a coordinate
 
     int javaMajor = 0;          ///< javaVersion.majorVersion, 0 when the manifest does not say
     QString javaComponent;      ///< javaVersion.component, the runtime Mojang publishes

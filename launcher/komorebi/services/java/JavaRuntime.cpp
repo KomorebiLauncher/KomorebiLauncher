@@ -112,11 +112,15 @@ std::optional<JavaRuntime> parseRelease(const QString& text, const QString& home
 
     for (const auto& rawLine : text.split(QLatin1Char('\n'))) {
         const QString line = rawLine.trimmed();
-        if (line.startsWith(QLatin1String("JAVA_VERSION"))) {
+        // The whole key, not a prefix: JAVA_VERSION_DATE sits next to JAVA_VERSION and its value is a
+        // date, which read as a version turns a JDK 17 into "major 2026".
+        const int equals = line.indexOf(QLatin1Char('='));
+        const QString key = equals > 0 ? line.left(equals).trimmed() : line;
+        if (key == QLatin1String("JAVA_VERSION")) {
             runtime.version = releaseValue(line);
-        } else if (line.startsWith(QLatin1String("OS_ARCH"))) {
+        } else if (key == QLatin1String("OS_ARCH")) {
             runtime.architecture = releaseValue(line);
-        } else if (line.startsWith(QLatin1String("IMPLEMENTOR"))) {
+        } else if (key == QLatin1String("IMPLEMENTOR")) {
             runtime.vendor = releaseValue(line);
         }
     }

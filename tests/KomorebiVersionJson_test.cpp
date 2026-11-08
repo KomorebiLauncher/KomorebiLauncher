@@ -14,6 +14,7 @@ class KomorebiVersionJsonTest : public QObject {
    private slots:
     void parseManifest();
     void parseRejectsWhatIsNotAManifest();
+    void parseComponentManifest();
     void mergeKeepsTheChildsIdentityAndTakesTheParentsDefaults();
     void mergeOrdersArgumentsFromBaseToLoader();
     void mergeRefusesAMissingParent();
@@ -71,6 +72,31 @@ void KomorebiVersionJsonTest::parseManifest()
     QCOMPARE(manifest->jvmArguments.size(), 3);
 }
 
+void KomorebiVersionJsonTest::parseComponentManifest()
+{
+    // What this launcher keeps for every version: a uid/version pair, the majors to pick Java from,
+    // extra JVM arguments and the coordinate of the client jar, rather than a Mojang-style id.
+    const auto document = QJsonDocument::fromJson(R"({
+        "uid": "net.minecraft",
+        "version": "26.4-snapshot-7",
+        "mainClass": "net.minecraft.client.main.Main",
+        "compatibleJavaMajors": [ 25, 21 ],
+        "mainJar": { "name": "com.mojang:minecraft:26.4-snapshot-7:client" },
+        "+jvmArgs": [ "-Dexample=1" ],
+        "minecraftArguments": "--username ${auth_player_name}",
+        "libraries": [ { "name": "org.example:one:1.0" } ]
+    })")
+                            .object();
+
+    QString error;
+    const auto manifest = VersionJson::parse(document, &error);
+    QVERIFY2(manifest.has_value(), qPrintable(error));
+    QCOMPARE(manifest->id, QStringLiteral("26.4-snapshot-7"));
+    QCOMPARE(manifest->javaMajor, 25);
+    QCOMPARE(manifest->mainJarName, QStringLiteral("com.mojang:minecraft:26.4-snapshot-7:client"));
+    QCOMPARE(manifest->jvmArguments, QStringList({ QStringLiteral("-Dexample=1") }));
+    QCOMPARE(manifest->libraries.size(), 1);
+}
 void KomorebiVersionJsonTest::parseRejectsWhatIsNotAManifest()
 {
     QString error;
