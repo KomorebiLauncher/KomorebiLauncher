@@ -395,21 +395,44 @@ bool LaunchController::reauthenticateAccount(const MinecraftAccountPtr& account,
 
 void LaunchController::offerAuthlibInjector()
 {
-    if (m_instance->getPackProfile()->getComponent(AuthlibInjector::componentUid)) {
+    /*
+     * The component only says an agent is installed; the server it talks to is the agent's argument.
+     * An instance prepared for one server keeps sending the client's login and session requests to
+     * that server after the account is switched to another, and nothing in the UI said so.
+     */
+    QString installedServer;
+    if (auto packProfile = m_instance->getPackProfile(); packProfile && packProfile->getProfile()) {
+        const auto agentPrefix = AuthlibInjector::mavenName.chopped(1);  // drop the trailing ':'
+        for (const auto& agent : packProfile->getProfile()->getAgents()) {
+            if (agent.library && agent.library->rawName().artifactPrefix() == agentPrefix) {
+                installedServer = agent.argument;
+                break;
+            }
+        }
+    }
+
+    const QString wantedServer = m_accountToUse->authServerUrl();
+    if (!installedServer.isEmpty() && installedServer == wantedServer) {
         return;
     }
 
+    const bool pointsElsewhere = !installedServer.isEmpty();
     auto answer = QMessageBox::question(
-        m_parentWidget, tr("authlib-injector is not installed"),
-        tr("This account signs in through %1, but this instance has no authlib-injector agent, so the game cannot reach "
-           "that server to load skins or to join its online-mode servers.\n\nInstall the agent into this instance now?")
-            .arg(m_accountToUse->authServerUrl()),
+        m_parentWidget, pointsElsewhere ? tr("authlib-injector points at another server") : tr("authlib-injector is not installed"),
+        pointsElsewhere
+            ? tr("The authlib-injector agent in this instance sends the game's authentication to %1, but this account signs in "
+                 "through %2. Skins and online-mode servers will not work until the agent is reinstalled for the current "
+                 "account.\n\nReinstall it now?")
+                  .arg(installedServer, wantedServer)
+            : tr("This account signs in through %1, but this instance has no authlib-injector agent, so the game cannot reach "
+                 "that server to load skins or to join its online-mode servers.\n\nInstall the agent into this instance now?")
+                  .arg(wantedServer),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
     if (answer != QMessageBox::Yes) {
         return;
     }
 
-    auto task = makeShared<AuthlibInjector::InstallTask>(m_instance, m_accountToUse->authServerUrl(),
+    auto task = makeShared<AuthlibInjector::InstallTask>(m_instance, wantedServer,
                                                          APPLICATION->settings()->get("MirrorBaseUrl").toString());
     connect(task.get(), &Task::failed, this, [this](QString reason) {
         CustomMessageBox::selectable(m_parentWidget, tr("Install authlib-injector"), reason, QMessageBox::Warning)->show();

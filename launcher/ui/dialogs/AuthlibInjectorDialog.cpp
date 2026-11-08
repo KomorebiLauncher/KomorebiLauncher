@@ -17,13 +17,15 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
+#include "ui/dialogs/YggdrasilLoginDialog.h"
+
 namespace {
 
 auto isUsableServer(const QString& text) -> bool
 {
-    const QUrl url(text.trimmed(), QUrl::TolerantMode);
-    const auto scheme = url.scheme().toLower();
-    return url.isValid() && !url.host().isEmpty() && (scheme == QLatin1String("https") || scheme == QLatin1String("http"));
+    // The same rule the sign-in dialog applies: https anywhere, plain http only on this machine.
+    // The agent forwards the client's session requests to that server, and those carry the token.
+    return YggdrasilLoginDialog::serverProblem(text).isEmpty() && !text.trimmed().isEmpty();
 }
 
 }  // namespace

@@ -47,5 +47,4 @@ class YggdrasilLoginDialog final : public QDialog {
     QLabel* m_hint;
     QPushButton* m_ok;
     MinecraftAccountPtr m_account;
-    bool m_choiceRefused = false;
 };

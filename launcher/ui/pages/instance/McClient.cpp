@@ -30,12 +30,15 @@ Result<uint8_t> readByte(QByteArray& data)
 // From https://wiki.vg/Protocol#VarInt_and_VarLong
 Result<int> readVarInt(QByteArray& data)
 {
-    int value = 0;
+    // Accumulate unsigned: a 32-bit VarInt's fifth byte carries bits 28..34, and shifting a signed int
+    // by 28 there is undefined behaviour. The range check below still rejects anything longer than a
+    // VarInt, and the sign comes back through the cast at the end.
+    quint32 value = 0;
     int position = 0;
 
     while (position < 32) {
         TRY_INTO(const auto& currentByte, readByte(data))
-        value |= (currentByte & McProtocol::varIntValueMask) << position;
+        value |= static_cast<quint32>(currentByte & McProtocol::varIntValueMask) << position;
 
         if ((currentByte & McProtocol::varIntContinueBit) == 0) {
             break;
@@ -48,7 +51,7 @@ Result<int> readVarInt(QByteArray& data)
         return std::unexpected("VarInt is too big");
     }
 
-    return value;
+    return static_cast<int>(value);
 }
 
 void writeUInt16(QByteArray& data, const uint16_t value)

@@ -220,6 +220,9 @@ class Request : public Task {
     int m_retryCount = 0;
     QTimer m_retryTimer;
 
+    /// Set once a terminal signal went out; a reply that finishes afterwards must not be acted on again.
+    bool m_terminalSignalSent = false;
+
     int m_redirectCount = 0;
 
     HttpMethod m_httpMethod = HttpMethod::Get;

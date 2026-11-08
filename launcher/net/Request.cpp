@@ -404,6 +404,7 @@ void Request::handleAutoRetry(int64_t delay)
     if (delay > 60 || m_retryCount > 4) {
         /* 1 minute is too long to wait for retry, fail for now */
         m_state = State::Failed;
+        m_terminalSignalSent = true;
         auto retryAfter = QDateTime::currentDateTime().addSecs(delay);
         emitFailed(tr("Request Rate Limited for %n second(s): Retry After %1", "seconds", static_cast<int>(delay))
                        .arg(retryAfter.toLocalTime().toString(QLocale::system().dateTimeFormat(QLocale::ShortFormat))));
@@ -419,6 +420,16 @@ void Request::handleAutoRetry(int64_t delay)
 
 void Request::downloadFinished()
 {
+    /*
+     * A task that already reported a terminal state must not be acted on again. Running out of retries
+     * for a rate-limited request fails it while the reply's own finished signal is still on its way;
+     * acting on that signal then sent the request to the next mirror, reviving a task the caller was
+     * already told had failed -- and the caller's restart guard left the part stuck in "doing".
+     */
+    if (m_terminalSignalSent) {
+        return;
+    }
+
     // currently waiting for retry
     if (m_retryTimer.isActive()) {
         return;
@@ -435,6 +446,7 @@ void Request::downloadFinished()
     {
         qCDebug(m_logCat) << getUid().toString() << "Request failed but we are allowed to proceed:" << m_url.toString();
         m_sink->abort();
+        m_terminalSignalSent = true;
         emit succeeded();
         emit finished();
         return;
@@ -446,6 +458,7 @@ void Request::downloadFinished()
         qCDebug(m_logCat) << getUid().toString() << "Request failed in previous step:" << m_url.toString();
         m_sink->abort();
         m_failReason = m_reply->errorString();
+        m_terminalSignalSent = true;
         emit failed(m_reply->errorString());
         emit finished();
         return;
@@ -453,6 +466,7 @@ void Request::downloadFinished()
     if (m_state == State::AbortedByUser) {
         qCDebug(m_logCat) << getUid().toString() << "Request aborted in previous step:" << m_url.toString();
         m_sink->abort();
+        m_terminalSignalSent = true;
         emit aborted();
         emit finished();
         return;
@@ -466,6 +480,7 @@ void Request::downloadFinished()
         if (!result) {
             qCDebug(m_logCat) << getUid().toString() << "Request failed to write:" << m_url.toString();
             m_sink->abort();
+            m_terminalSignalSent = true;
             emitFailed(result.error());
             return;
         }
@@ -479,11 +494,13 @@ void Request::downloadFinished()
         if (tryNextSource()) {
             return;
         }
+        m_terminalSignalSent = true;
         emitFailed(result.error());
         return;
     }
 
     qCDebug(m_logCat) << getUid().toString() << "Request succeeded:" << m_url.toString();
+    m_terminalSignalSent = true;
     emitSucceeded();
 }
 
@@ -514,6 +531,7 @@ auto Request::abort() -> bool
         disconnect(m_reply.get(), &QNetworkReply::errorOccurred, nullptr, nullptr);
         m_reply->abort();
     } else {
+        m_terminalSignalSent = true;
         emit aborted();
         emit finished();
     }

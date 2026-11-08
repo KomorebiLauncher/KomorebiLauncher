@@ -46,7 +46,7 @@
 MSADeviceCodeStep::MSADeviceCodeStep(AccountData* data) : AuthStep(data)
 {
     m_clientId = APPLICATION->getMSAClientID();
-    connect(&m_expiration_timer, &QTimer::timeout, this, &MSADeviceCodeStep::abort);
+    connect(&m_expiration_timer, &QTimer::timeout, this, &MSADeviceCodeStep::expired);
     connect(&m_pool_timer, &QTimer::timeout, this, &MSADeviceCodeStep::authenticateUser);
 }
 
@@ -153,6 +153,18 @@ void MSADeviceCodeStep::abort()
         m_request->abort();
     }
     m_is_aborted = true;
+}
+
+/*
+ * The code on screen is no longer valid. abort() only tears the request down and marks the step
+ * aborted -- on its own the flow never reports back, and the dialog that showed the code waits for a
+ * terminal state that never comes. Expiring is a failure with its own explanation.
+ */
+void MSADeviceCodeStep::expired()
+{
+    abort();
+    emit finished(AccountTaskState::STATE_FAILED_HARD,
+                  tr("The sign-in code expired before it was used. Sign in again to get a new one."));
 }
 
 void MSADeviceCodeStep::startPoolTimer()

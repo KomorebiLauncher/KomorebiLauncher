@@ -15,8 +15,26 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegularExpression>
 
 namespace OptiFine {
+
+namespace {
+
+/*
+ * The mirror list is not trusted: type and patch end up in the file name the installer writes, and
+ * OptiFineInstallTask::getVersionId builds the version id from them too. A slash or a pair of dots
+ * there walks out of the instance directory, so only characters that belong in a file name survive.
+ */
+auto safeToken(const QString& value) -> QString
+{
+    static const QRegularExpression invalid(QStringLiteral("[^A-Za-z0-9_.-]"));
+    QString clean = value;
+    clean.remove(invalid);
+    return clean;
+}
+
+}  // namespace
 
 auto parseBuilds(const QByteArray& json) -> QList<Build>
 {
@@ -29,9 +47,9 @@ auto parseBuilds(const QByteArray& json) -> QList<Build>
     for (const auto& value : doc.array()) {
         auto obj = value.toObject();
         Build build;
-        build.mcVersion = obj.value("mcversion").toString();
-        build.type = obj.value("type").toString();
-        build.patch = obj.value("patch").toString();
+        build.mcVersion = safeToken(obj.value("mcversion").toString());
+        build.type = safeToken(obj.value("type").toString());
+        build.patch = safeToken(obj.value("patch").toString());
         build.filename = obj.value("filename").toString();
         auto forge = obj.value("forge");
         build.hasForgeNote = forge.isString() && !forge.toString().isEmpty();

@@ -60,6 +60,7 @@ class MSADeviceCodeStep : public AuthStep {
    private slots:
     void deviceAuthorizationFinished(QByteArray* response);
     void startPoolTimer();
+    void expired();
     void authenticateUser();
     void authenticationFinished(QByteArray* response);
 

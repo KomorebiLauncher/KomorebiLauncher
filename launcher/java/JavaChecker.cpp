@@ -159,6 +159,11 @@ bool JavaChecker::abort()
 
 void JavaChecker::stdoutReady()
 {
+    // The connection is queued, so a read that was already posted can arrive after abort() destroyed
+    // the process; without a process there is nothing to read.
+    if (!m_process) {
+        return;
+    }
     QByteArray data = m_process->readAllStandardOutput();
     QString added = QString::fromLocal8Bit(data);
     added.remove('\r');
@@ -167,6 +172,9 @@ void JavaChecker::stdoutReady()
 
 void JavaChecker::stderrReady()
 {
+    if (!m_process) {
+        return;
+    }
     QByteArray data = m_process->readAllStandardError();
     QString added = QString::fromLocal8Bit(data);
     added.remove('\r');

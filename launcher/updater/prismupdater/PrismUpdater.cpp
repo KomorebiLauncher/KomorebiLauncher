@@ -337,13 +337,11 @@ PrismUpdaterApp::PrismUpdaterApp(int& argc, char** argv) : QApplication(argc, ar
             m_prsimVersionChannel = "stable";
         }
         auto versionParts = version.split('.');
-        m_prismVersionMajor = versionParts.takeFirst().toInt();
-        m_prismVersionMinor = versionParts.takeFirst().toInt();
-        if (!versionParts.isEmpty()) {
-            m_prismVersionPatch = versionParts.takeFirst().toInt();
-        } else {
-            m_prismVersionPatch = 0;
-        }
+        // A version the caller mistyped ("-V 1") has fewer parts than the format has fields; take
+        // what is there instead of taking two elements out of a one-element list.
+        m_prismVersionMajor = versionParts.size() > 0 ? versionParts.at(0).toInt() : 0;
+        m_prismVersionMinor = versionParts.size() > 1 ? versionParts.at(1).toInt() : 0;
+        m_prismVersionPatch = versionParts.size() > 2 ? versionParts.at(2).toInt() : 0;
     }
 
     m_allowPreRelease = parser.isSet("pre-release");

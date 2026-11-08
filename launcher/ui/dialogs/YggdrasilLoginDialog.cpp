@@ -135,6 +135,11 @@ auto YggdrasilLoginDialog::serverProblem(const QString& text) -> QString
     if (!url.isValid() || url.host().isEmpty() || (scheme != QLatin1String("https") && scheme != QLatin1String("http"))) {
         return tr("The address has to start with http:// or https://");
     }
+    // An address of the form https://user:pass@host carries a password in a place that ends up in
+    // logs and in accounts.json, and nothing reads it for authentication anyway.
+    if (!url.userInfo().isEmpty()) {
+        return tr("The address must not contain a user name or password.");
+    }
     // The password is sent over this connection when signing in, so plain http is only acceptable
     // for a server on this machine; anything else has to be encrypted.
     if (scheme == QLatin1String("http") && !isLoopbackHost(url.host())) {
@@ -160,7 +165,7 @@ void YggdrasilLoginDialog::signIn()
     }
 
     auto& state = *account->accountData();
-    if (!m_choiceRefused && state.availableProfiles.size() > 1) {
+    if (state.availableProfiles.size() > 1) {
         auto choice = askForCharacter(this, state.availableProfiles);
         if (!choice.isEmpty()) {
             auto chosen = makeAccount(choice);
@@ -169,10 +174,12 @@ void YggdrasilLoginDialog::signIn()
                 accept();
                 return;
             }
-            // The server refused to be told which character to hand over. Its own pick still plays, and asking
-            // again the next time the sign-in button is pressed would only refuse again.
-            m_choiceRefused = true;
-            return;
+            /*
+             * Asking for a character failed. That may be the server refusing the choice, or the network
+             * slipping -- either way the account that signed in without a choice is still valid, and its
+             * own pick still plays. Keep it rather than latching a refusal that would stop the next
+             * sign-in from even asking.
+             */
         }
     }
 

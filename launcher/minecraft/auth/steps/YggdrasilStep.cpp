@@ -93,6 +93,17 @@ auto YggdrasilStep::requestBody(const AccountData& data, bool interactive) -> QJ
 
 void YggdrasilStep::perform()
 {
+    /*
+     * An address like https://user:pass@host keeps a password where it does not belong: it would be
+     * sent as part of the request target, written to the log, and stored in accounts.json verbatim.
+     * No server needs it -- authentication happens in the body.
+     */
+    if (!QUrl(m_data->authServerUrl).userInfo().isEmpty()) {
+        emit finished(AccountTaskState::STATE_FAILED_HARD,
+                      tr("The authentication server address contains a user name or password. Remove it and sign in again."));
+        return;
+    }
+
     m_url = endpoint(m_data->authServerUrl, m_interactive ? QStringLiteral("authenticate") : QStringLiteral("refresh"));
 
     auto body = requestBody(*m_data, m_interactive);

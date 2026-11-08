@@ -36,6 +36,7 @@
 #include "AutoInstallJava.h"
 
 #include <algorithm>
+#include <QDebug>
 #include <QDir>
 #include <QFileInfo>
 #include <memory>
@@ -94,7 +95,8 @@ void AutoInstallJava::startLocalScan()
     m_local_scan = Java::LocalJavaScanTask::Ptr(new Java::LocalJavaScanTask(m_instance->instanceRoot()));
     connect(m_local_scan.get(), &Task::succeeded, this, &AutoInstallJava::chooseLocalJava);
     connect(m_local_scan.get(), &Task::failed, this, &AutoInstallJava::chooseLocalJava);
-    connect(m_local_scan.get(), &Task::aborted, this, [this] { emitFailed(tr("Looking for Java inside the instance was aborted.")); });
+    // Aborting the scan is not a launch failure: abort() already gives this task its aborted state,
+    // and reporting "failed" here turned a player's cancel into an error dialog.
     connect(m_local_scan.get(), &Task::progress, this, &AutoInstallJava::setProgress);
     connect(m_local_scan.get(), &Task::stepProgress, this, &AutoInstallJava::propagateStepProgress);
     connect(m_local_scan.get(), &Task::status, this, &AutoInstallJava::setStatus);
@@ -310,6 +312,18 @@ void AutoInstallJava::tryNextMajorJava()
     }
     auto majorJavaVersion = majorJavaVersions[m_majorJavaVersionIndex];
     m_majorJavaVersionIndex++;
+
+    /*
+     * The allow-list is not a suggestion: a pack that needs several majors may allow one of them and
+     * exclude another, and downloading the excluded one would put a runtime on disk (and on the
+     * instance) the player asked not to use. Skip those and keep looking.
+     */
+    auto allowed = Java::parseVersionList(m_instance->settings()->get("AllowedJavaVersions").toString());
+    if (!Java::isVersionAllowed(majorJavaVersion, allowed)) {
+        qDebug() << "Skipping Java" << majorJavaVersion << "because the allowed versions exclude it";
+        tryNextMajorJava();
+        return;
+    }
 
     auto javaMajor = versionList->getVersion(QString("java%1").arg(majorJavaVersion));
 

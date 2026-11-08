@@ -27,7 +27,7 @@ namespace {
 const QRegularExpression& archiveNamePattern()
 {
     static const QRegularExpression pattern(
-        QStringLiteral("^OpenJDK(\\d+)U-(jdk|jre)_([A-Za-z0-9]+)_([A-Za-z]+)_hotspot_.*\\.(?:zip|tar\\.gz)$"));
+        QStringLiteral("^OpenJDK(\\d+)U-(jdk|jre)_([A-Za-z0-9-]+)_([A-Za-z0-9-]+)_hotspot_.*\\.(?:zip|tar\\.gz)$"));
     return pattern;
 }
 

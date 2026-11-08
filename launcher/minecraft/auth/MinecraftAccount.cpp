@@ -132,6 +132,12 @@ shared_qobject_ptr<AuthFlow> MinecraftAccount::login(bool useDeviceCode)
     connect(m_currentTask.get(), &Task::succeeded, this, &MinecraftAccount::authSucceeded);
     connect(m_currentTask.get(), &Task::failed, this, &MinecraftAccount::authFailed);
     connect(m_currentTask.get(), &Task::aborted, this, [this] { authFailed(tr("Aborted")); });
+    /*
+     * The password is only needed to start the flow; what it hands back is a token. Keeping the
+     * password afterwards would leave a plaintext secret in memory for the rest of the session, and a
+     * wrong one would never be asked for again: reauthentication only prompts when it is empty.
+     */
+    connect(m_currentTask.get(), &Task::finished, this, [this] { data.password.clear(); });
     emit activityChanged(true);
     return m_currentTask;
 }
