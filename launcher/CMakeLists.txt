@@ -1212,6 +1212,8 @@ SET(LAUNCHER_SOURCES
     komorebi/core/version/VersionJson.h
     komorebi/core/launch/LaunchPlan.cpp
     komorebi/core/launch/LaunchPlan.h
+    komorebi/services/java/JavaRuntime.cpp
+    komorebi/services/java/JavaRuntime.h
     komorebi/core/legacy/LegacyInstanceRepository.cpp
     ui/kit/KButton.cpp
     ui/kit/KButton.h
