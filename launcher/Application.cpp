@@ -356,7 +356,7 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
         for (const auto& name : { QStringLiteral("komorebi-data"), QStringLiteral("komorebi-version"),
                                   QStringLiteral("komorebi-game-dir"), QStringLiteral("komorebi-username"),
-                                  QStringLiteral("komorebi-timeout") }) {
+                                  QStringLiteral("komorebi-timeout"), QStringLiteral("komorebi-launch-instance") }) {
             QCommandLineOption option{ name, QStringLiteral("Used by --komorebi-probe-launch"), QStringLiteral("value") };
             option.setFlags(QCommandLineOption::HiddenFromHelp);
             parser.addOption(option);

@@ -114,6 +114,7 @@
 #include "ui/instanceview/InstanceDelegate.h"
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
+#include "komorebi/legacy/CoreLaunchAdapter.h"
 #include "komorebi/ui/InstanceListPage.h"
 #include "ui/widgets/LauncherBackground.h"
 #include "ui/window/MainContentPanel.h"
@@ -658,6 +659,25 @@ QList<QAction*> MainWindow::instanceMenuActions()
     auto* header = new QAction(m_selectedInstance->name(), this);
     header->setEnabled(false);
     actions.prepend(header);
+
+    /*
+     * A development hook for comparing the two launch paths: with KOMOREBI_CORE_LAUNCH set, the menu
+     * grows an entry that starts the game through the core instead of launch(). It is not a setting
+     * yet because the core's path is still being checked against the old one, instance by instance.
+     */
+    if (qEnvironmentVariableIsSet("KOMOREBI_CORE_LAUNCH")) {
+        auto* coreLaunch = new QAction(tr("Launch with the new core"), this);
+        connect(coreLaunch, &QAction::triggered, this, [this] {
+            if (!m_selectedInstance)
+                return;
+            QString error;
+            if (Komorebi::Legacy::launchInstance(m_selectedInstance, APPLICATION->accounts()->defaultAccount(), &error))
+                statusBar()->showMessage(tr("Started with the new core; its output is in the instance's logs."), 8000);
+            else
+                CustomMessageBox::selectable(this, tr("Launch with the new core"), error, QMessageBox::Warning)->show();
+        });
+        actions.append(coreLaunch);
+    }
     return actions;
 }
 

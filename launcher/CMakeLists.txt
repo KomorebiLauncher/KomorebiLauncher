@@ -1216,6 +1216,10 @@ SET(LAUNCHER_SOURCES
     komorebi/core/instance/InstanceFolder.h
     komorebi/services/java/JavaRuntime.cpp
     komorebi/services/java/JavaRuntime.h
+    komorebi/services/launch/InstanceLaunch.cpp
+    komorebi/services/launch/InstanceLaunch.h
+    komorebi/legacy/CoreLaunchAdapter.cpp
+    komorebi/legacy/CoreLaunchAdapter.h
     komorebi/core/version/VersionChain.cpp
     komorebi/core/version/VersionChain.h
     komorebi/core/version/ComponentSet.cpp

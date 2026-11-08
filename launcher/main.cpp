@@ -38,7 +38,10 @@
 #include <QCoreApplication>
 
 #include "Application.h"
+#include "InstanceList.h"
+#include "minecraft/auth/AccountList.h"
 #include "komorebi/app/LaunchProbe.h"
+#include "komorebi/legacy/CoreLaunchAdapter.h"
 
 #if defined Q_OS_WIN32
 #include "console/WindowsConsole.h"
@@ -89,6 +92,21 @@ int main(int argc, char* argv[])
             Q_INIT_RESOURCE(themes);
 
             Q_INIT_RESOURCE(shaders);
+
+            /*
+             * A development hook: start one instance through the core, with the account the launcher
+             * already has signed in. The launcher's classes provide the account and the paths, the
+             * core does the rest, and the game's output ends up in the instance's logs.
+             */
+            const int coreLaunch = app.arguments().indexOf(QStringLiteral("--komorebi-launch-instance"));
+            if (coreLaunch >= 0 && coreLaunch + 1 < app.arguments().size()) {
+                auto* instance = APPLICATION->instances()->getInstanceById(app.arguments().at(coreLaunch + 1));
+                QString error;
+                const bool started = instance != nullptr
+                                     && Komorebi::Legacy::launchInstance(instance, APPLICATION->accounts()->defaultAccount(), &error);
+                qInfo().noquote() << "core launch:" << (started ? QStringLiteral("started") : error);
+                return started ? 0 : 1;
+            }
 
             return app.exec();
         }
