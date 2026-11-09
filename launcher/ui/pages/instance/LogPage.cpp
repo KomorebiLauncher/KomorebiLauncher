@@ -154,6 +154,7 @@ LogPage::LogPage(BaseInstance* instance, QWidget* parent) : QWidget(parent), ui(
             setInstanceLaunchTaskChanged(launchTask, true);
         }
         connect(m_instance, &BaseInstance::launchTaskChanged, this, &LogPage::onInstanceLaunchTaskChanged);
+    connect(m_instance, &BaseInstance::coreLogModelChanged, this, &LogPage::onCoreLogModelChanged);
     }
 
     auto findShortcut = new QShortcut(QKeySequence(QKeySequence::Find), this);
@@ -206,8 +207,19 @@ void LogPage::UIToModelState()
 void LogPage::setInstanceLaunchTaskChanged(LaunchTask* proc, bool initial)
 {
     m_process = proc;
-    if (m_process) {
-        m_model = proc->getLogModel();
+    refreshModel(initial);
+}
+
+void LogPage::onCoreLogModelChanged()
+{
+    // A launch by the core has no LaunchTask; its log arrives through the instance instead.
+    refreshModel(false);
+}
+
+void LogPage::refreshModel(bool initial)
+{
+    m_model = m_process ? m_process->getLogModel() : m_instance->getCoreLogModel();
+    if (m_model) {
         m_proxy->setSourceModel(m_model.get());
         if (initial) {
             modelStateToUI();

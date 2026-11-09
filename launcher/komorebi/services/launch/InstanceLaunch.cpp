@@ -270,10 +270,43 @@ void InstanceLaunch::stepLaunch()
     game->setArguments(plan->arguments);
     game->setWorkingDirectory(plan->workingDirectory);
     game->setProcessChannelMode(QProcess::MergedChannels);
-    // MergedChannels already sends stderr to the same place; setting both channels to a file is what
-    // Qt warns about with "Inconsistent stderr channel configuration".
-    game->setStandardOutputFile(logPath, QIODevice::Append);
+
+    // The output is read here rather than redirected straight to a file, so the same lines can go to
+    // the launcher as well: they are what the instance's console page shows while the game runs.
+    m_logFile = new QFile(logPath, this);
+    if (!m_logFile->open(QIODevice::WriteOnly | QIODevice::Append)) {
+        m_logFile->deleteLater();
+        m_logFile = nullptr;
+    }
+    m_lineBuffer.clear();
+
+    connect(game, &QProcess::readyRead, this, [this, game] {
+        const QByteArray data = game->readAll();
+        if (m_logFile)
+            m_logFile->write(data);
+
+        m_lineBuffer += QString::fromUtf8(data);
+        int newline = m_lineBuffer.indexOf(QLatin1Char('\n'));
+        while (newline >= 0) {
+            QString line = m_lineBuffer.left(newline);
+            m_lineBuffer.remove(0, newline + 1);
+            if (line.endsWith(QLatin1Char('\r')))
+                line.chop(1);
+            emit output(line);
+            newline = m_lineBuffer.indexOf(QLatin1Char('\n'));
+        }
+    });
+
     connect(game, &QProcess::finished, this, [this, game](int exitCode, QProcess::ExitStatus) {
+        if (!m_lineBuffer.isEmpty()) {
+            emit output(m_lineBuffer);
+            m_lineBuffer.clear();
+        }
+        if (m_logFile) {
+            m_logFile->close();
+            m_logFile->deleteLater();
+            m_logFile = nullptr;
+        }
         m_game = nullptr;
         game->deleteLater();
         emit gameFinished(exitCode);

@@ -89,11 +89,13 @@ class LogPage : public QWidget, public BasePage {
     void findPreviousActivated();
 
     void onInstanceLaunchTaskChanged(LaunchTask* proc);
+    void onCoreLogModelChanged();
 
    private:
     void modelStateToUI();
     void UIToModelState();
     void setInstanceLaunchTaskChanged(LaunchTask* proc, bool initial);
+    void refreshModel(bool initial);
 
    private:
     Ui::LogPage* ui;

@@ -5,6 +5,9 @@
 #include <QPointer>
 
 #include "Application.h"
+#include "QObjectPtr.h"
+#include "launch/LogModel.h"
+#include "logs/LogParser.h"
 #include "BaseInstance.h"
 
 #include "komorebi/services/download/DownloadSource.h"
@@ -60,6 +63,18 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
     const QString id = instance->id();
     s_launches.insert(id, task);
     const auto forget = [id] { s_launches.remove(id); };
+
+    auto model = makeShared<LogModel>();
+    model->setMaxLines(getConsoleMaxLines(instance->settings()));
+    model->setStopOnOverflow(shouldStopOnConsoleOverflow(instance->settings()));
+    instance->setCoreLogModel(model);
+
+    QObject::connect(task, &Services::InstanceLaunch::output, APPLICATION, [model](const QString& line) {
+        model->append(LogParser::guessLevel(line, model->previousLevel()), line);
+    });
+    QObject::connect(task, &Services::InstanceLaunch::failed, APPLICATION, [model](const QString& reason) {
+        model->append(MessageLevel::Error, reason);
+    });
 
     QObject::connect(task, &Services::InstanceLaunch::started, APPLICATION, [onStarted](const QString& logPath) {
         if (onStarted)

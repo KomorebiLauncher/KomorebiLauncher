@@ -26,6 +26,7 @@
 #include "komorebi/services/download/FileDownloader.h"
 #include "komorebi/services/download/DownloadSource.h"
 
+class QFile;
 class QNetworkAccessManager;
 class QProcess;
 
@@ -82,6 +83,8 @@ class InstanceLaunch : public QObject {
     void status(const QString& message);
     void progress(int done, int total);
     void started(const QString& logPath);
+    /// One line of the game's output, without its newline.
+    void output(const QString& line);
     void gameFinished(int exitCode);
     void aborted();
     void failed(const QString& error);
@@ -102,6 +105,8 @@ class InstanceLaunch : public QObject {
 
     QNetworkAccessManager* m_network = nullptr;
     QProcess* m_game = nullptr;
+    QFile* m_logFile = nullptr;
+    QString m_lineBuffer;
     InstanceLaunchOptions m_options;
     LaunchAccount m_account;
     std::optional<Core::VersionJson> m_manifest;

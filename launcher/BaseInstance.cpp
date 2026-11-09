@@ -502,6 +502,12 @@ LaunchTask* BaseInstance::getLaunchTask()
     return m_launchProcess.get();
 }
 
+void BaseInstance::setCoreLogModel(const shared_qobject_ptr<LogModel>& model)
+{
+    m_coreLogModel = model;
+    emit coreLogModelChanged();
+}
+
 void BaseInstance::updateRuntimeContext()
 {
     // NOOP

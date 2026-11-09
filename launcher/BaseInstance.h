@@ -47,6 +47,7 @@
 #include <QSet>
 #include <cstdint>
 #include "QObjectPtr.h"
+#include "launch/LogModel.h"
 
 #include "settings/SettingsObject.h"
 
@@ -205,6 +206,10 @@ class BaseInstance : public QObject {
     /// returns the current launch task (if any)
     LaunchTask* getLaunchTask();
 
+    /// The console log of a game started by the core, for as long as that log is the last one.
+    void setCoreLogModel(const shared_qobject_ptr<LogModel>& model);
+    shared_qobject_ptr<LogModel> getCoreLogModel() const { return m_coreLogModel; }
+
     /*!
      * Create envrironment variables for running the instance
      */
@@ -283,6 +288,7 @@ class BaseInstance : public QObject {
     void propertiesChanged();
 
     void launchTaskChanged(LaunchTask*);
+    void coreLogModelChanged();
 
     void runningStatusChanged(bool running);
 
@@ -299,6 +305,7 @@ class BaseInstance : public QObject {
     // InstanceFlags m_flags;
     bool m_isRunning = false;
     std::unique_ptr<LaunchTask> m_launchProcess;
+    shared_qobject_ptr<LogModel> m_coreLogModel;
     QDateTime m_timeStarted;
     RuntimeContext m_runtimeContext;
 
