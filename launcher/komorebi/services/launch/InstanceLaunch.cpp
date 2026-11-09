@@ -120,7 +120,25 @@ void InstanceLaunch::cancel()
         queue->cancel();
         queue->deleteLater();
     }
-    emit failed(tr("cancelled"));
+    emit aborted();
+}
+
+void InstanceLaunch::kill()
+{
+    if (m_game) {
+        if (m_game->state() != QProcess::NotRunning) {
+            m_game->terminate();
+            if (!m_game->waitForFinished(5000))
+                m_game->kill();
+        }
+        return;
+    }
+    cancel();
+}
+
+qint64 InstanceLaunch::gameProcessId() const
+{
+    return m_game ? m_game->processId() : 0;
 }
 
 void InstanceLaunch::fail(const QString& reason)
@@ -247,6 +265,7 @@ void InstanceLaunch::stepLaunch()
     const QString logPath = logs.filePath(QStringLiteral("core-launch.log"));
 
     auto* game = new QProcess(this);
+    m_game = game;
     game->setProgram(plan->program);
     game->setArguments(plan->arguments);
     game->setWorkingDirectory(plan->workingDirectory);
@@ -255,6 +274,7 @@ void InstanceLaunch::stepLaunch()
     // Qt warns about with "Inconsistent stderr channel configuration".
     game->setStandardOutputFile(logPath, QIODevice::Append);
     connect(game, &QProcess::finished, this, [this, game](int exitCode, QProcess::ExitStatus) {
+        m_game = nullptr;
         game->deleteLater();
         emit gameFinished(exitCode);
     });
@@ -265,6 +285,7 @@ void InstanceLaunch::stepLaunch()
 
     game->start();
     if (!game->waitForStarted(10000)) {
+        m_game = nullptr;
         game->deleteLater();
         return fail(tr("java did not start: %1").arg(game->errorString()));
     }

@@ -27,6 +27,7 @@
 #include "komorebi/services/download/DownloadSource.h"
 
 class QNetworkAccessManager;
+class QProcess;
 
 namespace Komorebi::Services {
 
@@ -69,6 +70,12 @@ class InstanceLaunch : public QObject {
 
     void cancel();
 
+    /// Stops the launch, or the game if it is already running.
+    void kill();
+
+    /// The game process, once it exists; zero before that.
+    qint64 gameProcessId() const;
+
     bool isRunning() const { return m_running; }
 
    signals:
@@ -76,6 +83,7 @@ class InstanceLaunch : public QObject {
     void progress(int done, int total);
     void started(const QString& logPath);
     void gameFinished(int exitCode);
+    void aborted();
     void failed(const QString& error);
 
    private:
@@ -93,6 +101,7 @@ class InstanceLaunch : public QObject {
     void finish(const QString& logPath);
 
     QNetworkAccessManager* m_network = nullptr;
+    QProcess* m_game = nullptr;
     InstanceLaunchOptions m_options;
     LaunchAccount m_account;
     std::optional<Core::VersionJson> m_manifest;

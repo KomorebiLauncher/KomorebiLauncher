@@ -138,8 +138,21 @@ int main(int argc, char* argv[])
                 loop.exec();
                 poll.stop();
 
+                QEventLoop gameLoop;
+                QObject::connect(game, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), &gameLoop,
+                                 [&gameLoop](int, QProcess::ExitStatus) { gameLoop.quit(); });
+
+                // An optional way to test the launcher's own "kill" action from the command line.
+                const int killAfter = app.arguments().indexOf(QStringLiteral("--komorebi-kill-after"));
+                if (killAfter >= 0 && killAfter + 1 < app.arguments().size()) {
+                    QTimer::singleShot(app.arguments().at(killAfter + 1).toInt(), &gameLoop, [instance] {
+                        qInfo().noquote() << "core launch: asking the launcher to kill" << instance->id();
+                        APPLICATION->kill(instance);
+                    });
+                }
+
                 qInfo().noquote() << "core launch: waiting for the game, pid" << game->processId();
-                game->waitForFinished(-1);
+                gameLoop.exec();
                 qInfo().noquote() << "core launch: the game exited with" << game->exitCode();
                 return 0;
             }

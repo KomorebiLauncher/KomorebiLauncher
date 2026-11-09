@@ -357,7 +357,8 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
         for (const auto& name : { QStringLiteral("komorebi-data"), QStringLiteral("komorebi-version"),
                                   QStringLiteral("komorebi-game-dir"), QStringLiteral("komorebi-username"),
-                                  QStringLiteral("komorebi-timeout"), QStringLiteral("komorebi-launch-instance") }) {
+                                  QStringLiteral("komorebi-timeout"), QStringLiteral("komorebi-launch-instance"),
+                                  QStringLiteral("komorebi-kill-after") }) {
             QCommandLineOption option{ name, QStringLiteral("Used by --komorebi-probe-launch"), QStringLiteral("value") };
             option.setFlags(QCommandLineOption::HiddenFromHelp);
             parser.addOption(option);
@@ -1726,6 +1727,10 @@ bool Application::kill(BaseInstance* instance)
         qWarning() << "Attempted to kill instance" << instance->id() << ", which isn't running.";
         return false;
     }
+    // A game started by the core has no LaunchController; its launch task owns the process.
+    if (Komorebi::Legacy::killInstance(instance->id()))
+        return true;
+
     QMutexLocker locker(&m_instanceExtrasMutex);
     auto& extras = m_instanceExtras[instance->id()];
     // NOTE: copy of the shared pointer keeps it alive
