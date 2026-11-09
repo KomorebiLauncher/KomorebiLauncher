@@ -140,6 +140,25 @@ std::optional<QJsonObject> componentFromMojangVersion(const QJsonObject& version
     if (const auto logging = version.value(QStringLiteral("logging")).toObject(); !logging.isEmpty())
         component.insert(QStringLiteral("logging"), logging);
 
+    // The component format always carries a JVM-argument list, empty when the version adds none; the
+    // launcher's component reader expects the field to be there.
+    component.insert(QStringLiteral("+jvmArgs"), QJsonArray{});
+
+    // Modern versions expect their graphics library from a component of its own: the suggestion names the
+    // version the game itself was built against.
+    for (const auto& value : version.value(QStringLiteral("libraries")).toArray()) {
+        const auto coordinate = value.toObject().value(QStringLiteral("name")).toString();
+        if (!coordinate.startsWith(QStringLiteral("org.lwjgl:lwjgl:")))
+            continue;
+        const auto parts = coordinate.split(QLatin1Char(':'));
+        if (parts.size() >= 3) {
+            component.insert(QStringLiteral("requires"),
+                             QJsonObject{ { QStringLiteral("uid"), QStringLiteral("org.lwjgl3") },
+                                          { QStringLiteral("suggests"), parts.at(2) } });
+        }
+        break;
+    }
+
     if (supportsQuickPlay(id)) {
         component.insert(QStringLiteral("+traits"),
                          QJsonArray{ QStringLiteral("feature:is_quick_play_multiplayer"),

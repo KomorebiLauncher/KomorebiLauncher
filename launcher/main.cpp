@@ -66,8 +66,42 @@ int main(int argc, char* argv[])
         return Komorebi::App::probeLaunch(probeApp.arguments());
     }
 
+    /*
+     * The launcher treats leftover command-line words as URLs to import, and runs that import before
+     * anything else. The development arguments are taken out of what it is given, so a value like an
+     * instance name cannot be mistaken for one.
+     */
+    QString developmentInstance;
+    int developmentKillAfterMs = 0;
+    QList<QByteArray> keptArguments;
+    keptArguments.append(QByteArray(argv[0]));
+    for (int index = 1; index < argc; ++index) {
+        const QByteArray argument(argv[index]);
+        if (!argument.startsWith("--komorebi-")) {
+            keptArguments.append(argument);
+            continue;
+        }
+
+        const int equals = argument.indexOf('=');
+        const QByteArray key = equals < 0 ? argument : argument.left(equals);
+        QByteArray value = equals < 0 ? QByteArray() : argument.mid(equals + 1);
+        if (equals < 0 && index + 1 < argc)
+            value = QByteArray(argv[++index]);
+
+        if (key == "--komorebi-launch-instance")
+            developmentInstance = QString::fromLocal8Bit(value);
+        else if (key == "--komorebi-kill-after")
+            developmentKillAfterMs = value.toInt();
+    }
+
+    QList<char*> filteredArgv;
+    filteredArgv.reserve(keptArguments.size());
+    for (auto& argument : keptArguments)
+        filteredArgv.append(argument.data());
+    int filteredArgc = static_cast<int>(filteredArgv.size());
+
     // initialize Qt
-    Application app(argc, argv);
+    Application app(filteredArgc, filteredArgv.data());
     switch (app.status()) {
         case Application::StartingUp:
         case Application::Initialized: {
@@ -101,11 +135,11 @@ int main(int argc, char* argv[])
             /*
              * A development hook: start one instance through the launcher's own entry point, which now
              * goes through the core, and wait for the game so the launcher does not take it down on
-             * exit.
+             * exit. Its arguments were taken out of what the launcher's parser saw, above.
              */
-            const int coreLaunch = app.arguments().indexOf(QStringLiteral("--komorebi-launch-instance"));
-            if (coreLaunch >= 0 && coreLaunch + 1 < app.arguments().size()) {
-                const QString instanceId = app.arguments().at(coreLaunch + 1);
+            const QString instanceId = developmentInstance;
+            const int killAfterMilliseconds = developmentKillAfterMs;
+            if (!instanceId.isEmpty()) {
                 auto* instance = APPLICATION->instances()->getInstanceById(instanceId);
                 if (!instance) {
                     qInfo().noquote() << "core launch: no such instance" << instanceId;
@@ -143,9 +177,8 @@ int main(int argc, char* argv[])
                                  [&gameLoop](int, QProcess::ExitStatus) { gameLoop.quit(); });
 
                 // An optional way to test the launcher's own "kill" action from the command line.
-                const int killAfter = app.arguments().indexOf(QStringLiteral("--komorebi-kill-after"));
-                if (killAfter >= 0 && killAfter + 1 < app.arguments().size()) {
-                    QTimer::singleShot(app.arguments().at(killAfter + 1).toInt(), &gameLoop, [instance] {
+                if (killAfterMilliseconds > 0) {
+                    QTimer::singleShot(killAfterMilliseconds, &gameLoop, [instance] {
                         qInfo().noquote() << "core launch: asking the launcher to kill" << instance->id();
                         APPLICATION->kill(instance);
                     });
