@@ -1679,6 +1679,11 @@ bool Application::launch(MinecraftInstance* instance,
             const auto account = accountToUse ? accountToUse : m_accounts->defaultAccount();
             instance->setCrashed(false);
 
+            // Playtime is recorded around the game, not around the fetching: the clock starts when the
+            // game does. The old path did that in its launcher-part step, which the core path has no
+            // equivalent of.
+            auto playing = std::make_shared<bool>(false);
+
             // The same courtesy the old path pays on a failed launch: the console is where the reason is.
             const auto showConsoleOnError = [this, instance] {
                 if (instance->settings()->get("ShowConsoleOnError").toBool())
@@ -1687,11 +1692,18 @@ bool Application::launch(MinecraftInstance* instance,
 
             const bool accepted = Komorebi::Legacy::launchInstance(
                 instance, account,
-                [](const QString&) {
+                [instance, playing](const QString&) {
                     // The instance already counts as running from the moment the launcher accepted the
-                    // launch, so nothing has to happen when the game finally appears.
+                    // launch, so nothing has to happen when the game finally appears -- except that the
+                    // play clock starts now.
+                    *playing = true;
+                    instance->setMinecraftRunning(true);
                 },
-                [this, parent, instance, showConsoleOnError](const QString& reason) {
+                [this, parent, instance, showConsoleOnError, playing](const QString& reason) {
+                    if (*playing) {
+                        *playing = false;
+                        instance->setMinecraftRunning(false);
+                    }
                     instance->setRunning(false);
                     subRunningInstance();
                     showConsoleOnError();
@@ -1699,7 +1711,11 @@ bool Application::launch(MinecraftInstance* instance,
                         ->show();
                 },
                 nullptr,
-                [this, instance, showConsoleOnError](int exitCode) {
+                [this, instance, showConsoleOnError, playing](int exitCode) {
+                    if (*playing) {
+                        *playing = false;
+                        instance->setMinecraftRunning(false);
+                    }
                     instance->setRunning(false);
                     if (exitCode != 0) {
                         instance->setCrashed(true);
@@ -1711,7 +1727,11 @@ bool Application::launch(MinecraftInstance* instance,
                     if (instance->settings()->get("QuitAfterGameStop").toBool())
                         QMetaObject::invokeMethod(this, &QCoreApplication::quit, Qt::QueuedConnection);
                 },
-                [this, instance] {
+                [this, instance, playing] {
+                    if (*playing) {
+                        *playing = false;
+                        instance->setMinecraftRunning(false);
+                    }
                     instance->setRunning(false);
                     subRunningInstance();
                 },
