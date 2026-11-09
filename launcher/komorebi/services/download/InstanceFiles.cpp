@@ -86,6 +86,21 @@ QList<FileDownload> missingInstanceFiles(const QString& dataRoot, const QString&
         missing.append(FileDownload{ QUrl(library.url), target, sha1, size });
     }
 
+    // Maven files are the installer and tools a wrapper-style loader reads from disk; they are named
+    // separately from the libraries but still have to be fetched.
+    for (const auto& file : manifest->mavenFiles) {
+        if (file.url.isEmpty())
+            continue;
+        const QString target = Core::libraryFilePath(file, libraries.path());
+        if (target.isEmpty())
+            continue;
+        const QByteArray sha1 = file.sha1.isEmpty() ? QByteArray() : QByteArray::fromHex(file.sha1.toLatin1());
+        const qint64 size = file.size > 0 ? file.size : -1;
+        if (fileIsGood(target, sha1, size))
+            continue;
+        missing.append(FileDownload{ QUrl(file.url), target, sha1, size });
+    }
+
     // The game's own jar is named by the manifest rather than listed among the libraries.
     const auto client = manifest->downloads.value(QStringLiteral("client")).toObject();
     const QString clientJar = clientJarFor(*manifest, dataRoot);

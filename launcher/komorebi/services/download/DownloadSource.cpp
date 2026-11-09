@@ -9,7 +9,8 @@ const QString kBangbangHost = QStringLiteral("bmclapi2.bangbang93.com");
 
 struct MirrorRule {
     QString host;
-    QString pathPrefix;  ///< empty when the mirror serves the host's paths unchanged
+    QString pathPrefix;      ///< empty when the mirror serves the host's paths unchanged
+    QString dropPathPrefix;  ///< a repository path the mirror leaves out, dropped before the prefix
 };
 
 const QList<MirrorRule>& mirrorRules()
@@ -20,6 +21,8 @@ const QList<MirrorRule>& mirrorRules()
         { QStringLiteral("libraries.minecraft.net"), QStringLiteral("/maven") },
         { QStringLiteral("maven.minecraftforge.net"), QStringLiteral("/maven") },
         { QStringLiteral("maven.fabricmc.net"), QStringLiteral("/maven") },
+        { QStringLiteral("maven.neoforged.net"), QStringLiteral("/maven"), QStringLiteral("/releases") },
+        { QStringLiteral("maven.neoforged.net"), QStringLiteral("/maven"), QStringLiteral("/snapshots") },
         { QStringLiteral("resources.download.minecraft.net"), QStringLiteral("/assets") },
         { QStringLiteral("meta.fabricmc.net"), QStringLiteral("/fabric-meta") },
         { QStringLiteral("piston-meta.mojang.com"), QString() },
@@ -67,10 +70,17 @@ QUrl sourceUrl(const QUrl& url, DownloadSource source)
         if (rule.host != url.host())
             continue;
 
+        QString path = url.path();
+        if (!rule.dropPathPrefix.isEmpty()) {
+            if (!path.startsWith(rule.dropPathPrefix))
+                continue;
+            path = path.mid(rule.dropPathPrefix.size());
+        }
+
         QUrl mirrored = url;
         mirrored.setScheme(QStringLiteral("https"));
         mirrored.setHost(kBangbangHost);
-        mirrored.setPath(rule.pathPrefix + url.path());
+        mirrored.setPath(rule.pathPrefix + path);
         return mirrored;
     }
     return url;

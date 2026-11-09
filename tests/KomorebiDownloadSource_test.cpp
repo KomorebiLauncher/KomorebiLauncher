@@ -53,6 +53,13 @@ void KomorebiDownloadSourceTest::mapsMavenHostsOntoTheMirror()
     // pointed at a path that answers 404.
     const QUrl quilt(QStringLiteral("https://maven.quiltmc.org/repository/release/org/example/lib/1.0/lib-1.0.jar"));
     QCOMPARE(sourceUrl(quilt, DownloadSource::Bmclapi), quilt);
+
+    // NeoForge keeps a "releases" segment the mirror leaves out.
+    const auto neoforged = sourceUrl(
+        QUrl(QStringLiteral("https://maven.neoforged.net/releases/net/neoforged/neoforge/20.2.93/neoforge-20.2.93-installer.jar")),
+        DownloadSource::Bmclapi);
+    QCOMPARE(neoforged.host(), QStringLiteral("bmclapi2.bangbang93.com"));
+    QCOMPARE(neoforged.path(), QStringLiteral("/maven/net/neoforged/neoforge/20.2.93/neoforge-20.2.93-installer.jar"));
 }
 
 void KomorebiDownloadSourceTest::keepsPistonPaths()

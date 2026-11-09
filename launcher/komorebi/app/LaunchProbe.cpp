@@ -300,6 +300,8 @@ int probeCreate(const QStringList& arguments, QTextStream& out)
             request.loaderVersion = argument.section(QLatin1Char('='), 1);
         else if (argument.startsWith(QStringLiteral("--komorebi-create-forge-version=")))
             request.forgeVersion = argument.section(QLatin1Char('='), 1);
+        else if (argument.startsWith(QStringLiteral("--komorebi-create-neoforge-version=")))
+            request.neoforgeVersion = argument.section(QLatin1Char('='), 1);
         else if (argument.startsWith(QStringLiteral("--komorebi-create-java=")))
             request.javaPath = argument.section(QLatin1Char('='), 1);
         else if (argument == QLatin1String("--komorebi-create-mirror"))

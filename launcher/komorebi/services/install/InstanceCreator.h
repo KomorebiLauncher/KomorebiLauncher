@@ -44,6 +44,10 @@ struct InstanceCreateRequest {
     QString quiltMetaUrl = QStringLiteral("https://meta.quiltmc.org");
     /// Which Forge release to install when the loader is "forge".
     QString forgeVersion;
+    /// Which NeoForge release to use; empty picks the newest for the game version.
+    QString neoforgeVersion;
+    /// Where NeoForge component metadata comes from.
+    QString neoforgeMetaUrl = QStringLiteral("https://meta.prismlauncher.org/v1");
     /// The Java to run a loader installer with; empty asks the launcher's discovery for one.
     QString javaPath;
 };
@@ -73,6 +77,8 @@ class InstanceCreator : public QObject {
     void fetchLibraries();
     void fetchAssets();
     void installForge();
+    void fetchNeoForgeIndex();
+    void fetchNeoForgeComponent(const QString& version);
     void readForgeInstall(const QString& installRoot);
     void copyInstallerLibraries(const QString& installRoot);
     void fetch(const QString& url, const QString& target, const QString& sha1, const std::function<void()>& next);

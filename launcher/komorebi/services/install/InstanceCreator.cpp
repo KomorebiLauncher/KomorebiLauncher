@@ -82,10 +82,15 @@ void InstanceCreator::start(const InstanceCreateRequest& request)
         m_loaderMetaBase = QString();
         m_loaderUid = QStringLiteral("net.minecraftforge");
         m_loaderName = QStringLiteral("Forge");
+    } else if (m_request.loader == QLatin1String("neoforge")) {
+        m_loaderMetaBase = m_request.neoforgeMetaUrl;
+        m_loaderUid = QStringLiteral("net.neoforged");
+        m_loaderName = QStringLiteral("NeoForge");
     } else if (!m_request.loader.isEmpty()) {
         m_running = false;
         m_reported = true;
-        emit failed(tr("only the Fabric, Quilt and Forge loaders are supported so far, not %1").arg(m_request.loader));
+        emit failed(tr("only the Fabric, Quilt, Forge and NeoForge loaders are supported so far, not %1")
+                        .arg(m_request.loader));
         return;
     }
     fetchManifest();
@@ -176,7 +181,82 @@ void InstanceCreator::fetchVersion(const QString& url, const QString& sha1)
             return writeInstance();
         if (m_request.loader == QLatin1String("forge"))
             return installForge();
+        if (m_request.loader == QLatin1String("neoforge"))
+            return fetchNeoForgeIndex();
         fetchLoaderList();
+    });
+}
+
+void InstanceCreator::fetchNeoForgeIndex()
+{
+    emit status(tr("Reading the %1 versions").arg(m_loaderName));
+
+    const QString url = m_loaderMetaBase + QStringLiteral("/net.neoforged/index.json");
+    const QString target = QDir(m_request.dataRoot).filePath(QStringLiteral("tmp/neoforge-index.json"));
+    fetch(url, target, {}, [this, target] {
+        QFile file(target);
+        if (!file.open(QIODevice::ReadOnly))
+            return fail(tr("could not read %1").arg(target));
+
+        const auto document = QJsonDocument::fromJson(file.readAll()).object();
+        const auto versions = document.value(QStringLiteral("versions")).toArray();
+        if (versions.isEmpty())
+            return fail(tr("there is no %1 metadata here").arg(m_loaderName));
+
+        QString chosen = m_request.neoforgeVersion;
+        for (const auto& value : versions) {
+            const auto entry = value.toObject();
+            if (!chosen.isEmpty() && entry.value(QStringLiteral("version")).toString() != chosen)
+                continue;
+
+            // The index says which game version a release is for; anything else is not a candidate.
+            bool forThisGame = chosen.isEmpty() ? false : true;
+            for (const auto& requirement : entry.value(QStringLiteral("requires")).toArray()) {
+                const auto object = requirement.toObject();
+                if (object.value(QStringLiteral("uid")).toString() != QLatin1String("net.minecraft"))
+                    continue;
+                const QString wanted = object.value(QStringLiteral("equals")).toString();
+                if (!wanted.isEmpty() && wanted != m_request.minecraftVersion) {
+                    if (chosen.isEmpty())
+                        continue;
+                    forThisGame = false;
+                    break;
+                }
+                forThisGame = true;
+            }
+            if (!forThisGame)
+                continue;
+
+            chosen = entry.value(QStringLiteral("version")).toString();
+            break;
+        }
+        if (chosen.isEmpty())
+            return fail(tr("%1 has no release for Minecraft %2").arg(m_loaderName, m_request.minecraftVersion));
+
+        fetchNeoForgeComponent(chosen);
+    });
+}
+
+void InstanceCreator::fetchNeoForgeComponent(const QString& version)
+{
+    emit status(tr("Reading the %1 profile").arg(m_loaderName));
+
+    const QString url = m_loaderMetaBase + QStringLiteral("/net.neoforged/%1.json").arg(version);
+    const QString target = QDir(m_request.dataRoot).filePath(QStringLiteral("tmp/neoforge-%1.json").arg(version));
+    fetch(url, target, {}, [this, target, version] {
+        QFile file(target);
+        if (!file.open(QIODevice::ReadOnly))
+            return fail(tr("could not read %1").arg(target));
+
+        const auto document = QJsonDocument::fromJson(file.readAll()).object();
+        if (document.value(QStringLiteral("mainClass")).toString().isEmpty())
+            return fail(tr("the %1 metadata has no main class").arg(m_loaderName));
+
+        // A label the launcher has never cached, so it does not try to replace this file with its own
+        // on the way to opening the instance.
+        m_loaderComponent = document;
+        m_loaderComponent.insert(QStringLiteral("version"), version + QStringLiteral("-komorebi"));
+        writeInstance();
     });
 }
 
@@ -517,11 +597,19 @@ void InstanceCreator::writeInstance()
             }
         }
     }
+    // The way the launcher writes these entries: a component it has already resolved is described by
+    // what was resolved, and it only goes looking for metadata again when that is missing.
     components.append(QJsonObject{ { QStringLiteral("uid"), QStringLiteral("net.minecraft") },
-                                   { QStringLiteral("version"), m_versionId } });
+                                   { QStringLiteral("version"), m_versionId },
+                                   { QStringLiteral("cachedName"), QStringLiteral("Minecraft") },
+                                   { QStringLiteral("cachedVersion"), m_versionId } });
     if (!m_loaderComponent.isEmpty()) {
-        components.append(QJsonObject{ { QStringLiteral("uid"), m_loaderComponent.value(QStringLiteral("uid")) },
-                                       { QStringLiteral("version"), m_loaderComponent.value(QStringLiteral("version")) } });
+        const QString loaderUid = m_loaderComponent.value(QStringLiteral("uid")).toString();
+        const QString loaderVersion = m_loaderComponent.value(QStringLiteral("version")).toString();
+        components.append(QJsonObject{ { QStringLiteral("uid"), loaderUid },
+                                       { QStringLiteral("version"), loaderVersion },
+                                       { QStringLiteral("cachedName"), m_loaderName },
+                                       { QStringLiteral("cachedVersion"), loaderVersion } });
     }
     QJsonObject pack{
         { QStringLiteral("formatVersion"), 1 },
