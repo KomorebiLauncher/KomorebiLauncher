@@ -28,9 +28,6 @@ compile_commands.json
 build
 /build-*
 
-# The core's install service is source, not a build's install directory
-!launcher/komorebi/services/install/
-!launcher/komorebi/services/install/**
 
 # Install dirs
 install
@@ -72,3 +69,7 @@ flatbuild
 
 # Python bytecode from program_info/gen_icons.py
 __pycache__/
+
+# The core's install service is source, not a build's install directory
+!launcher/komorebi/services/install/
+!launcher/komorebi/services/install/**
