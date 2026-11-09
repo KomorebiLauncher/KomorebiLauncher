@@ -35,9 +35,11 @@
 
 #include <iostream>
 
+#include <QAction>
 #include <QCoreApplication>
 
 #include "Application.h"
+#include "ui/MainWindow.h"
 #include "InstanceList.h"
 #include "minecraft/auth/AccountList.h"
 #include "komorebi/app/LaunchProbe.h"
@@ -73,6 +75,7 @@ int main(int argc, char* argv[])
      */
     QString developmentInstance;
     int developmentKillAfterMs = 0;
+    bool developmentOpenNewInstanceDialog = false;
     QList<QByteArray> keptArguments;
     keptArguments.append(QByteArray(argv[0]));
     for (int index = 1; index < argc; ++index) {
@@ -92,6 +95,8 @@ int main(int argc, char* argv[])
             developmentInstance = QString::fromLocal8Bit(value);
         else if (key == "--komorebi-kill-after")
             developmentKillAfterMs = value.toInt();
+        else if (key == "--komorebi-new-instance-dialog")
+            developmentOpenNewInstanceDialog = true;
     }
 
     QList<char*> filteredArgv;
@@ -188,6 +193,18 @@ int main(int argc, char* argv[])
                 gameLoop.exec();
                 qInfo().noquote() << "core launch: the game exited with" << game->exitCode();
                 return 0;
+            }
+
+            // A development hook: open the new-instance dialog as soon as the window exists, so the
+            // interface can be exercised without hunting for it.
+            if (developmentOpenNewInstanceDialog) {
+                QTimer::singleShot(1200, APPLICATION, [] {
+                    auto* window = APPLICATION->showMainWindow();
+                    if (!window)
+                        return;
+                    if (auto* action = window->findChild<QAction*>(QStringLiteral("actionAddInstance")))
+                        action->trigger();
+                });
             }
 
             return app.exec();

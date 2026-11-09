@@ -764,6 +764,8 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         // Whether starting an instance goes through the new core; the old controller stays reachable
         // by turning this off.
         m_settings->registerSetting("UseCoreLauncher", true);
+        // Whether the "add instance" dialog is the core one or the launcher's original.
+        m_settings->registerSetting("UseCoreInstanceCreation", true);
 
         // Console
         m_settings->registerSetting("ShowConsole", false);

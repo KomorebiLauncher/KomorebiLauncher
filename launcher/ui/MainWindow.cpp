@@ -115,6 +115,7 @@
 #include "ui/instanceview/InstanceProxyModel.h"
 #include "ui/instanceview/InstanceView.h"
 #include "komorebi/ui/InstanceListPage.h"
+#include "komorebi/ui/NewInstanceDialog.h"
 #include "ui/widgets/LauncherBackground.h"
 #include "ui/window/MainContentPanel.h"
 #include "ui/window/RailShell.h"
@@ -1057,6 +1058,16 @@ void MainWindow::addInstance(const QString& url, const QMap<QString, QString>& e
 
     if (groupName.isEmpty()) {
         groupName = APPLICATION->settings()->get("LastUsedGroupForNewInstance").toString();
+    }
+
+    // The plain "new instance" path goes through the core now; an import still needs the launcher dialog,
+    // which knows how to turn a pack URL or file into a task.
+    if (url.isEmpty() && extra_info.isEmpty() && APPLICATION->settings()->get("UseCoreInstanceCreation").toBool()) {
+        KomorebiNewInstanceDialog dialog(this);
+        if (dialog.exec() != QDialog::Accepted)
+            return;
+        APPLICATION->instances()->loadList();
+        return;
     }
 
     NewInstanceDialog newInstDlg(groupName, url, extra_info, this);
