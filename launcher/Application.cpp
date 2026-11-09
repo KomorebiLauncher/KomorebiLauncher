@@ -1676,22 +1676,37 @@ bool Application::launch(MinecraftInstance* instance,
         if (m_settings->get("UseCoreLauncher").toBool()) {
             auto* parent = window ? static_cast<QWidget*>(window) : static_cast<QWidget*>(m_mainWindow);
             const auto account = accountToUse ? accountToUse : m_accounts->defaultAccount();
+            instance->setCrashed(false);
             const bool accepted = Komorebi::Legacy::launchInstance(
                 instance, account,
-                [this, instance](const QString&) {
-                    instance->setRunning(true);
-                    addRunningInstance();
+                [](const QString&) {
+                    // The instance already counts as running from the moment the launcher accepted the
+                    // launch, so nothing has to happen when the game finally appears.
                 },
-                [parent](const QString& reason) {
+                [this, parent, instance](const QString& reason) {
+                    instance->setRunning(false);
+                    subRunningInstance();
                     CustomMessageBox::selectable(parent, QObject::tr("Could not start the instance"), reason, QMessageBox::Warning)
                         ->show();
                 },
-                nullptr, [this, instance](int) {
+                nullptr,
+                [this, instance](int exitCode) {
+                    instance->setRunning(false);
+                    if (exitCode != 0)
+                        instance->setCrashed(true);
+                    subRunningInstance();
+                },
+                [this, instance] {
                     instance->setRunning(false);
                     subRunningInstance();
                 });
-            if (accepted)
+            if (accepted) {
+                // Running from here on: the launch may still fail while fetching, which undoes this, but
+                // until then the instance cannot be started a second time by another click.
+                instance->setRunning(true);
+                addRunningInstance();
                 return true;
+            }
         }
 
         auto& controller = extras.controller;

@@ -30,7 +30,8 @@ namespace Komorebi::Legacy {
 bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& account,
                     const std::function<void(const QString& logPath)>& onStarted,
                     const std::function<void(const QString& error)>& onFailed, QString* error = nullptr,
-                    const std::function<void(int exitCode)>& onFinished = nullptr);
+                    const std::function<void(int exitCode)>& onFinished = nullptr,
+                    const std::function<void()>& onAborted = nullptr);
 
 /// Stops the launch, or the game, that was started for this instance. False when it was not started here.
 bool killInstance(const QString& instanceId);

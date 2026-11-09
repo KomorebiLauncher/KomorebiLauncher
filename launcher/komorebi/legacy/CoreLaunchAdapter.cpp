@@ -34,7 +34,7 @@ bool killInstance(const QString& instanceId)
 bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& account,
                     const std::function<void(const QString& logPath)>& onStarted,
                     const std::function<void(const QString& error)>& onFailed, QString* error,
-                    const std::function<void(int exitCode)>& onFinished)
+                    const std::function<void(int exitCode)>& onFinished, const std::function<void()>& onAborted)
 {
     if (!instance) {
         if (error)
@@ -85,7 +85,11 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
         if (onFailed)
             onFailed(reason);
     });
-    QObject::connect(task, &Services::InstanceLaunch::aborted, APPLICATION, [forget] { forget(); });
+    QObject::connect(task, &Services::InstanceLaunch::aborted, APPLICATION, [onAborted, forget] {
+        forget();
+        if (onAborted)
+            onAborted();
+    });
     QObject::connect(task, &Services::InstanceLaunch::gameFinished, APPLICATION, [onFinished, forget](int exitCode) {
         forget();
         if (onFinished)
