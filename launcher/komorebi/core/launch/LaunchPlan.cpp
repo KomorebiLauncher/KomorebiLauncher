@@ -94,7 +94,12 @@ LaunchPlan buildLaunchPlan(const VersionJson& merged, const LaunchOptions& optio
     plan.workingDirectory = options.gameDirectory;
 
     auto classpathList = classpathEntries(merged, options, platform);
-    classpathList << mavenFileEntries(merged.mavenFiles, options);
+    // A maven file may also be one of the libraries; the classpath can only hold each jar once, and the
+    // wrapper that reads it fails outright on a duplicate.
+    for (const auto& entry : mavenFileEntries(merged.mavenFiles, options)) {
+        if (!classpathList.contains(entry))
+            classpathList.append(entry);
+    }
     const auto classpath = classpathList.join(QLatin1Char(';'));
     const QString assetIndexName = options.assetIndexName.isEmpty()
                                        ? (merged.assetIndexId.isEmpty() ? merged.assets : merged.assetIndexId)

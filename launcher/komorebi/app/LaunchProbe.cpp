@@ -106,6 +106,18 @@ bool applyJava(const Core::VersionJson& manifest, const QString& dataRoot, Core:
     return true;
 }
 
+/// Writes the command the plan would run to a file, for comparing it against another launcher's.
+void writeReport(const QStringList& arguments, const Core::LaunchPlan& plan)
+{
+    const QString path = valueOf(arguments, QStringLiteral("--komorebi-report"));
+    if (path.isEmpty())
+        return;
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly))
+        return;
+    file.write((plan.program + QLatin1Char(' ') + plan.arguments.join(QLatin1Char(' '))).toUtf8());
+}
+
 int probeVersion(const QStringList& arguments, QTextStream& out)
 {
     const QString dataRoot = valueOf(arguments, QStringLiteral("--komorebi-data"));
@@ -157,6 +169,7 @@ int probeVersion(const QStringList& arguments, QTextStream& out)
                  .arg(merged->libraries.size())
                  .arg(merged->mainClass));
     say(out, QStringLiteral("probe: command %1 %2").arg(plan.program, plan.arguments.join(QLatin1Char(' '))));
+    writeReport(arguments, plan);
     return runPlan(plan, timeoutSeconds, out);
 }
 
@@ -219,6 +232,7 @@ int probeInstance(const QStringList& arguments, QTextStream& out)
                  .arg(manifest->libraries.size())
                  .arg(manifest->mainClass, options.clientJarPath));
     say(out, QStringLiteral("probe: command %1 %2").arg(plan.program, plan.arguments.join(QLatin1Char(' '))));
+    writeReport(arguments, plan);
     return runPlan(plan, timeoutSeconds, out);
 }
 
