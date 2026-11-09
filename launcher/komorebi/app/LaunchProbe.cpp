@@ -270,9 +270,35 @@ int probeAuth(const QStringList& arguments, QTextStream& out)
 {
     const bool device = arguments.contains(QStringLiteral("--komorebi-auth-device"));
     const bool refresh = arguments.contains(QStringLiteral("--komorebi-auth-refresh"));
-    if (!device && !refresh) {
-        say(out, QStringLiteral("probe: --komorebi-auth-device or --komorebi-auth-refresh is required"));
+    const bool list = arguments.contains(QStringLiteral("--komorebi-auth-list"));
+    if (!device && !refresh && !list) {
+        say(out, QStringLiteral("probe: --komorebi-auth-device, --komorebi-auth-refresh or --komorebi-auth-list is required"));
         return 2;
+    }
+
+    const QString storePath = valueOf(arguments, QStringLiteral("--komorebi-auth-store"));
+    const QString dataRoot = valueOf(arguments, QStringLiteral("--komorebi-data"));
+
+    if (list) {
+        if (storePath.isEmpty() && dataRoot.isEmpty()) {
+            say(out, QStringLiteral("probe: --komorebi-data or --komorebi-auth-store is required"));
+            return 2;
+        }
+        const Services::TokenVault vault =
+            storePath.isEmpty() ? Services::TokenVault::forDataRoot(dataRoot) : Services::TokenVault(storePath);
+        QString error;
+        const QList<Services::AuthSession> accounts = vault.load(&error);
+        say(out, QStringLiteral("auth: %1 account(s) in %2").arg(accounts.size()).arg(vault.path()));
+        for (const auto& account : accounts) {
+            say(out, QStringLiteral("auth: %1 (%2), refresh token %3 characters")
+                         .arg(account.username, account.uuid)
+                         .arg(account.refreshToken.size()));
+        }
+        if (!error.isEmpty()) {
+            say(out, QStringLiteral("auth: %1").arg(error));
+            return 1;
+        }
+        return accounts.isEmpty() ? 1 : 0;
     }
 
     const QString clientId = valueOf(arguments, QStringLiteral("--komorebi-auth-client"), BuildConfig.MSA_CLIENT_ID);
@@ -321,7 +347,6 @@ int probeAuth(const QStringList& arguments, QTextStream& out)
             poll.stop();
             const Services::AuthSession session = auth.session();
             say(out, QStringLiteral("auth: signed in as %1 (%2)").arg(session.username, session.uuid));
-            const QString dataRoot = valueOf(arguments, QStringLiteral("--komorebi-data"));
             if (!dataRoot.isEmpty()) {
                 const Services::TokenVault vault = Services::TokenVault::forDataRoot(dataRoot);
                 QString error;
@@ -335,13 +360,12 @@ int probeAuth(const QStringList& arguments, QTextStream& out)
         auth.requestDeviceCode();
         loop.exec();
     } else {
-        const QString store = valueOf(arguments, QStringLiteral("--komorebi-auth-store"));
-        const QString dataRoot = valueOf(arguments, QStringLiteral("--komorebi-data"));
-        if (store.isEmpty() && dataRoot.isEmpty()) {
+        if (storePath.isEmpty() && dataRoot.isEmpty()) {
             say(out, QStringLiteral("probe: --komorebi-data or --komorebi-auth-store is required"));
             return 2;
         }
-        const Services::TokenVault vault = store.isEmpty() ? Services::TokenVault::forDataRoot(dataRoot) : Services::TokenVault(store);
+        const Services::TokenVault vault =
+            storePath.isEmpty() ? Services::TokenVault::forDataRoot(dataRoot) : Services::TokenVault(storePath);
         QString error;
         const QList<Services::AuthSession> accounts = vault.load(&error);
         if (accounts.isEmpty()) {
@@ -444,7 +468,8 @@ int probeLaunch(const QStringList& arguments)
     QTextStream out(stdout);
     if (arguments.contains(QStringLiteral("--komorebi-create-instance")))
         return probeCreate(arguments, out);
-    if (arguments.contains(QStringLiteral("--komorebi-auth-device")) || arguments.contains(QStringLiteral("--komorebi-auth-refresh")))
+    if (arguments.contains(QStringLiteral("--komorebi-auth-device")) || arguments.contains(QStringLiteral("--komorebi-auth-refresh"))
+        || arguments.contains(QStringLiteral("--komorebi-auth-list")))
         return probeAuth(arguments, out);
     if (arguments.contains(QStringLiteral("--komorebi-fetch")))
         return probeFetch(arguments, out);
