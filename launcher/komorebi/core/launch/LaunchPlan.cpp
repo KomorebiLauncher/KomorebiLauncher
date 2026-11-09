@@ -82,31 +82,14 @@ QStringList classpathEntries(const VersionJson& merged, const LaunchOptions& opt
     return entries;
 }
 
-/// The classpath entries a wrapper-style loader needs: its installer and tools are maven files rather
-/// than libraries, so nothing downloads them from a version document, but they have to be on the path.
-QStringList mavenFileEntries(const QList<LibraryEntry>& files, const LaunchOptions& options)
-{
-    QStringList entries;
-    for (const auto& file : files) {
-        const QString path = libraryFilePath(file, options.librariesDirectory);
-        if (!path.isEmpty() && QFileInfo::exists(path))
-            entries.append(path);
-    }
-    return entries;
-}
-
 LaunchPlan buildLaunchPlan(const VersionJson& merged, const LaunchOptions& options, const Platform& platform)
 {
     LaunchPlan plan;
     plan.workingDirectory = options.gameDirectory;
 
     auto classpathList = classpathEntries(merged, options, platform);
-    // A maven file may also be one of the libraries; the classpath can only hold each jar once, and the
-    // wrapper that reads it fails outright on a duplicate.
-    for (const auto& entry : mavenFileEntries(merged.mavenFiles, options)) {
-        if (!classpathList.contains(entry))
-            classpathList.append(entry);
-    }
+    // Maven files are not put on the classpath: they are the installer and tools a wrapper locates by
+    // itself. Adding them made the wrapper see several copies of the same libraries and refuse to start.
     const auto classpath = classpathList.join(QLatin1Char(';'));
     const QString assetIndexName = options.assetIndexName.isEmpty()
                                        ? (merged.assetIndexId.isEmpty() ? merged.assets : merged.assetIndexId)
