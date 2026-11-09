@@ -75,12 +75,27 @@ QStringList classpathEntries(const VersionJson& merged, const LaunchOptions& opt
     return entries;
 }
 
+/// The classpath entries a wrapper-style loader needs: its installer and tools are maven files rather
+/// than libraries, so nothing downloads them from a version document, but they have to be on the path.
+QStringList mavenFileEntries(const QList<LibraryEntry>& files, const LaunchOptions& options)
+{
+    QStringList entries;
+    for (const auto& file : files) {
+        const QString path = libraryFilePath(file, options.librariesDirectory);
+        if (!path.isEmpty() && QFileInfo::exists(path))
+            entries.append(path);
+    }
+    return entries;
+}
+
 LaunchPlan buildLaunchPlan(const VersionJson& merged, const LaunchOptions& options, const Platform& platform)
 {
     LaunchPlan plan;
     plan.workingDirectory = options.gameDirectory;
 
-    const auto classpath = classpathEntries(merged, options, platform).join(QLatin1Char(';'));
+    auto classpathList = classpathEntries(merged, options, platform);
+    classpathList << mavenFileEntries(merged.mavenFiles, options);
+    const auto classpath = classpathList.join(QLatin1Char(';'));
     const QString assetIndexName = options.assetIndexName.isEmpty()
                                        ? (merged.assetIndexId.isEmpty() ? merged.assets : merged.assetIndexId)
                                        : options.assetIndexName;

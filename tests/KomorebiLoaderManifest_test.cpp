@@ -49,6 +49,7 @@ class KomorebiLoaderManifestTest : public QObject {
     void readsTheQuiltLoaderList();
     void convertsAProfileIntoComponentMetadata();
     void refusesAProfileWithoutAMainClass();
+    void convertsAnInstalledForgeVersion();
 };
 
 void KomorebiLoaderManifestTest::readsTheLoaderList()
@@ -104,6 +105,46 @@ void KomorebiLoaderManifestTest::convertsAProfileIntoComponentMetadata()
     QVERIFY(manifest->jvmArguments.contains(QStringLiteral("-DFabricMcEmu= net.minecraft.client.main.Main ")));
 }
 
+void KomorebiLoaderManifestTest::convertsAnInstalledForgeVersion()
+{
+    const QJsonObject document{
+        { QStringLiteral("id"), QStringLiteral("1.20.1-forge-47.4.0") },
+        { QStringLiteral("inheritsFrom"), QStringLiteral("1.20.1") },
+        { QStringLiteral("mainClass"), QStringLiteral("cpw.mods.bootstraplauncher.BootstrapLauncher") },
+        { QStringLiteral("libraries"),
+          QJsonArray{ QJsonObject{ { QStringLiteral("name"), QStringLiteral("cpw.mods:securejarhandler:2.1.10") } } } },
+        { QStringLiteral("arguments"),
+          QJsonObject{
+              { QStringLiteral("game"),
+                QJsonArray{ QStringLiteral("--launchTarget"), QStringLiteral("forgeclient"),
+                            QStringLiteral("--fml.forgeVersion"), QStringLiteral("47.4.0") } },
+              { QStringLiteral("jvm"),
+                QJsonArray{ QStringLiteral("-DlibraryDirectory=${library_directory}"),
+                            QStringLiteral("-p ${library_directory}/cpw/mods/bootstraplauncher/1.1.2/bootstraplauncher-1.1.2.jar") } },
+          } },
+    };
+
+    QString error;
+    const auto component = componentFromForgeVersion(document, QStringLiteral("47.4.0"), &error);
+    QVERIFY2(component.has_value(), qPrintable(error));
+
+    QCOMPARE(component->value(QStringLiteral("uid")).toString(), QStringLiteral("net.minecraftforge"));
+    QCOMPARE(component->value(QStringLiteral("version")).toString(), QStringLiteral("47.4.0"));
+    QCOMPARE(component->value(QStringLiteral("mainClass")).toString(),
+             QStringLiteral("cpw.mods.bootstraplauncher.BootstrapLauncher"));
+    QCOMPARE(component->value(QStringLiteral("minecraftArguments")).toString(),
+             QStringLiteral("--launchTarget forgeclient --fml.forgeVersion 47.4.0"));
+
+    const auto jvmArgs = component->value(QStringLiteral("+jvmArgs")).toArray();
+    QCOMPARE(jvmArgs.size(), 2);
+    QVERIFY(jvmArgs.first().toString().contains(QStringLiteral("${library_directory}")));
+
+    // What the launcher reads back is the same command line, placeholders untouched.
+    const auto manifest = VersionJson::parse(*component, &error);
+    QVERIFY2(manifest.has_value(), qPrintable(error));
+    QCOMPARE(manifest->legacyArguments.first(), QStringLiteral("--launchTarget"));
+    QVERIFY(manifest->jvmArguments.contains(QStringLiteral("-DlibraryDirectory=${library_directory}")));
+}
 void KomorebiLoaderManifestTest::refusesAProfileWithoutAMainClass()
 {
     auto profile = fabricProfile();

@@ -116,6 +116,8 @@ void KomorebiComponentSetTest::loaderReplacesHowTheGameStarts()
     QCOMPARE(merged->mainClass, QStringLiteral("io.github.zekerzhayard.forgewrapper.installer.Main"));
     QCOMPARE(merged->libraries.size(), 2);
     QCOMPARE(merged->mavenFiles.size(), 1);
+    // The game's arguments come first and the loader appends its own entry point to them.
+    QCOMPARE(merged->legacyArguments.first(), QStringLiteral("--username"));
     QVERIFY(merged->legacyArguments.contains(QStringLiteral("--launchTarget")));
     QVERIFY(merged->legacyArguments.contains(QStringLiteral("forgeclient")));
 }

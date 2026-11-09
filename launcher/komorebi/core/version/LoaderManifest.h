@@ -44,4 +44,14 @@ std::optional<QList<LoaderRelease>> parseQuiltLoaderList(const QJsonArray& docum
 std::optional<QJsonObject> componentFromLoaderProfile(const QJsonObject& profile, const QString& uid, const QString& name,
                                                       const QString& loaderVersion, QString* error = nullptr);
 
+/**
+ * Converts the version document an installed Forge writes into component metadata.
+ *
+ * Forge's installer produces a version document of its own that inherits from the game version: the main
+ * class, the libraries it adds and its own game and JVM arguments. Those arguments are kept as they are,
+ * placeholders included, because the launch fills them in from the instance it starts.
+ */
+std::optional<QJsonObject> componentFromForgeVersion(const QJsonObject& version, const QString& forgeVersion,
+                                                     QString* error = nullptr);
+
 }  // namespace Komorebi::Core

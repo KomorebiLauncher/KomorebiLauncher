@@ -85,8 +85,16 @@ std::optional<VersionJson> mergeComponents(const QList<LoadedComponent>& compone
         if (component.uid != QLatin1String("net.minecraft")) {
             if (!component.manifest.mainClass.isEmpty())
                 merged.mainClass = component.manifest.mainClass;
-            if (!component.manifest.legacyArguments.isEmpty())
-                merged.legacyArguments = component.manifest.legacyArguments;
+            // A loader may write a complete command line of its own (the wrapper-style components do,
+            // repeating the game's arguments) or only the arguments it adds. A complete line replaces
+            // the game's; anything shorter is appended after it.
+            const auto& loaderArguments = component.manifest.legacyArguments;
+            const bool completeLine = loaderArguments.contains(QStringLiteral("--username"))
+                                      || loaderArguments.contains(QStringLiteral("--gameDir"));
+            if (completeLine)
+                merged.legacyArguments = loaderArguments;
+            else
+                merged.legacyArguments << loaderArguments;
             mavenFiles << component.manifest.mavenFiles;
         }
 

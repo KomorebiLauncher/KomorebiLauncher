@@ -124,4 +124,50 @@ std::optional<QJsonObject> componentFromLoaderProfile(const QJsonObject& profile
     return component;
 }
 
+std::optional<QJsonObject> componentFromForgeVersion(const QJsonObject& version, const QString& forgeVersion, QString* error)
+{
+    const auto fail = [error](const QString& reason) -> std::optional<QJsonObject> {
+        if (error)
+            *error = reason;
+        return std::nullopt;
+    };
+
+    if (forgeVersion.isEmpty())
+        return fail(QStringLiteral("no Forge version was given"));
+    const QString mainClass = version.value(QStringLiteral("mainClass")).toString();
+    if (mainClass.isEmpty())
+        return fail(QStringLiteral("the Forge version has no main class"));
+    const auto libraries = version.value(QStringLiteral("libraries")).toArray();
+    if (libraries.isEmpty())
+        return fail(QStringLiteral("the Forge version lists no libraries"));
+
+    const auto arguments = version.value(QStringLiteral("arguments")).toObject();
+    QStringList gameArguments;
+    for (const auto& value : arguments.value(QStringLiteral("game")).toArray()) {
+        if (value.isString())
+            gameArguments.append(value.toString());
+    }
+    QJsonArray jvmArguments;
+    for (const auto& value : arguments.value(QStringLiteral("jvm")).toArray()) {
+        if (value.isString())
+            jvmArguments.append(value.toString());
+    }
+
+    QJsonObject component{
+        { QStringLiteral("formatVersion"), 1 },
+        { QStringLiteral("uid"), QStringLiteral("net.minecraftforge") },
+        { QStringLiteral("version"), forgeVersion },
+        { QStringLiteral("name"), QStringLiteral("Forge") },
+        { QStringLiteral("type"), QStringLiteral("release") },
+        { QStringLiteral("order"), 1 },
+        { QStringLiteral("mainClass"), mainClass },
+        { QStringLiteral("libraries"), libraries },
+        { QStringLiteral("+jvmArgs"), jvmArguments },
+    };
+    if (!gameArguments.isEmpty())
+        component.insert(QStringLiteral("minecraftArguments"), gameArguments.join(QLatin1Char(' ')));
+
+    return component;
+}
+
 }  // namespace Komorebi::Core
