@@ -1242,6 +1242,8 @@ SET(LAUNCHER_SOURCES
     komorebi/core/version/LibraryFile.h
     komorebi/core/version/VersionManifest.cpp
     komorebi/core/version/VersionManifest.h
+    komorebi/core/version/LoaderManifest.cpp
+    komorebi/core/version/LoaderManifest.h
     komorebi/core/asset/AssetIndex.cpp
     komorebi/core/asset/AssetIndex.h
     komorebi/core/asset/AssetLayout.cpp

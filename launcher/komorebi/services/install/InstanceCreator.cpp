@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "komorebi/services/install/InstanceCreator.h"
 
+#include <QCryptographicHash>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -11,6 +13,7 @@
 #include <QRegularExpression>
 
 #include "komorebi/core/asset/AssetIndex.h"
+#include "komorebi/core/version/LoaderManifest.h"
 #include "komorebi/core/version/VersionManifest.h"
 #include "komorebi/services/download/AssetFiles.h"
 #include "komorebi/services/download/DownloadQueue.h"
@@ -92,7 +95,7 @@ void InstanceCreator::fetch(const QString& url, const QString& target, const QSt
             return fail(error);
         next();
     });
-    downloader->start(FileDownload{ QUrl(url), target, expected, -1 });
+    downloader->start(FileDownload{ sourceUrl(QUrl(url), m_request.source), target, expected, -1 });
 }
 
 void InstanceCreator::fetchManifest()
@@ -140,26 +143,154 @@ void InstanceCreator::fetchVersion(const QString& url, const QString& sha1)
         const auto component = Core::componentFromMojangVersion(document.object(), &error);
         if (!component)
             return fail(error);
-        writeInstance(*component);
+        m_gameComponent = *component;
+        m_gameReleaseTime = document.object().value(QStringLiteral("releaseTime")).toString();
+
+        if (m_request.loader.isEmpty())
+            return writeInstance();
+        if (m_request.loader != QLatin1String("fabric"))
+            return fail(tr("only the Fabric loader is supported so far, not %1").arg(m_request.loader));
+        fetchLoaderList();
     });
 }
 
-void InstanceCreator::writeInstance(const QJsonObject& component)
+void InstanceCreator::writeComponent(const QString& uid, const QString& version, const QJsonObject& component,
+                                     const QString& releaseTime, const QString& type)
+{
+    const QString directory = QDir(m_versionsRoot).filePath(uid);
+    if (!QDir().mkpath(directory)) {
+        fail(tr("could not create %1").arg(directory));
+        return;
+    }
+
+    const QByteArray bytes = QJsonDocument(component).toJson();
+    QFile file(QDir(directory).filePath(version + QStringLiteral(".json")));
+    if (!file.open(QIODevice::WriteOnly)) {
+        fail(tr("could not write the %1 metadata").arg(uid));
+        return;
+    }
+    file.write(bytes);
+    file.close();
+
+    // The launcher resolves a component through its index: a metadata file it cannot find listed there is
+    // treated as absent, and the launcher then goes looking for a newer list somewhere else.
+    const QString indexPath = QDir(directory).filePath(QStringLiteral("index.json"));
+    QJsonObject index;
+    QFile indexFile(indexPath);
+    if (indexFile.open(QIODevice::ReadOnly))
+        index = QJsonDocument::fromJson(indexFile.readAll()).object();
+    indexFile.close();
+    if (index.isEmpty()) {
+        index = QJsonObject{ { QStringLiteral("formatVersion"), 1 },
+                             { QStringLiteral("name"), component.value(QStringLiteral("name")) },
+                             { QStringLiteral("uid"), uid } };
+    }
+
+    QJsonArray versions;
+    for (const auto& value : index.value(QStringLiteral("versions")).toArray()) {
+        if (value.toObject().value(QStringLiteral("version")).toString() != version)
+            versions.append(value);
+    }
+
+    QJsonArray requirements;
+    const auto requirement = component.value(QStringLiteral("requires")).toObject();
+    if (!requirement.isEmpty())
+        requirements.append(requirement);
+
+    const QJsonObject entry{ { QStringLiteral("version"), version },
+                             { QStringLiteral("type"), type },
+                             { QStringLiteral("recommended"), false },
+                             { QStringLiteral("releaseTime"), releaseTime },
+                             { QStringLiteral("requires"), requirements },
+                             { QStringLiteral("sha256"),
+                               QString::fromLatin1(QCryptographicHash::hash(bytes, QCryptographicHash::Sha256).toHex()) } };
+    versions.prepend(entry);
+    index.insert(QStringLiteral("versions"), versions);
+
+    QFile newIndex(indexPath);
+    if (!newIndex.open(QIODevice::WriteOnly)) {
+        fail(tr("could not write the %1 index").arg(uid));
+        return;
+    }
+    newIndex.write(QJsonDocument(index).toJson());
+    newIndex.close();
+}
+void InstanceCreator::fetchLoaderList()
+{
+    emit status(tr("Reading the Fabric loader versions"));
+
+    const QString url = QStringLiteral("%1/v2/versions/loader/%2")
+                            .arg(m_request.loaderMetaUrl, m_request.minecraftVersion);
+    const QString target = QDir(m_request.dataRoot).filePath(QStringLiteral("tmp/fabric-loader-list.json"));
+    fetch(url, target, {}, [this, target] {
+        QFile file(target);
+        if (!file.open(QIODevice::ReadOnly))
+            return fail(tr("could not read %1").arg(target));
+
+        const auto document = QJsonDocument::fromJson(file.readAll());
+        QString error;
+        const auto releases = Core::parseFabricLoaderList(document.array(), &error);
+        if (!releases)
+            return fail(error);
+
+        QString chosen = m_request.loaderVersion;
+        if (chosen.isEmpty()) {
+            for (const auto& release : *releases) {
+                if (release.stable) {
+                    chosen = release.version;
+                    break;
+                }
+            }
+            if (chosen.isEmpty())
+                chosen = releases->first().version;
+        } else {
+            bool listed = false;
+            for (const auto& release : *releases)
+                listed = listed || release.version == chosen;
+            if (!listed)
+                return fail(tr("Fabric does not list loader %1 for Minecraft %2")
+                                .arg(chosen, m_request.minecraftVersion));
+        }
+        fetchLoaderProfile(chosen);
+    });
+}
+
+void InstanceCreator::fetchLoaderProfile(const QString& loaderVersion)
+{
+    emit status(tr("Reading the Fabric loader profile"));
+
+    const QString url = QStringLiteral("%1/v2/versions/loader/%2/%3/profile/json")
+                            .arg(m_request.loaderMetaUrl, m_request.minecraftVersion, loaderVersion);
+    const QString target = QDir(m_request.dataRoot).filePath(QStringLiteral("tmp/fabric-loader-profile.json"));
+    fetch(url, target, {}, [this, target, loaderVersion] {
+        QFile file(target);
+        if (!file.open(QIODevice::ReadOnly))
+            return fail(tr("could not read %1").arg(target));
+
+        const auto document = QJsonDocument::fromJson(file.readAll());
+        QString error;
+        const auto component = Core::componentFromFabricProfile(document.object(), loaderVersion, &error);
+        if (!component)
+            return fail(error);
+        m_loaderComponent = *component;
+        writeInstance();
+    });
+}
+void InstanceCreator::writeInstance()
 {
     emit status(tr("Creating the instance"));
 
-    const QString metaDirectory = QDir(m_versionsRoot).filePath(QStringLiteral("net.minecraft"));
-    if (!QDir().mkpath(metaDirectory))
-        return fail(tr("could not create %1").arg(metaDirectory));
+    writeComponent(QStringLiteral("net.minecraft"), m_versionId, m_gameComponent, m_gameReleaseTime,
+                   m_gameComponent.value(QStringLiteral("type")).toString());
+    if (!m_loaderComponent.isEmpty()) {
+        writeComponent(m_loaderComponent.value(QStringLiteral("uid")).toString(),
+                       m_loaderComponent.value(QStringLiteral("version")).toString(), m_loaderComponent,
+                       QDateTime::currentDateTime().toString(Qt::ISODate), QStringLiteral("release"));
+    }
+    if (m_reported)
+        return;
 
-    const QString metaPath = QDir(metaDirectory).filePath(m_versionId + QStringLiteral(".json"));
-    QFile metaFile(metaPath);
-    if (!metaFile.open(QIODevice::WriteOnly))
-        return fail(tr("could not write %1").arg(metaPath));
-    metaFile.write(QJsonDocument(component).toJson());
-    metaFile.close();
-
-    m_assetIndexId = component.value(QStringLiteral("assetIndex")).toObject().value(QStringLiteral("id")).toString();
+    m_assetIndexId = m_gameComponent.value(QStringLiteral("assetIndex")).toObject().value(QStringLiteral("id")).toString();
 
     const QDir instancesRoot(QDir(m_request.dataRoot).filePath(QStringLiteral("instances")));
     if (!QDir().mkpath(instancesRoot.path()))
@@ -169,11 +300,16 @@ void InstanceCreator::writeInstance(const QJsonObject& component)
     if (!QDir().mkpath(m_instanceDirectory))
         return fail(tr("could not create %1").arg(m_instanceDirectory));
 
+    QJsonArray components;
+    components.append(QJsonObject{ { QStringLiteral("uid"), QStringLiteral("net.minecraft") },
+                                   { QStringLiteral("version"), m_versionId } });
+    if (!m_loaderComponent.isEmpty()) {
+        components.append(QJsonObject{ { QStringLiteral("uid"), m_loaderComponent.value(QStringLiteral("uid")) },
+                                       { QStringLiteral("version"), m_loaderComponent.value(QStringLiteral("version")) } });
+    }
     QJsonObject pack{
         { QStringLiteral("formatVersion"), 1 },
-        { QStringLiteral("components"),
-          QJsonArray{ QJsonObject{ { QStringLiteral("uid"), QStringLiteral("net.minecraft") },
-                                   { QStringLiteral("version"), m_versionId } } } },
+        { QStringLiteral("components"), components },
     };
     QFile packFile(QDir(m_instanceDirectory).filePath(QStringLiteral("mmc-pack.json")));
     if (!packFile.open(QIODevice::WriteOnly))

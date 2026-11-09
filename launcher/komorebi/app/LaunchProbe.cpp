@@ -279,6 +279,14 @@ int probeCreate(const QStringList& arguments, QTextStream& out)
     request.minecraftVersion = arguments.at(at + 1);
     request.name = arguments.at(at + 2);
     request.ensureFiles = !arguments.contains(QStringLiteral("--komorebi-create-skip-files"));
+    for (const auto& argument : arguments) {
+        if (argument.startsWith(QStringLiteral("--komorebi-create-loader=")))
+            request.loader = argument.section(QLatin1Char('='), 1);
+        else if (argument.startsWith(QStringLiteral("--komorebi-create-loader-version=")))
+            request.loaderVersion = argument.section(QLatin1Char('='), 1);
+        else if (argument == QLatin1String("--komorebi-create-mirror"))
+            request.source = Services::DownloadSource::Bmclapi;
+    }
     creator.start(request);
     loop.exec();
 

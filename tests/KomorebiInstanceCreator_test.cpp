@@ -85,6 +85,7 @@ class KomorebiInstanceCreatorTest : public QObject {
     void createsAVanillaInstanceAndItsFiles();
     void canCreateWithoutFetchingFiles();
     void refusesAVersionThatIsNotInTheList();
+    void createsAFabricInstance();
 };
 
 void KomorebiInstanceCreatorTest::createsAVanillaInstanceAndItsFiles()
@@ -169,6 +170,70 @@ void KomorebiInstanceCreatorTest::canCreateWithoutFetchingFiles()
     QVERIFY(QFile::exists(QDir(data.path()).filePath(QStringLiteral("meta/net.minecraft/1.20.1.json"))));
 }
 
+void KomorebiInstanceCreatorTest::createsAFabricInstance()
+{
+    QTemporaryDir data;
+    QVERIFY(data.isValid());
+    KomorebiTestServer server;
+    QVERIFY(server.listen(QHostAddress::LocalHost));
+
+    const auto base = QStringLiteral("http://127.0.0.1:%1").arg(server.serverPort());
+    const QByteArray clientJar = QByteArrayLiteral("client");
+    const QByteArray libraryJar = QByteArrayLiteral("library");
+    const QByteArray fabricJar = QByteArrayLiteral("fabric loader");
+    const QByteArray versionBytes = versionDocument(clientJar, libraryJar, server.serverPort());
+    server.files.insert("/manifest.json", manifestDocument(server.serverPort(), versionBytes));
+    server.files.insert("/version.json", versionBytes);
+    server.files.insert("/client.jar", clientJar);
+    server.files.insert("/lib.jar", libraryJar);
+
+    const QJsonObject loaderList{ { QStringLiteral("loader"),
+                                    QJsonObject{ { QStringLiteral("version"), QStringLiteral("0.15.11") },
+                                                 { QStringLiteral("stable"), true } } } };
+    server.files.insert("/v2/versions/loader/1.20.1", QJsonDocument(QJsonArray{ loaderList }).toJson());
+    const QJsonObject profile{
+        { QStringLiteral("id"), QStringLiteral("fabric-loader-0.15.11-1.20.1") },
+        { QStringLiteral("mainClass"), QStringLiteral("net.fabricmc.loader.impl.launch.knot.KnotClient") },
+        { QStringLiteral("libraries"),
+          QJsonArray{ QJsonObject{ { QStringLiteral("name"), QStringLiteral("org.ow2.asm:asm:9.10.1") },
+                                   { QStringLiteral("url"), base + QStringLiteral("/maven/") },
+                                   { QStringLiteral("sha1"), sha1Hex(fabricJar) },
+                                   { QStringLiteral("size"), fabricJar.size() } } } },
+        { QStringLiteral("arguments"), QJsonObject{ { QStringLiteral("jvm"), QJsonArray{} } } },
+    };
+    server.files.insert("/v2/versions/loader/1.20.1/0.15.11/profile/json", QJsonDocument(profile).toJson());
+    server.files.insert("/maven/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar", fabricJar);
+
+    QNetworkAccessManager network;
+    InstanceCreator creator(&network);
+    QSignalSpy finished(&creator, &InstanceCreator::finished);
+    QSignalSpy failed(&creator, &InstanceCreator::failed);
+    InstanceCreateRequest request;
+    request.dataRoot = data.path();
+    request.name = QStringLiteral("Fabric World");
+    request.minecraftVersion = QStringLiteral("1.20.1");
+    request.versionManifestUrl = base + QStringLiteral("/manifest.json");
+    request.loaderMetaUrl = base;
+    request.loader = QStringLiteral("fabric");
+    creator.start(request);
+
+    QTRY_VERIFY_WITH_TIMEOUT(finished.count() == 1 || failed.count() == 1, 20000);
+    QVERIFY2(failed.isEmpty(), failed.isEmpty() ? "" : qPrintable(failed.first().at(0).toString()));
+
+    const QString instanceDirectory = finished.first().at(0).toString();
+    QFile pack(QDir(instanceDirectory).filePath(QStringLiteral("mmc-pack.json")));
+    QVERIFY(pack.open(QIODevice::ReadOnly));
+    const auto components = QJsonDocument::fromJson(pack.readAll()).object().value(QStringLiteral("components")).toArray();
+    QCOMPARE(components.size(), 2);
+    QCOMPARE(components.at(1).toObject().value(QStringLiteral("uid")).toString(),
+             QStringLiteral("net.fabricmc.fabric-loader"));
+    QVERIFY(QFile::exists(QDir(data.path()).filePath(QStringLiteral("meta/net.fabricmc.fabric-loader/0.15.11.json"))));
+
+    QString error;
+    QVERIFY2(missingInstanceFiles(data.path(), instanceDirectory, &error).isEmpty(), qPrintable(error));
+    QCOMPARE(readAll(QDir(data.path()).filePath(QStringLiteral("libraries/org/ow2/asm/asm/9.10.1/asm-9.10.1.jar"))),
+             fabricJar);
+}
 void KomorebiInstanceCreatorTest::refusesAVersionThatIsNotInTheList()
 {
     QTemporaryDir data;

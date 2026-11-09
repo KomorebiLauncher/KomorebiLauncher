@@ -13,6 +13,7 @@
 #pragma once
 
 #include <QObject>
+#include <QJsonObject>
 #include <QString>
 
 #include <functional>
@@ -33,6 +34,12 @@ struct InstanceCreateRequest {
     /// Fetch the libraries and client jar now; off is for tests and for callers that start the game
     /// immediately, since the launch fetches whatever is missing anyway.
     bool ensureFiles = true;
+    /// A mod loader to add on top of the game: "fabric" for now, empty for vanilla.
+    QString loader;
+    /// Which loader release; empty picks the newest stable the loader lists.
+    QString loaderVersion;
+    /// Where the loader's metadata comes from; a test points it at itself.
+    QString loaderMetaUrl = QStringLiteral("https://meta.fabricmc.net");
 };
 
 class InstanceCreator : public QObject {
@@ -52,7 +59,11 @@ class InstanceCreator : public QObject {
    private:
     void fetchManifest();
     void fetchVersion(const QString& url, const QString& sha1);
-    void writeInstance(const QJsonObject& component);
+    void fetchLoaderList();
+    void fetchLoaderProfile(const QString& loaderVersion);
+    void writeComponent(const QString& uid, const QString& version, const QJsonObject& component,
+                        const QString& releaseTime, const QString& type);
+    void writeInstance();
     void fetchLibraries();
     void fetchAssets();
     void fetch(const QString& url, const QString& target, const QString& sha1, const std::function<void()>& next);
@@ -66,6 +77,9 @@ class InstanceCreator : public QObject {
     QString m_versionId;
     QString m_instanceDirectory;
     QString m_assetIndexId;
+    QString m_gameReleaseTime;
+    QJsonObject m_gameComponent;
+    QJsonObject m_loaderComponent;
     bool m_running = false;
     bool m_reported = false;
 };
