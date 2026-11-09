@@ -11,11 +11,15 @@
 #include <QJsonParseError>
 #include <QProcess>
 #include <QTextStream>
+#include <QTimer>
 
+#include "BuildConfig.h"
 #include "komorebi/core/instance/InstanceFolder.h"
 #include "komorebi/core/launch/LaunchPlan.h"
 #include "komorebi/core/version/ComponentSet.h"
 #include "komorebi/core/version/VersionChain.h"
+#include "komorebi/services/auth/MicrosoftAuth.h"
+#include "komorebi/services/auth/TokenVault.h"
 #include "komorebi/services/download/FileDownloader.h"
 #include "komorebi/services/install/InstanceCreator.h"
 #include "komorebi/services/java/JavaRuntime.h"
@@ -261,6 +265,128 @@ int probeFetch(const QStringList& arguments, QTextStream& out)
     say(out, ok ? QStringLiteral("fetch: ok") : QStringLiteral("fetch: %1").arg(errorText));
     return ok ? 0 : 1;
 }
+
+int probeAuth(const QStringList& arguments, QTextStream& out)
+{
+    const bool device = arguments.contains(QStringLiteral("--komorebi-auth-device"));
+    const bool refresh = arguments.contains(QStringLiteral("--komorebi-auth-refresh"));
+    if (!device && !refresh) {
+        say(out, QStringLiteral("probe: --komorebi-auth-device or --komorebi-auth-refresh is required"));
+        return 2;
+    }
+
+    const QString clientId = valueOf(arguments, QStringLiteral("--komorebi-auth-client"), BuildConfig.MSA_CLIENT_ID);
+    if (clientId.isEmpty()) {
+        say(out, QStringLiteral("auth: no Microsoft app id is configured"));
+        return 2;
+    }
+    say(out, QStringLiteral("auth: client id %1").arg(clientId));
+
+    QNetworkAccessManager network;
+    Services::MicrosoftAuth auth(&network);
+    auth.setClientId(clientId);
+
+    QEventLoop loop;
+    QString failure;
+    QObject::connect(&auth, &Services::MicrosoftAuth::failed, &loop, [&](const QString& reason) {
+        failure = reason;
+        loop.quit();
+    });
+
+    if (device) {
+        // The code is printed once and then polled on a timer: the browser is where the player is,
+        // and blocking this process on a modal loop would make the timeout the only way out.
+        int intervalMs = 5000;
+        QTimer poll;
+        QObject::connect(&auth, &Services::MicrosoftAuth::deviceCodeReady, &loop, [&] {
+            const Services::DeviceCode code = auth.currentDeviceCode();
+            say(out, QStringLiteral("auth: open %1 and enter %2 (valid for %3s)")
+                         .arg(code.verificationUri, code.userCode)
+                         .arg(code.expiresIn));
+            intervalMs = code.interval * 1000;
+            poll.start(intervalMs);
+            QTimer::singleShot(code.expiresIn * 1000, &loop, [&] {
+                failure = QStringLiteral("the code expired before it was approved");
+                loop.quit();
+            });
+        });
+        QObject::connect(&poll, &QTimer::timeout, &loop, [&] { auth.pollDeviceCode(auth.currentDeviceCode()); });
+        QObject::connect(&auth, &Services::MicrosoftAuth::pending, &loop, [&] { say(out, QStringLiteral("auth: waiting for approval")); });
+        QObject::connect(&auth, &Services::MicrosoftAuth::slowDown, &loop, [&] {
+            intervalMs = qMin(intervalMs * 2, 60000);
+            poll.setInterval(intervalMs);
+            say(out, QStringLiteral("auth: asked to poll less often, now every %1s").arg(intervalMs / 1000));
+        });
+        QObject::connect(&auth, &Services::MicrosoftAuth::signedIn, &loop, [&] {
+            poll.stop();
+            const Services::AuthSession session = auth.session();
+            say(out, QStringLiteral("auth: signed in as %1 (%2)").arg(session.username, session.uuid));
+            const QString dataRoot = valueOf(arguments, QStringLiteral("--komorebi-data"));
+            if (!dataRoot.isEmpty()) {
+                const Services::TokenVault vault = Services::TokenVault::forDataRoot(dataRoot);
+                QString error;
+                if (vault.upsert(session, &error))
+                    say(out, QStringLiteral("auth: saved into %1").arg(vault.path()));
+                else
+                    say(out, QStringLiteral("auth: could not save the account: %1").arg(error));
+            }
+            loop.quit();
+        });
+        auth.requestDeviceCode();
+        loop.exec();
+    } else {
+        const QString store = valueOf(arguments, QStringLiteral("--komorebi-auth-store"));
+        const QString dataRoot = valueOf(arguments, QStringLiteral("--komorebi-data"));
+        if (store.isEmpty() && dataRoot.isEmpty()) {
+            say(out, QStringLiteral("probe: --komorebi-data or --komorebi-auth-store is required"));
+            return 2;
+        }
+        const Services::TokenVault vault = store.isEmpty() ? Services::TokenVault::forDataRoot(dataRoot) : Services::TokenVault(store);
+        QString error;
+        const QList<Services::AuthSession> accounts = vault.load(&error);
+        if (accounts.isEmpty()) {
+            say(out, QStringLiteral("auth: no accounts in %1%2")
+                         .arg(vault.path(), error.isEmpty() ? QString() : QStringLiteral(": %1").arg(error)));
+            return 1;
+        }
+
+        for (const auto& account : accounts) {
+            say(out, QStringLiteral("auth: renewing %1 (%2)").arg(account.username, account.uuid));
+
+            QEventLoop one;
+            bool ok = false;
+            QObject::connect(&auth, &Services::MicrosoftAuth::signedIn, &one, [&] {
+                ok = true;
+                one.quit();
+            });
+            QObject::connect(&auth, &Services::MicrosoftAuth::failed, &one, [&](const QString& reason) {
+                failure = reason;
+                one.quit();
+            });
+            QTimer::singleShot(120000, &one, [&] { one.quit(); });
+            auth.refresh(account.refreshToken);
+            one.exec();
+
+            if (!failure.isEmpty())
+                break;
+            if (!ok) {
+                failure = QStringLiteral("no answer while renewing %1").arg(account.username);
+                break;
+            }
+            const Services::AuthSession session = auth.session();
+            say(out, QStringLiteral("auth: %1 -> %2, %3, access token %4 characters")
+                         .arg(account.username, session.username, session.uuid)
+                         .arg(session.accessToken.size()));
+        }
+    }
+
+    if (!failure.isEmpty()) {
+        say(out, QStringLiteral("auth: %1").arg(failure));
+        return 1;
+    }
+    return 0;
+}
+
 int probeCreate(const QStringList& arguments, QTextStream& out)
 {
     const int at = arguments.indexOf(QStringLiteral("--komorebi-create-instance"));
@@ -318,6 +444,8 @@ int probeLaunch(const QStringList& arguments)
     QTextStream out(stdout);
     if (arguments.contains(QStringLiteral("--komorebi-create-instance")))
         return probeCreate(arguments, out);
+    if (arguments.contains(QStringLiteral("--komorebi-auth-device")) || arguments.contains(QStringLiteral("--komorebi-auth-refresh")))
+        return probeAuth(arguments, out);
     if (arguments.contains(QStringLiteral("--komorebi-fetch")))
         return probeFetch(arguments, out);
     if (arguments.contains(QStringLiteral("--komorebi-probe-instance")))

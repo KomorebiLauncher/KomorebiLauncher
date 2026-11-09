@@ -24,6 +24,9 @@ namespace Komorebi::App {
  *   --komorebi-username <name>  optional: defaults to "Player"
  *   --komorebi-timeout <sec>    optional: stop the game after that long, 0 waits for ever
  *
+ * The other probes are dispatched here too: --komorebi-create-instance, --komorebi-fetch,
+ * --komorebi-auth-device and --komorebi-auth-refresh; see their functions for the arguments they take.
+ *
  * Returns the game's exit code, 2 when the command line could not be assembled, 3 when nothing could
  * be printed at all.
  */

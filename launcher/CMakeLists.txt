@@ -1236,6 +1236,11 @@ SET(LAUNCHER_SOURCES
     komorebi/services/launch/InstanceLaunch.h
     komorebi/services/install/InstanceCreator.cpp
     komorebi/services/install/InstanceCreator.h
+    komorebi/services/auth/AuthSession.h
+    komorebi/services/auth/MicrosoftAuth.cpp
+    komorebi/services/auth/MicrosoftAuth.h
+    komorebi/services/auth/TokenVault.cpp
+    komorebi/services/auth/TokenVault.h
     komorebi/legacy/CoreLaunchAdapter.cpp
     komorebi/legacy/CoreLaunchAdapter.h
     komorebi/core/version/VersionChain.cpp
@@ -1418,6 +1423,11 @@ target_link_libraries(Launcher_logic
 )
 if (TARGET ${Launcher_QT_DBUS})
     target_compile_definitions(Launcher_logic PUBLIC WITH_QTDBUS)
+endif()
+
+if(WIN32)
+    # The account vault seals refresh tokens to the current Windows user with DPAPI.
+    target_link_libraries(Launcher_logic crypt32)
 endif()
 
 if(APPLE)
