@@ -20,6 +20,7 @@
 class QFile;
 class QNetworkAccessManager;
 class QNetworkReply;
+class QTimer;
 
 namespace Komorebi::Services {
 
@@ -29,6 +30,7 @@ struct FileDownload {
     QString targetPath;
     QByteArray sha1;          ///< empty when the manifest gives no hash
     qint64 expectedSize = -1;  ///< negative when the manifest gives no size
+    QUrl fallbackUrl;          ///< the manifest's own address, tried when the source cannot serve the file
 };
 
 class FileDownloader : public QObject {
@@ -43,6 +45,9 @@ class FileDownloader : public QObject {
 
     void cancel();
 
+    /// How long a silent connection is tolerated before it counts as failed; a test sets it short.
+    void setStallTimeout(int milliseconds);
+
    signals:
     void progress(qint64 received, qint64 total);
     void finished(bool ok, const QString& error);
@@ -52,6 +57,7 @@ class FileDownloader : public QObject {
     void handleReadyRead();
     void handleReplyFinished();
     void fail(const QString& error);
+    void handleStalled();
     bool finishFile();
     bool existingFileIsGood() const;
     static QByteArray fileHash(const QString& path);
@@ -68,6 +74,10 @@ class FileDownloader : public QObject {
     int m_attempt = 0;
     bool m_cancelled = false;
     bool m_reported = false;
+    QTimer* m_stallTimer = nullptr;
+    int m_stallTimeoutMs = 20000;
+    bool m_stalled = false;
+    bool m_triedFallback = false;
 };
 
 }  // namespace Komorebi::Services

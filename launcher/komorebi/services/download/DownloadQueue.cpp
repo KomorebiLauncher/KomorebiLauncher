@@ -59,8 +59,12 @@ void DownloadQueue::startNext()
         FileDownload request = m_files.at(m_next);
         ++m_next;
 
-        // The manifest keeps the official URL; the source decides where it is actually fetched from.
-        request.url = sourceUrl(request.url, m_source);
+        // The manifest keeps the official URL; the source decides where it is actually fetched from,
+        // and stays the fallback when the mirror turns out not to have the file.
+        const QUrl official = request.url;
+        request.url = sourceUrl(official, m_source);
+        if (request.url != official)
+            request.fallbackUrl = official;
 
         auto* downloader = new FileDownloader(m_network, this);
         m_active.append(downloader);

@@ -8,6 +8,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
+#include <QDebug>
 #include <QTimer>
 
 namespace Komorebi::Services {
@@ -32,6 +33,25 @@ QByteArray hashFile(const QString& path)
 
 FileDownloader::FileDownloader(QNetworkAccessManager* network, QObject* parent) : QObject(parent), m_network(network)
 {
+    m_stallTimer = new QTimer(this);
+    m_stallTimer->setSingleShot(true);
+    connect(m_stallTimer, &QTimer::timeout, this, &FileDownloader::handleStalled);
+}
+
+void FileDownloader::setStallTimeout(int milliseconds)
+{
+    m_stallTimeoutMs = milliseconds;
+}
+
+void FileDownloader::handleStalled()
+{
+    if (!m_reply || m_cancelled || m_reported)
+        return;
+
+    // A connection that stops sending is not an error Qt reports by itself; without this the download
+    // waits forever and a launch appears to do nothing.
+    m_stalled = true;
+    m_reply->abort();
 }
 
 FileDownloader::~FileDownloader()
@@ -58,6 +78,7 @@ void FileDownloader::start(const FileDownload& download)
     m_received = 0;
     m_total = -1;
     m_attempt = 0;
+    m_triedFallback = false;
     m_partPath = download.targetPath + QStringLiteral(".part");
 
     if (existingFileIsGood()) {
@@ -82,6 +103,7 @@ void FileDownloader::cancel()
         return;
     m_cancelled = true;
     m_reported = true;
+    m_stallTimer->stop();
 
     if (m_reply) {
         m_reply->disconnect(this);
@@ -138,6 +160,7 @@ void FileDownloader::beginAttempt()
     m_received = alreadyThere;
     m_attemptResumeFrom = alreadyThere;
     m_restartedThisAttempt = false;
+    m_stalled = false;
 
     QNetworkRequest request(m_download.url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -147,6 +170,7 @@ void FileDownloader::beginAttempt()
 
     m_reply = m_network->get(request);
     m_total = m_received > 0 ? m_received : -1;
+    m_stallTimer->start(m_stallTimeoutMs);
 
     connect(m_reply, &QNetworkReply::readyRead, this, &FileDownloader::handleReadyRead);
     connect(m_reply, &QNetworkReply::errorOccurred, this, [this](QNetworkReply::NetworkError) { handleReplyFinished(); });
@@ -180,6 +204,8 @@ void FileDownloader::handleReadyRead()
     if (chunk.isEmpty())
         return;
 
+    m_stallTimer->start(m_stallTimeoutMs);
+
     if (m_file->write(chunk) != chunk.size()) {
         fail(tr("could not write to %1: %2").arg(m_partPath, m_file->errorString()));
         return;
@@ -202,6 +228,7 @@ void FileDownloader::handleReplyFinished()
     auto* reply = m_reply;
     m_reply = nullptr;
     reply->disconnect(this);
+    m_stallTimer->stop();
 
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     const bool httpOk = status == 0 || (status >= 200 && status < 300);
@@ -223,6 +250,18 @@ void FileDownloader::handleReplyFinished()
     }
 
     if (!httpOk || !networkError.isEmpty()) {
+        if (m_stalled) {
+            // Nothing came back, so nothing was written either; a fresh attempt is cheap and the
+            // launcher only has to say what happened once the attempts are used up.
+            if (m_attempt < kMaxAttempts) {
+                QTimer::singleShot(300 * m_attempt, this, &FileDownloader::beginAttempt);
+                return;
+            }
+            fail(tr("no data arrived for %1 seconds from %2")
+                     .arg(m_stallTimeoutMs / 1000)
+                     .arg(m_download.url.toString()));
+            return;
+        }
         // A dropped connection is worth another attempt, and the part file is what it will resume from.
         if (m_attempt < kMaxAttempts && !networkError.contains(QStringLiteral("aborted"))) {
             QTimer::singleShot(300 * m_attempt, this, &FileDownloader::beginAttempt);
@@ -276,6 +315,16 @@ bool FileDownloader::finishFile()
 
 void FileDownloader::fail(const QString& error)
 {
+    if (!m_triedFallback && m_download.fallbackUrl.isValid()) {
+        // A mirror may not have every file; the address the manifest named is still worth one attempt.
+        m_triedFallback = true;
+        m_download.url = m_download.fallbackUrl;
+        m_download.fallbackUrl = QUrl();
+        m_attempt = 0;
+        beginAttempt();
+        return;
+    }
+
     if (m_reported)
         return;
     m_reported = true;

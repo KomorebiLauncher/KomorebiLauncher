@@ -155,6 +155,8 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
         censor.insert(who.uuid, QStringLiteral("<PROFILE ID>"));
 
     QObject::connect(task, &Services::InstanceLaunch::status, APPLICATION, [model, onStatus](const QString& text) {
+        // A launch that appears to do nothing is a launch whose last step can be read in the log.
+        qDebug().noquote() << "core launch:" << text;
         model->append(MessageLevel::Launcher, text);
         if (onStatus)
             onStatus(text);
@@ -184,6 +186,7 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
             onStarted(logPath);
     });
     QObject::connect(task, &Services::InstanceLaunch::failed, APPLICATION, [onFailed, forget](const QString& reason) {
+        qWarning().noquote() << "core launch failed:" << reason;
         forget();
         if (onFailed)
             onFailed(reason);

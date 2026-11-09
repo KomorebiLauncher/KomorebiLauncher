@@ -144,20 +144,9 @@ std::optional<QJsonObject> componentFromMojangVersion(const QJsonObject& version
     // launcher's component reader expects the field to be there.
     component.insert(QStringLiteral("+jvmArgs"), QJsonArray{});
 
-    // Modern versions expect their graphics library from a component of its own: the suggestion names the
-    // version the game itself was built against.
-    for (const auto& value : version.value(QStringLiteral("libraries")).toArray()) {
-        const auto coordinate = value.toObject().value(QStringLiteral("name")).toString();
-        if (!coordinate.startsWith(QStringLiteral("org.lwjgl:lwjgl:")))
-            continue;
-        const auto parts = coordinate.split(QLatin1Char(':'));
-        if (parts.size() >= 3) {
-            component.insert(QStringLiteral("requires"),
-                             QJsonObject{ { QStringLiteral("uid"), QStringLiteral("org.lwjgl3") },
-                                          { QStringLiteral("suggests"), parts.at(2) } });
-        }
-        break;
-    }
+    // No requirement is declared for the graphics library. The launcher's own components ask for it as a
+    // separate component, but this one carries the libraries itself; declaring the requirement without
+    // that component would make the launcher try to install one before the instance could be opened.
 
     if (supportsQuickPlay(id)) {
         component.insert(QStringLiteral("+traits"),

@@ -21,6 +21,8 @@ class TinyFileServer : public QTcpServer {
     bool supportRange = false;
     int requests = 0;
     int dropFirstRequests = 0;
+    bool stall = false;
+    bool notFound = false;
     QByteArray lastRange;
 
     using QTcpServer::QTcpServer;
@@ -39,6 +41,13 @@ class TinyFileServer : public QTcpServer {
 
             ++requests;
             lastRange.clear();
+            if (stall)
+                return;
+            if (notFound) {
+                socket->write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                socket->disconnectFromHost();
+                return;
+            }
             for (const auto& line : buffer->split('\n')) {
                 const QByteArray trimmed = line.trimmed();
                 if (trimmed.toLower().startsWith("range:"))
@@ -97,6 +106,8 @@ class KomorebiFileDownloaderTest : public QObject {
     void skipsAFileThatIsAlreadyRight();
     void retriesAfterADroppedConnection();
     void writesAFileLargeEnoughForSeveralReads();
+    void reportsAStalledConnection();
+    void triesTheFallbackAddress();
 
    private:
     static QUrl urlFor(const TinyFileServer& server);
@@ -224,6 +235,56 @@ void KomorebiFileDownloaderTest::skipsAFileThatIsAlreadyRight()
     QCOMPARE(server.requests, 0);
 }
 
+void KomorebiFileDownloaderTest::reportsAStalledConnection()
+{
+    QTemporaryDir data;
+    QVERIFY(data.isValid());
+    TinyFileServer server;
+    server.stall = true;
+    QVERIFY(server.listen(QHostAddress::LocalHost));
+
+    QNetworkAccessManager network;
+    FileDownloader downloader(&network);
+    downloader.setStallTimeout(300);
+    QSignalSpy finished(&downloader, &FileDownloader::finished);
+    downloader.start(FileDownload{ QUrl(QStringLiteral("http://127.0.0.1:%1/file.bin").arg(server.serverPort())),
+                                   QDir(data.path()).filePath(QStringLiteral("file.bin")), {}, -1 });
+
+    QTRY_VERIFY_WITH_TIMEOUT(finished.count() == 1, 20000);
+    QVERIFY(!finished.first().at(0).toBool());
+    QVERIFY2(finished.first().at(1).toString().contains(QStringLiteral("no data")),
+             qPrintable(finished.first().at(1).toString()));
+}
+
+void KomorebiFileDownloaderTest::triesTheFallbackAddress()
+{
+    QTemporaryDir data;
+    QVERIFY(data.isValid());
+
+    TinyFileServer mirror;
+    mirror.notFound = true;
+    QVERIFY(mirror.listen(QHostAddress::LocalHost));
+
+    TinyFileServer origin;
+    origin.body = QByteArrayLiteral("the file itself");
+    QVERIFY(origin.listen(QHostAddress::LocalHost));
+
+    QNetworkAccessManager network;
+    FileDownloader downloader(&network);
+    QSignalSpy finished(&downloader, &FileDownloader::finished);
+    FileDownload file;
+    file.url = QUrl(QStringLiteral("http://127.0.0.1:%1/file.bin").arg(mirror.serverPort()));
+    file.fallbackUrl = QUrl(QStringLiteral("http://127.0.0.1:%1/file.bin").arg(origin.serverPort()));
+    file.targetPath = QDir(data.path()).filePath(QStringLiteral("file.bin"));
+    downloader.start(file);
+
+    QTRY_VERIFY_WITH_TIMEOUT(finished.count() == 1, 20000);
+    QVERIFY2(finished.first().at(0).toBool(), qPrintable(finished.first().at(1).toString()));
+
+    QFile written(file.targetPath);
+    QVERIFY(written.open(QIODevice::ReadOnly));
+    QCOMPARE(written.readAll(), origin.body);
+}
 void KomorebiFileDownloaderTest::writesAFileLargeEnoughForSeveralReads()
 {
     // A download that arrives in several chunks used to be truncated at every chunk: the "server
