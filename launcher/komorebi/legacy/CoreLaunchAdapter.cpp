@@ -64,7 +64,9 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
      * arguments (which carry the agents a loader or an auth server adds), environment overrides, and a
      * server or world to join once the game starts.
      */
-    options.extraJvmArguments = instance->extraArguments();
+    // javaArguments() is extraArguments() plus the flags the launcher always adds (the game language
+    // pin among them), which is what the old path handed to java.
+    options.extraJvmArguments = instance->javaArguments();
 
     if (instance->settings()->get("OverrideJavaLocation").toBool()) {
         const QString javaPath = instance->settings()->get("JavaPath").toString();
@@ -123,10 +125,21 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
         if (onStatus)
             onStatus(text);
     });
-    QObject::connect(task, &Services::InstanceLaunch::output, APPLICATION, [model, censor](QString line) {
-        for (auto it = censor.begin(); it != censor.end(); ++it)
-            line.replace(it.key(), it.value());
-        model->append(LogParser::guessLevel(line, model->previousLevel()), line);
+    // CloseAfterLaunch hides the launcher once the game is really running and brings it back when the
+    // game ends; the old path watched for the same line in the output.
+    const bool closeAfterLaunch = instance->settings()->get("CloseAfterLaunch").toBool();
+    auto windowsClosed = std::make_shared<bool>(false);
+
+    QObject::connect(task, &Services::InstanceLaunch::output, APPLICATION,
+                     [model, censor, closeAfterLaunch, windowsClosed](QString line) {
+                         for (auto it = censor.begin(); it != censor.end(); ++it)
+                             line.replace(it.key(), it.value());
+
+                         if (closeAfterLaunch && !*windowsClosed && line.contains(QStringLiteral("Setting user"))) {
+                             *windowsClosed = true;
+                             APPLICATION->closeAllWindows();
+                         }
+                         model->append(LogParser::guessLevel(line, model->previousLevel()), line);
     });
     QObject::connect(task, &Services::InstanceLaunch::failed, APPLICATION, [model](const QString& reason) {
         model->append(MessageLevel::Error, reason);
@@ -147,7 +160,9 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
             onAborted();
     });
     QObject::connect(task, &Services::InstanceLaunch::gameFinished, APPLICATION,
-                     [onFinished, forget, model](int exitCode) {
+                     [onFinished, forget, model, windowsClosed](int exitCode) {
+                         if (*windowsClosed)
+                             APPLICATION->showMainWindow();
                          model->append(MessageLevel::Launcher,
                                        QObject::tr("The game exited with code %1.").arg(exitCode));
 
