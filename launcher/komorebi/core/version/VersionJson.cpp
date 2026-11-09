@@ -162,7 +162,15 @@ std::optional<VersionJson> VersionJson::parse(const QJsonObject& object, QString
         manifest.assetIndexId = manifest.assetIndex.value(QStringLiteral("id")).toString();
     }
     manifest.downloads = object.value(QStringLiteral("downloads")).toObject();
-    manifest.mainJarName = object.value(QStringLiteral("mainJar")).toObject().value(QStringLiteral("name")).toString();
+    const auto mainJar = object.value(QStringLiteral("mainJar")).toObject();
+    manifest.mainJarName = mainJar.value(QStringLiteral("name")).toString();
+    if (!mainJar.isEmpty() && manifest.downloads.value(QStringLiteral("client")).toObject().isEmpty()) {
+        // Component metadata names the client jar through mainJar rather than a downloads object; the
+        // file is the same one, and the missing-file list has to know where to fetch it from.
+        const auto artifact = mainJar.value(QStringLiteral("downloads")).toObject().value(QStringLiteral("artifact")).toObject();
+        if (!artifact.isEmpty())
+            manifest.downloads.insert(QStringLiteral("client"), artifact);
+    }
 
     const auto javaVersion = object.value(QStringLiteral("javaVersion")).toObject();
     manifest.javaMajor = javaVersion.value(QStringLiteral("majorVersion")).toInt();
