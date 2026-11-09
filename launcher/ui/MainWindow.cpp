@@ -116,6 +116,7 @@
 #include "ui/instanceview/InstanceView.h"
 #include "komorebi/ui/InstanceListPage.h"
 #include "komorebi/ui/NewInstanceDialog.h"
+#include "komorebi/ui/AccountsDialog.h"
 #include "ui/widgets/LauncherBackground.h"
 #include "ui/window/MainContentPanel.h"
 #include "ui/window/RailShell.h"
@@ -847,6 +848,15 @@ void MainWindow::repopulateAccountsMenu()
     ui->accountsMenu->addSeparator();
     ui->accountsMenu->addAction(ui->actionManageSkins);
     ui->accountsMenu->addAction(ui->actionManageAccounts);
+
+    // The core's accounts live beside the launcher's own while the account side is migrated; this is
+    // where a player signs in with one and says which account launching should use.
+    auto* coreAccounts = new QAction(tr("Komorebi accounts…"), this);
+    connect(coreAccounts, &QAction::triggered, this, [this] {
+        KomorebiAccountsDialog dialog(this);
+        dialog.exec();
+    });
+    ui->accountsMenu->addAction(coreAccounts);
 
     accountsButtonMenu->addActions(ui->accountsMenu->actions());
 }

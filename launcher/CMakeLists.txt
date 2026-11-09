@@ -1210,6 +1210,10 @@ SET(LAUNCHER_SOURCES
     komorebi/ui/NewInstanceDialog.h
     komorebi/ui/CoreSettingsPage.cpp
     komorebi/ui/CoreSettingsPage.h
+    komorebi/ui/AccountsDialog.cpp
+    komorebi/ui/AccountsDialog.h
+    komorebi/ui/DeviceCodeDialog.cpp
+    komorebi/ui/DeviceCodeDialog.h
     komorebi/core/Instance.h
     komorebi/core/InstanceRepository.h
     komorebi/core/version/VersionJson.cpp

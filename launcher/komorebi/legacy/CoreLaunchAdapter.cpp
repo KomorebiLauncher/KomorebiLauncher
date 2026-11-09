@@ -17,12 +17,20 @@
 #include "logs/LogParser.h"
 #include "BaseInstance.h"
 
+#include "komorebi/services/auth/MicrosoftAuth.h"
+#include "komorebi/services/auth/TokenVault.h"
 #include "komorebi/services/download/DownloadSource.h"
 #include "komorebi/services/launch/InstanceLaunch.h"
 
 namespace Komorebi::Legacy {
 
 namespace {
+
+using StartedCallback = std::function<void(const QString& logPath)>;
+using FailedCallback = std::function<void(const QString& error)>;
+using FinishedCallback = std::function<void(int exitCode)>;
+using AbortedCallback = std::function<void()>;
+using StatusCallback = std::function<void(const QString& status)>;
 
 /// The JVM arguments the launcher always adds, plus the ones the instance names.
 ///
@@ -60,34 +68,30 @@ QStringList jvmArgumentsFor(MinecraftInstance* instance)
 /// The launches this run started, so the launcher can stop one without owning its process.
 QHash<QString, QPointer<Services::InstanceLaunch>> s_launches;
 
-}  // namespace
-
-bool killInstance(const QString& instanceId)
+/// What the game is told about the account: one shape from two sources.
+Services::LaunchAccount accountFromPrism(const MinecraftAccountPtr& account)
 {
-    const auto task = s_launches.value(instanceId);
-    if (!task)
-        return false;
-    task->kill();
-    return true;
+    Services::LaunchAccount who;
+    who.username = account->profileName();
+    who.uuid = account->profileId();
+    who.accessToken = account->accessToken();
+    return who;
 }
 
-bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& account,
-                    const std::function<void(const QString& logPath)>& onStarted,
-                    const std::function<void(const QString& error)>& onFailed, QString* error,
-                    const std::function<void(int exitCode)>& onFinished, const std::function<void()>& onAborted,
-                    const std::function<void(const QString& status)>& onStatus)
+Services::LaunchAccount accountFromCore(const Services::AuthSession& session)
 {
-    if (!instance) {
-        if (error)
-            *error = QStringLiteral("no instance was selected");
-        return false;
-    }
-    if (!account) {
-        if (error)
-            *error = QStringLiteral("no account is signed in");
-        return false;
-    }
+    Services::LaunchAccount who;
+    who.username = session.username;
+    who.uuid = session.uuid;
+    who.accessToken = session.accessToken;
+    return who;
+}
 
+/// Everything a launch does once the account question is answered.
+bool beginLaunch(MinecraftInstance* instance, const Services::LaunchAccount& who,
+                 const StartedCallback& onStarted, const FailedCallback& onFailed, const FinishedCallback& onFinished,
+                 const AbortedCallback& onAborted, const StatusCallback& onStatus)
+{
     Services::InstanceLaunchOptions options;
     options.dataRoot = APPLICATION->dataRoot();
     options.instanceDirectory = instance->instanceRoot();
@@ -131,11 +135,6 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
         }
     }
 
-    Services::LaunchAccount who;
-    who.username = account->profileName();
-    who.uuid = account->profileId();
-    who.accessToken = account->accessToken();
-
     auto* task = new Services::InstanceLaunch(APPLICATION->network(), APPLICATION);
     const QString id = instance->id();
     s_launches.insert(id, task);
@@ -176,7 +175,7 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
                              APPLICATION->closeAllWindows();
                          }
                          model->append(LogParser::guessLevel(line, model->previousLevel()), line);
-    });
+                     });
     QObject::connect(task, &Services::InstanceLaunch::failed, APPLICATION, [model](const QString& reason) {
         model->append(MessageLevel::Error, reason);
     });
@@ -220,6 +219,81 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
                              onFinished(exitCode);
                      });
     task->start(options, who);
+    return true;
+}
+
+}  // namespace
+
+bool killInstance(const QString& instanceId)
+{
+    const auto task = s_launches.value(instanceId);
+    if (!task)
+        return false;
+    task->kill();
+    return true;
+}
+
+bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& account,
+                    const Services::AuthSession& coreAccount, const StartedCallback& onStarted,
+                    const FailedCallback& onFailed, QString* error, const FinishedCallback& onFinished,
+                    const AbortedCallback& onAborted, const StatusCallback& onStatus)
+{
+    if (!instance) {
+        if (error)
+            *error = QStringLiteral("no instance was selected");
+        return false;
+    }
+    if (!account && coreAccount.uuid.isEmpty()) {
+        if (error)
+            *error = QStringLiteral("no account is signed in");
+        return false;
+    }
+
+    // The core's account, when one is configured for launching; the launcher's own otherwise.
+    const bool useCore = !coreAccount.uuid.isEmpty();
+    if (!useCore)
+        return beginLaunch(instance, accountFromPrism(account), onStarted, onFailed, onFinished, onAborted, onStatus);
+
+    const Services::LaunchAccount who = accountFromCore(coreAccount);
+    if (!who.accessToken.isEmpty() && !coreAccount.expired())
+        return beginLaunch(instance, who, onStarted, onFailed, onFinished, onAborted, onStatus);
+
+    /*
+     * A stored session keeps only the refresh token, so the first launch of the day renews it here.
+     * That is one HTTPS round trip, not a login: it runs while the window says what it is doing, and
+     * the game is only started once the token is in hand.
+     */
+    if (onStatus)
+        onStatus(QObject::tr("Renewing the Komorebi account's sign-in…"));
+    qInfo().noquote() << "core launch: renewing the Komorebi account" << coreAccount.uuid;
+
+    auto* auth = new Services::MicrosoftAuth(APPLICATION->network(), APPLICATION);
+    auth->setClientId(APPLICATION->getMSAClientID());
+
+    QObject::connect(auth, &Services::MicrosoftAuth::signedIn, APPLICATION, [=] {
+        const Services::AuthSession renewed = auth->session();
+        QString ignored;
+        Services::TokenVault::forDataRoot(APPLICATION->dataRoot()).upsert(renewed, &ignored);
+        auth->deleteLater();
+        qInfo().noquote() << "core launch: the Komorebi account was renewed as" << renewed.username;
+        beginLaunch(instance, accountFromCore(renewed), onStarted, onFailed, onFinished, onAborted, onStatus);
+    });
+    QObject::connect(auth, &Services::MicrosoftAuth::failed, APPLICATION, [=](const QString& reason) {
+        auth->deleteLater();
+        qWarning().noquote() << "core launch: the Komorebi account could not be renewed:" << reason;
+        // A broken stored sign-in should not make the launcher stop working: the account the launcher
+        // already has is still there, and the player can fix the Komorebi one from its dialog.
+        if (!account) {
+            if (onFailed)
+                onFailed(reason);
+            return;
+        }
+        if (onStatus)
+            onStatus(QObject::tr("The Komorebi account could not be renewed (%1); starting with the launcher's own account.").arg(reason));
+        beginLaunch(instance, accountFromPrism(account), onStarted, onFailed, onFinished, onAborted, onStatus);
+    });
+
+    auth->refresh(coreAccount.refreshToken);
     return true;
 }
 

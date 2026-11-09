@@ -46,6 +46,15 @@ class MicrosoftAuth : public QObject {
     explicit MicrosoftAuth(QNetworkAccessManager* network, QObject* parent = nullptr);
     ~MicrosoftAuth() override;
 
+    /**
+     * Reads an endpoint override from KOMOREBI_MSA_ENDPOINTS, if it is set.
+     *
+     * It names a JSON file whose keys (deviceCode, token, xboxUser, xsts, minecraftLogin,
+     * minecraftProfile) replace the matching addresses. A locally rehearsed sign-in can then be run
+     * without a Microsoft account; ordinary launches never set it.
+     */
+    static void applyEndpointOverride(Endpoints& endpoints);
+
     /// The id the launcher is registered under; without one, signing in is impossible.
     void setClientId(const QString& clientId);
     QString clientId() const { return m_clientId; }

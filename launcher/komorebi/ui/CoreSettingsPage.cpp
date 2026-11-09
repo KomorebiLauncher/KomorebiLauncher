@@ -5,12 +5,15 @@
 #include <QComboBox>
 #include <QFormLayout>
 #include <QGroupBox>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QPushButton>
 #include <QVBoxLayout>
 
 #include "Application.h"
 #include "settings/SettingsObject.h"
 #include "komorebi/services/download/DownloadSource.h"
+#include "komorebi/ui/AccountsDialog.h"
 
 CoreSettingsPage::CoreSettingsPage(QWidget* parent) : QWidget(parent)
 {
@@ -32,6 +35,20 @@ CoreSettingsPage::CoreSettingsPage(QWidget* parent) : QWidget(parent)
     m_creationLabel = new QLabel(launchGroup);
     m_creationLabel->setWordWrap(true);
     launchForm->addRow(m_creationLabel);
+
+    m_useCoreAuth = new QCheckBox(launchGroup);
+    launchForm->addRow(QString(), m_useCoreAuth);
+
+    m_authLabel = new QLabel(launchGroup);
+    m_authLabel->setWordWrap(true);
+    launchForm->addRow(m_authLabel);
+
+    auto* accountRow = new QHBoxLayout();
+    m_manageAccounts = new QPushButton(launchGroup);
+    accountRow->addWidget(m_manageAccounts);
+    accountRow->addStretch(1);
+    launchForm->addRow(QString(), accountRow);
+
     layout->addWidget(launchGroup);
 
     auto* downloadGroup = new QGroupBox(this);
@@ -50,6 +67,11 @@ CoreSettingsPage::CoreSettingsPage(QWidget* parent) : QWidget(parent)
     layout->addStretch(1);
     loadSettings();
     retranslate();
+
+    connect(m_manageAccounts, &QPushButton::clicked, this, [this] {
+        KomorebiAccountsDialog dialog(this);
+        dialog.exec();
+    });
 }
 
 CoreSettingsPage::~CoreSettingsPage() = default;
@@ -58,6 +80,7 @@ void CoreSettingsPage::loadSettings()
 {
     m_useCoreLauncher->setChecked(APPLICATION->settings()->get("UseCoreLauncher").toBool());
     m_useCoreCreation->setChecked(APPLICATION->settings()->get("UseCoreInstanceCreation").toBool());
+    m_useCoreAuth->setChecked(APPLICATION->settings()->get("UseCoreAuth").toBool());
 
     const QString source = APPLICATION->settings()->get("DownloadSource").toString();
     const int index = m_downloadSource->findData(source);
@@ -68,6 +91,7 @@ bool CoreSettingsPage::apply()
 {
     APPLICATION->settings()->set("UseCoreLauncher", m_useCoreLauncher->isChecked());
     APPLICATION->settings()->set("UseCoreInstanceCreation", m_useCoreCreation->isChecked());
+    APPLICATION->settings()->set("UseCoreAuth", m_useCoreAuth->isChecked());
     APPLICATION->settings()->set("DownloadSource", m_downloadSource->currentData().toString());
     return true;
 }
@@ -83,6 +107,12 @@ void CoreSettingsPage::retranslate()
     m_creationLabel->setText(
         tr("The wizard asks for a name, a game version and, if wanted, a mod loader, and writes the instance "
            "through the core. Turning this off falls back to the launcher's original dialog."));
+
+    m_useCoreAuth->setText(tr("Play as the Komorebi account"));
+    m_authLabel->setText(
+        tr("A Komorebi account starts the game through the core's own Microsoft sign-in. Turning this off, or "
+           "having no account here, uses the launcher's original account."));
+    m_manageAccounts->setText(tr("Manage accounts…"));
 
     m_sourceLabel->setText(tr("Downloads come from"));
     m_hint->setText(tr("Official uses the addresses the version manifests name. A mirror is used where it has "

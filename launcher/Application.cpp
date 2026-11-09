@@ -42,6 +42,7 @@
 
 #include "Application.h"
 #include "komorebi/legacy/CoreLaunchAdapter.h"
+#include "komorebi/services/auth/TokenVault.h"
 #include "BuildConfig.h"
 
 #include "DataMigrationTask.h"
@@ -767,6 +768,10 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("UseCoreLauncher", true);
         // Whether the "add instance" dialog is the core one or the launcher's original.
         m_settings->registerSetting("UseCoreInstanceCreation", true);
+        // Whether launching plays as the Komorebi account the core signed in with, and which account
+        // that is (a profile id). Empty means the account is not set up yet.
+        m_settings->registerSetting("UseCoreAuth", true);
+        m_settings->registerSetting("CoreAccount", QString());
 
         // Console
         m_settings->registerSetting("ShowConsole", false);
@@ -1688,7 +1693,26 @@ bool Application::launch(MinecraftInstance* instance,
 
         {
             auto* parent = window ? static_cast<QWidget*>(window) : static_cast<QWidget*>(m_mainWindow);
-            const auto account = accountToUse ? accountToUse : m_accounts->defaultAccount();
+            auto account = accountToUse ? accountToUse : m_accounts->defaultAccount();
+
+            /*
+             * The Komorebi account, when the player signed in with one and chose to launch with it.
+             * It is read from the core's own store; an account that is not there (removed, or the file
+             * was never written) simply leaves the launcher's account in charge.
+             */
+            Komorebi::Services::AuthSession coreAccount;
+            if (m_settings->get("UseCoreAuth").toBool()) {
+                const QString wanted = m_settings->get("CoreAccount").toString();
+                if (!wanted.isEmpty()) {
+                    for (const auto& candidate : Komorebi::Services::TokenVault::forDataRoot(m_dataPath).load()) {
+                        if (candidate.uuid == wanted) {
+                            coreAccount = candidate;
+                            break;
+                        }
+                    }
+                }
+            }
+
             instance->setCrashed(false);
 
             // Playtime is recorded around the game, not around the fetching: the clock starts when the
@@ -1703,7 +1727,7 @@ bool Application::launch(MinecraftInstance* instance,
             };
 
             const bool accepted = Komorebi::Legacy::launchInstance(
-                instance, account,
+                instance, account, coreAccount,
                 [instance, playing](const QString&) {
                     // The instance already counts as running from the moment the launcher accepted the
                     // launch, so nothing has to happen when the game finally appears -- except that the

@@ -43,6 +43,7 @@
 #include "InstanceList.h"
 #include "minecraft/auth/AccountList.h"
 #include "komorebi/app/LaunchProbe.h"
+#include "komorebi/ui/AccountsDialog.h"
 
 #if defined Q_OS_WIN32
 #include "console/WindowsConsole.h"
@@ -79,6 +80,7 @@ int main(int argc, char* argv[])
     int developmentKillAfterMs = 0;
     bool developmentOpenNewInstanceDialog = false;
     bool developmentOpenSettings = false;
+    bool developmentOpenAccounts = false;
     QList<QByteArray> keptArguments;
     keptArguments.append(QByteArray(argv[0]));
     for (int index = 1; index < argc; ++index) {
@@ -102,6 +104,8 @@ int main(int argc, char* argv[])
             developmentOpenNewInstanceDialog = true;
         else if (key == "--komorebi-settings")
             developmentOpenSettings = true;
+        else if (key == "--komorebi-accounts")
+            developmentOpenAccounts = true;
     }
 
     QList<char*> filteredArgv;
@@ -219,6 +223,14 @@ int main(int argc, char* argv[])
                         return;
                     if (auto* action = window->findChild<QAction*>(QStringLiteral("actionSettings")))
                         action->trigger();
+                });
+            }
+
+            if (developmentOpenAccounts) {
+                QTimer::singleShot(1200, APPLICATION, [] {
+                    auto* window = APPLICATION->showMainWindow();
+                    KomorebiAccountsDialog dialog(window);
+                    dialog.exec();
                 });
             }
 

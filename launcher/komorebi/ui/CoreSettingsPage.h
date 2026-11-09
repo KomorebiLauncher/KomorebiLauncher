@@ -18,6 +18,7 @@
 class QCheckBox;
 class QComboBox;
 class QLabel;
+class QPushButton;
 
 class CoreSettingsPage : public QWidget, public BasePage {
     Q_OBJECT
@@ -37,9 +38,12 @@ class CoreSettingsPage : public QWidget, public BasePage {
 
     QCheckBox* m_useCoreLauncher = nullptr;
     QCheckBox* m_useCoreCreation = nullptr;
+    QCheckBox* m_useCoreAuth = nullptr;
+    QPushButton* m_manageAccounts = nullptr;
     QComboBox* m_downloadSource = nullptr;
     QLabel* m_launchLabel = nullptr;
     QLabel* m_creationLabel = nullptr;
+    QLabel* m_authLabel = nullptr;
     QLabel* m_sourceLabel = nullptr;
     QLabel* m_hint = nullptr;
 };

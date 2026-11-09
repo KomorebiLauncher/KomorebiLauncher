@@ -2,6 +2,7 @@
 #include "komorebi/services/auth/MicrosoftAuth.h"
 
 #include <QDateTime>
+#include <QFile>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QNetworkAccessManager>
@@ -47,6 +48,31 @@ MicrosoftAuth::MicrosoftAuth(QNetworkAccessManager* network, QObject* parent) : 
     m_endpoints.xsts = QUrl(QStringLiteral("https://xsts.auth.xboxlive.com/xsts/authorize"));
     m_endpoints.minecraftLogin = QUrl(QStringLiteral("https://api.minecraftservices.com/authentication/login_with_xbox"));
     m_endpoints.minecraftProfile = QUrl(QStringLiteral("https://api.minecraftservices.com/minecraft/profile"));
+    applyEndpointOverride(m_endpoints);
+}
+
+void MicrosoftAuth::applyEndpointOverride(Endpoints& endpoints)
+{
+    const QString path = qEnvironmentVariable("KOMOREBI_MSA_ENDPOINTS");
+    if (path.isEmpty())
+        return;
+
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return;
+    const QJsonObject object = QJsonDocument::fromJson(file.readAll()).object();
+
+    const auto take = [&object](const char* key, QUrl& target) {
+        const QString value = object.value(QString::fromLatin1(key)).toString();
+        if (!value.isEmpty())
+            target = QUrl(value);
+    };
+    take("deviceCode", endpoints.deviceCode);
+    take("token", endpoints.token);
+    take("xboxUser", endpoints.xboxUser);
+    take("xsts", endpoints.xsts);
+    take("minecraftLogin", endpoints.minecraftLogin);
+    take("minecraftProfile", endpoints.minecraftProfile);
 }
 
 MicrosoftAuth::~MicrosoftAuth() = default;
