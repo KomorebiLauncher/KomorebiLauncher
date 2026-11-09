@@ -70,7 +70,14 @@ QStringList classpathEntries(const VersionJson& merged, const LaunchOptions& opt
             continue;
         entries.append(path);
     }
-    if (!options.clientJarPath.isEmpty())
+    // A loader that ships a patched game jar (Forge names it with the "client" classifier) replaces the
+    // jar the version names; putting both on the path gives the runtime two copies of the game module.
+    bool patchedClientJar = false;
+    for (const auto& library : merged.libraries) {
+        if (library.name.contains(QStringLiteral(":client")))
+            patchedClientJar = true;
+    }
+    if (!patchedClientJar && !options.clientJarPath.isEmpty())
         entries.append(options.clientJarPath);
     return entries;
 }

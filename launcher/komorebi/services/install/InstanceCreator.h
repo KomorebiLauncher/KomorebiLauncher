@@ -42,6 +42,10 @@ struct InstanceCreateRequest {
     QString loaderMetaUrl = QStringLiteral("https://meta.fabricmc.net");
     /// Where Quilt's metadata comes from.
     QString quiltMetaUrl = QStringLiteral("https://meta.quiltmc.org");
+    /// Which Forge release to install when the loader is "forge".
+    QString forgeVersion;
+    /// The Java to run a loader installer with; empty asks the launcher's discovery for one.
+    QString javaPath;
 };
 
 class InstanceCreator : public QObject {
@@ -64,10 +68,13 @@ class InstanceCreator : public QObject {
     void fetchLoaderList();
     void fetchLoaderProfile(const QString& loaderVersion);
     void writeComponent(const QString& uid, const QString& version, const QJsonObject& component,
-                        const QString& releaseTime, const QString& type);
+                        const QString& releaseTime, const QString& type, bool replaceExisting = true);
     void writeInstance();
     void fetchLibraries();
     void fetchAssets();
+    void installForge();
+    void readForgeInstall(const QString& installRoot);
+    void copyInstallerLibraries(const QString& installRoot);
     void fetch(const QString& url, const QString& target, const QString& sha1, const std::function<void()>& next);
     void fail(const QString& reason);
     void finish();
