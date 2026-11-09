@@ -69,7 +69,20 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
     model->setStopOnOverflow(shouldStopOnConsoleOverflow(instance->settings()));
     instance->setCoreLogModel(model);
 
-    QObject::connect(task, &Services::InstanceLaunch::output, APPLICATION, [model](const QString& line) {
+    // The launcher's own message about the access token and profile must not end up in a log the
+    // player can copy out; the game prints them in some of its messages.
+    QMap<QString, QString> censor;
+    if (!who.accessToken.isEmpty() && who.accessToken != QLatin1String("0"))
+        censor.insert(who.accessToken, QStringLiteral("<ACCESS TOKEN>"));
+    if (!who.uuid.isEmpty())
+        censor.insert(who.uuid, QStringLiteral("<PROFILE ID>"));
+
+    QObject::connect(task, &Services::InstanceLaunch::status, APPLICATION, [model](const QString& text) {
+        model->append(MessageLevel::Launcher, text);
+    });
+    QObject::connect(task, &Services::InstanceLaunch::output, APPLICATION, [model, censor](QString line) {
+        for (auto it = censor.begin(); it != censor.end(); ++it)
+            line.replace(it.key(), it.value());
         model->append(LogParser::guessLevel(line, model->previousLevel()), line);
     });
     QObject::connect(task, &Services::InstanceLaunch::failed, APPLICATION, [model](const QString& reason) {
@@ -90,11 +103,14 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
         if (onAborted)
             onAborted();
     });
-    QObject::connect(task, &Services::InstanceLaunch::gameFinished, APPLICATION, [onFinished, forget](int exitCode) {
-        forget();
-        if (onFinished)
-            onFinished(exitCode);
-    });
+    QObject::connect(task, &Services::InstanceLaunch::gameFinished, APPLICATION,
+                     [onFinished, forget, model](int exitCode) {
+                         model->append(MessageLevel::Launcher,
+                                       QObject::tr("The game exited with code %1.").arg(exitCode));
+                         forget();
+                         if (onFinished)
+                             onFinished(exitCode);
+                     });
     task->start(options, who);
     return true;
 }

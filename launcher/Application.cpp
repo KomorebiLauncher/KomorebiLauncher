@@ -1695,6 +1695,10 @@ bool Application::launch(MinecraftInstance* instance,
                     if (exitCode != 0)
                         instance->setCrashed(true);
                     subRunningInstance();
+                    // The old path adds a step for this after the game; the core path has to do it
+                    // itself, since there is no step list any more.
+                    if (instance->settings()->get("QuitAfterGameStop").toBool())
+                        QMetaObject::invokeMethod(this, &QCoreApplication::quit, Qt::QueuedConnection);
                 },
                 [this, instance] {
                     instance->setRunning(false);
