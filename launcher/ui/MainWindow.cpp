@@ -1067,6 +1067,11 @@ void MainWindow::addInstance(const QString& url, const QMap<QString, QString>& e
         if (dialog.exec() != QDialog::Accepted)
             return;
         APPLICATION->instances()->loadList();
+        // The instance just made is the one the player is about to launch: point the window at it
+        // instead of leaving the selection on whatever happened to be selected before.
+        const QString created = QFileInfo(dialog.createdInstanceDirectory()).fileName();
+        if (!created.isEmpty())
+            setSelectedInstanceById(created);
         return;
     }
 

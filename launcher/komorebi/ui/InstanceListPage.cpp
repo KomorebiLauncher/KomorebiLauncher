@@ -188,10 +188,17 @@ InstanceListPage::~InstanceListPage() = default;
 
 void InstanceListPage::reload()
 {
+    // A reload replaces every row, which drops the selection with them. The window's idea of which
+    // instance it is showing should survive a rename or a refresh, so it is remembered and put back.
+    const QString selected = m_view->currentIndex().isValid() ? m_model->at(m_view->currentIndex().row()).id : QString();
+
     const auto instances = m_repository->instances();
     m_model->setInstances(instances);
     m_empty->setVisible(instances.isEmpty());
     m_view->setVisible(!instances.isEmpty());
+
+    if (!selected.isEmpty())
+        selectInstance(selected);
 }
 
 void InstanceListPage::selectInstance(const QString& id)

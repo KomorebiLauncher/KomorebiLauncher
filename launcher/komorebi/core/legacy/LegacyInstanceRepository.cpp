@@ -77,7 +77,21 @@ InstanceInfo describe(MinecraftInstance* instance, const QString& group)
 
 class LegacyRepository final : public InstanceRepository {
    public:
-    explicit LegacyRepository(QObject* parent) : InstanceRepository(parent) {}
+    explicit LegacyRepository(QObject* parent) : InstanceRepository(parent)
+    {
+        // The list behind this repository is the launcher's own, and it is the one that knows when an
+        // instance was added, removed, renamed or moved. Without hearing from it the new page would
+        // show what existed the moment the window opened, for as long as the window stays open.
+        auto* app = APPLICATION_DYN;
+        if (!app || !app->instances())
+            return;
+        auto* list = app->instances();
+        connect(list, &QAbstractItemModel::modelReset, this, &LegacyRepository::notifyChanged);
+        connect(list, &QAbstractItemModel::rowsInserted, this, &LegacyRepository::notifyChanged);
+        connect(list, &QAbstractItemModel::rowsRemoved, this, &LegacyRepository::notifyChanged);
+        connect(list, &QAbstractItemModel::dataChanged, this, &LegacyRepository::notifyChanged);
+        connect(list, &QAbstractItemModel::layoutChanged, this, &LegacyRepository::notifyChanged);
+    }
 
     QList<InstanceInfo> instances() const override
     {
@@ -116,6 +130,9 @@ class LegacyRepository final : public InstanceRepository {
             return {};
         return app->instances()->getGroups();
     }
+
+   private:
+    void notifyChanged() { emit changed(); }
 };
 
 }  // namespace
