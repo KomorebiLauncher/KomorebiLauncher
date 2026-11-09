@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QNetworkAccessManager>
 #include <QProcess>
+#include <QProcessEnvironment>
 
 #include "komorebi/core/instance/InstanceFolder.h"
 #include "komorebi/core/asset/AssetLayout.h"
@@ -37,18 +38,29 @@ std::optional<Core::LaunchPlan> buildPlan(const Core::VersionJson& manifest, con
                                           const LaunchAccount& account, QString* error)
 {
     const int required = manifest.javaMajor > 0 ? manifest.javaMajor : 8;
-    const auto java = choose(discover(options.dataRoot), required);
-    if (!java) {
-        if (error)
-            *error = QObject::tr("no Java %1 was found on this machine").arg(required);
-        return std::nullopt;
+    QString javaPath = options.javaPathOverride;
+    if (!javaPath.isEmpty()) {
+        // An instance may name its own Java; using the one it names is the whole point of the override.
+        if (!QFileInfo(javaPath).isExecutable()) {
+            if (error)
+                *error = QObject::tr("the Java this instance names does not exist: %1").arg(javaPath);
+            return std::nullopt;
+        }
+    } else {
+        const auto java = choose(discover(options.dataRoot), required);
+        if (!java) {
+            if (error)
+                *error = QObject::tr("no Java %1 was found on this machine").arg(required);
+            return std::nullopt;
+        }
+        javaPath = java->path;
     }
 
     const QString natives = QDir(options.instanceDirectory).filePath(QStringLiteral("natives"));
     QDir().mkpath(natives);
 
     Core::LaunchOptions launch;
-    launch.javaPath = java->path;
+    launch.javaPath = javaPath;
     launch.gameDirectory = options.instanceDirectory;
     launch.assetsDirectory = QDir(options.dataRoot).filePath(QStringLiteral("assets"));
     launch.librariesDirectory = QDir(options.dataRoot).filePath(QStringLiteral("libraries"));
@@ -65,6 +77,9 @@ std::optional<Core::LaunchPlan> buildPlan(const Core::VersionJson& manifest, con
     launch.minMemoryMb = options.minMemoryMb;
     launch.maxMemoryMb = options.maxMemoryMb;
     launch.extraJvmArguments = options.extraJvmArguments;
+    launch.serverAddress = options.serverAddress;
+    launch.serverPort = options.serverPort;
+    launch.worldToJoin = options.worldToJoin;
 
     auto plan = Core::buildLaunchPlan(manifest, launch);
     if (!plan.ok()) {
@@ -270,6 +285,13 @@ void InstanceLaunch::stepLaunch()
     game->setArguments(plan->arguments);
     game->setWorkingDirectory(plan->workingDirectory);
     game->setProcessChannelMode(QProcess::MergedChannels);
+
+    if (!m_options.environment.isEmpty()) {
+        auto environment = QProcessEnvironment::systemEnvironment();
+        for (auto it = m_options.environment.begin(); it != m_options.environment.end(); ++it)
+            environment.insert(it.key(), it.value());
+        game->setProcessEnvironment(environment);
+    }
 
     // The output is read here rather than redirected straight to a file, so the same lines can go to
     // the launcher as well: they are what the instance's console page shows while the game runs.

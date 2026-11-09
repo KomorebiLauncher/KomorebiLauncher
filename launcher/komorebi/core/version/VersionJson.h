@@ -84,6 +84,7 @@ struct VersionJson {
     QStringList gameArguments;  ///< plain strings from arguments.game
     QStringList jvmArguments;   ///< plain strings from arguments.jvm
     QStringList legacyArguments;  ///< minecraftArguments, split on spaces, for old versions
+    QStringList traits;           ///< +traits, which say what the version's launcher features are
 
     /// Parses a manifest. Returns an empty value and fills `error` when the document is not one.
     static std::optional<VersionJson> parse(const QJsonObject& object, QString* error = nullptr);

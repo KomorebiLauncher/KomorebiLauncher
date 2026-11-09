@@ -13,6 +13,7 @@
 #pragma once
 
 #include <QList>
+#include <QMap>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -49,6 +50,14 @@ struct InstanceLaunchOptions {
     int minMemoryMb = 512;
     int maxMemoryMb = 2048;
     QStringList extraJvmArguments;
+    /// A java to use instead of the one the core would pick; empty means pick one.
+    QString javaPathOverride;
+    /// Variables to put in the game's environment, on top of the system's.
+    QMap<QString, QString> environment;
+    /// A server to join once the game starts, or a world to open.
+    QString serverAddress;
+    int serverPort = 25565;
+    QString worldToJoin;
     DownloadSource source = DownloadSource::Official;
 };
 

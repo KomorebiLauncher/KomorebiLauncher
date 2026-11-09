@@ -40,6 +40,12 @@ struct LaunchOptions {
     int maxMemoryMb = 2048;
     QStringList extraJvmArguments;
     QStringList extraGameArguments;
+
+    /// A server the game should join once it starts, as a launcher feature; port defaults to Minecraft's.
+    QString serverAddress;
+    int serverPort = 25565;
+    /// A world to open directly, for versions whose launcher features allow it.
+    QString worldToJoin;
 };
 
 /// A command line that can be started, or the reasons it cannot be.

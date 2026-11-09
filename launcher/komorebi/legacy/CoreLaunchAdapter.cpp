@@ -4,6 +4,9 @@
 #include <QHash>
 #include <QPointer>
 
+#include <QJsonDocument>
+#include <QJsonObject>
+
 #include "Application.h"
 #include "QObjectPtr.h"
 #include "launch/LogModel.h"
@@ -55,6 +58,42 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
     options.minMemoryMb = instance->settings()->get("MinMemAlloc").toInt();
     options.maxMemoryMb = instance->settings()->get("MaxMemAlloc").toInt();
     options.source = Services::downloadSourceFromId(APPLICATION->settings()->get("DownloadSource").toString());
+
+    /*
+     * The instance's own settings. These are what the old path read too: the Java it names, the JVM
+     * arguments (which carry the agents a loader or an auth server adds), environment overrides, and a
+     * server or world to join once the game starts.
+     */
+    options.extraJvmArguments = instance->extraArguments();
+
+    if (instance->settings()->get("OverrideJavaLocation").toBool()) {
+        const QString javaPath = instance->settings()->get("JavaPath").toString();
+        if (!javaPath.isEmpty())
+            options.javaPathOverride = javaPath;
+    }
+
+    const auto envDocument = QJsonDocument::fromJson(instance->settings()->get("Env").toString().toUtf8());
+    if (envDocument.isObject()) {
+        const auto envObject = envDocument.object();
+        for (auto it = envObject.begin(); it != envObject.end(); ++it)
+            options.environment.insert(it.key(), it.value().toString());
+    }
+
+    if (instance->settings()->get("JoinServerOnLaunch").toBool()) {
+        const QString address = instance->settings()->get("JoinServerOnLaunchAddress").toString().trimmed();
+        if (!address.isEmpty()) {
+            // "host" or "host:port"; a bare host joins the default port.
+            const int colon = address.lastIndexOf(QLatin1Char(':'));
+            bool portOk = false;
+            const int port = colon > 0 ? address.mid(colon + 1).toInt(&portOk) : 0;
+            options.serverAddress = portOk ? address.left(colon) : address;
+            options.serverPort = portOk ? port : 25565;
+        } else {
+            const QString world = instance->settings()->get("JoinWorldOnLaunch").toString().trimmed();
+            if (!world.isEmpty())
+                options.worldToJoin = world;
+        }
+    }
 
     Services::LaunchAccount who;
     who.username = account->profileName();

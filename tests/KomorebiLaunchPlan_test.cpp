@@ -16,6 +16,8 @@ class KomorebiLaunchPlanTest : public QObject {
     void oldVersionGetsTheClassPathToldToIt();
     void classPathSkipsLibrariesForOtherPlatforms();
     void missingPiecesAreReported();
+    void joinsAServerTheQuickPlayWay();
+    void joinsAServerTheOldWay();
 };
 
 namespace {
@@ -123,6 +125,39 @@ void KomorebiLaunchPlanTest::classPathSkipsLibrariesForOtherPlatforms()
     QCOMPARE(entries.last(), QStringLiteral("C:/instances/test/1.20.1.jar"));
 }
 
+void KomorebiLaunchPlanTest::joinsAServerTheQuickPlayWay()
+{
+    auto manifest = modernManifest();
+    manifest.traits = { QStringLiteral("feature:is_quick_play_multiplayer") };
+
+    auto options = optionsFor();
+    options.serverAddress = QStringLiteral("mc.example.org");
+    options.serverPort = 25566;
+
+    const auto plan = buildLaunchPlan(manifest, options, kWindows);
+    QVERIFY2(plan.ok(), qPrintable(plan.problems.join(QStringLiteral("; "))));
+
+    const int at = plan.arguments.indexOf(QStringLiteral("--quickPlayMultiplayer"));
+    QVERIFY(at > 0);
+    QCOMPARE(plan.arguments.at(at + 1), QStringLiteral("mc.example.org:25566"));
+}
+
+void KomorebiLaunchPlanTest::joinsAServerTheOldWay()
+{
+    // Without the trait the game takes --server/--port, which is what versions before quick play do.
+    const auto plan = buildLaunchPlan(modernManifest(), [&] {
+        auto options = optionsFor();
+        options.serverAddress = QStringLiteral("mc.example.org");
+        return options;
+    }(), kWindows);
+    QVERIFY2(plan.ok(), qPrintable(plan.problems.join(QStringLiteral("; "))));
+
+    const int at = plan.arguments.indexOf(QStringLiteral("--server"));
+    QVERIFY(at > 0);
+    QCOMPARE(plan.arguments.at(at + 1), QStringLiteral("mc.example.org"));
+    QCOMPARE(plan.arguments.at(at + 2), QStringLiteral("--port"));
+    QCOMPARE(plan.arguments.at(at + 3), QStringLiteral("25565"));
+}
 void KomorebiLaunchPlanTest::missingPiecesAreReported()
 {
     auto options = optionsFor();

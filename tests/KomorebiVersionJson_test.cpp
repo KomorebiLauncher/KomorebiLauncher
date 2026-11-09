@@ -81,6 +81,7 @@ void KomorebiVersionJsonTest::parseComponentManifest()
         "version": "26.4-snapshot-7",
         "mainClass": "net.minecraft.client.main.Main",
         "compatibleJavaMajors": [ 25, 21 ],
+        "+traits": [ "feature:is_quick_play_multiplayer" ],
         "mainJar": { "name": "com.mojang:minecraft:26.4-snapshot-7:client" },
         "+jvmArgs": [ "-Dexample=1" ],
         "minecraftArguments": "--username ${auth_player_name}",
@@ -96,6 +97,7 @@ void KomorebiVersionJsonTest::parseComponentManifest()
     QCOMPARE(manifest->mainJarName, QStringLiteral("com.mojang:minecraft:26.4-snapshot-7:client"));
     QCOMPARE(manifest->jvmArguments, QStringList({ QStringLiteral("-Dexample=1") }));
     QCOMPARE(manifest->libraries.size(), 1);
+    QCOMPARE(manifest->traits, QStringList{ QStringLiteral("feature:is_quick_play_multiplayer") });
 }
 void KomorebiVersionJsonTest::parseRejectsWhatIsNotAManifest()
 {

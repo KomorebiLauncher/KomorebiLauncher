@@ -132,6 +132,22 @@ LaunchPlan buildLaunchPlan(const VersionJson& merged, const LaunchOptions& optio
         plan.arguments << substituteAll(merged.gameArguments, values);
 
     plan.arguments << options.extraGameArguments;
+
+    // Joining a server or a world is a launcher feature named by the manifest's traits: newer versions
+    // take it as quick play, older ones as --server/--port.
+    if (!options.serverAddress.isEmpty()) {
+        const auto quickPlay = merged.traits.contains(QStringLiteral("feature:is_quick_play_multiplayer"));
+        if (quickPlay) {
+            plan.arguments << QStringLiteral("--quickPlayMultiplayer")
+                           << QStringLiteral("%1:%2").arg(options.serverAddress).arg(options.serverPort);
+        } else {
+            plan.arguments << QStringLiteral("--server") << options.serverAddress << QStringLiteral("--port")
+                           << QString::number(options.serverPort);
+        }
+    } else if (!options.worldToJoin.isEmpty()
+               && merged.traits.contains(QStringLiteral("feature:is_quick_play_singleplayer"))) {
+        plan.arguments << QStringLiteral("--quickPlaySingleplayer") << options.worldToJoin;
+    }
     return plan;
 }
 

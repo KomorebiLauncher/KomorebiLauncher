@@ -198,6 +198,11 @@ std::optional<VersionJson> VersionJson::parse(const QJsonObject& object, QString
     manifest.jvmArguments += readArgumentArray(arguments.value(QStringLiteral("jvm")));
     manifest.legacyArguments = splitLegacyArguments(object.value(QStringLiteral("minecraftArguments")).toString());
 
+    for (const auto& trait : object.value(QStringLiteral("+traits")).toArray()) {
+        if (trait.isString())
+            manifest.traits.append(trait.toString());
+    }
+
     return manifest;
 }
 
