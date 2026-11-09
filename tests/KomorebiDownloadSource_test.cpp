@@ -41,13 +41,18 @@ void KomorebiDownloadSourceTest::mapsAssetsOntoTheMirror()
 
 void KomorebiDownloadSourceTest::mapsMavenHostsOntoTheMirror()
 {
-    for (const auto* host : { "maven.minecraftforge.net", "maven.fabricmc.net", "maven.quiltmc.org" }) {
+    for (const auto* host : { "maven.minecraftforge.net", "maven.fabricmc.net" }) {
         const auto mirrored =
             sourceUrl(QUrl(QStringLiteral("https://") + host + QStringLiteral("/org/example/lib/1.0/lib-1.0.jar")),
                       DownloadSource::Bmclapi);
         QCOMPARE(mirrored.host(), QStringLiteral("bmclapi2.bangbang93.com"));
         QCOMPARE(mirrored.path(), QStringLiteral("/maven/org/example/lib/1.0/lib-1.0.jar"));
     }
+
+    // The mirror does not keep Quilt's repository, so its addresses are left as they are rather than
+    // pointed at a path that answers 404.
+    const QUrl quilt(QStringLiteral("https://maven.quiltmc.org/repository/release/org/example/lib/1.0/lib-1.0.jar"));
+    QCOMPARE(sourceUrl(quilt, DownloadSource::Bmclapi), quilt);
 }
 
 void KomorebiDownloadSourceTest::keepsPistonPaths()
