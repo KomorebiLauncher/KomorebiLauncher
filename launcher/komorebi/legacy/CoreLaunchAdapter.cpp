@@ -7,7 +7,10 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
+#include <QFileInfo>
+
 #include "Application.h"
+#include "Commandline.h"
 #include "QObjectPtr.h"
 #include "launch/LogModel.h"
 #include "minecraft/CrashAnalysis.h"
@@ -20,6 +23,39 @@
 namespace Komorebi::Legacy {
 
 namespace {
+
+/// The JVM arguments the launcher always adds, plus the ones the instance names.
+///
+/// This deliberately avoids MinecraftInstance::javaArguments(): that one needs the instance's components
+/// to have been resolved, and a freshly created instance has not been through that. Everything here comes
+/// from settings, which is what the launch is allowed to depend on.
+QStringList jvmArgumentsFor(MinecraftInstance* instance)
+{
+    QStringList arguments{ QStringLiteral("-Duser.language=en") };
+    arguments += Commandline::splitArgs(instance->settings()->get("JvmArgs").toString());
+
+    const auto nativeLibrary = [instance](const QString& useSetting, const QString& customSetting, const QString& detected) {
+        if (!instance->settings()->get(useSetting).toBool())
+            return QString();
+        const QString custom = instance->settings()->get(customSetting).toString();
+        const QString path = custom.isEmpty() ? detected : custom;
+        return QFileInfo(path).isFile() ? QFileInfo(path).absoluteFilePath() : QString();
+    };
+    const QString openal = nativeLibrary(QStringLiteral("UseNativeOpenAL"), QStringLiteral("CustomOpenALPath"),
+                                         APPLICATION->m_detectedOpenALPath);
+    const QString glfw = nativeLibrary(QStringLiteral("UseNativeGLFW"), QStringLiteral("CustomGLFWPath"),
+                                       APPLICATION->m_detectedGLFWPath);
+    const QString sdl = nativeLibrary(QStringLiteral("UseNativeSDL"), QStringLiteral("CustomSDLPath"),
+                                      APPLICATION->m_detectedSDLPath);
+    if (!openal.isEmpty())
+        arguments.append(QStringLiteral("-Dorg.lwjgl.openal.libname=") + openal);
+    if (!glfw.isEmpty())
+        arguments.append(QStringLiteral("-Dorg.lwjgl.glfw.libname=") + glfw);
+    if (!sdl.isEmpty())
+        arguments.append(QStringLiteral("-Dorg.lwjgl.sdl.libname=") + sdl);
+
+    return arguments;
+}
 
 /// The launches this run started, so the launcher can stop one without owning its process.
 QHash<QString, QPointer<Services::InstanceLaunch>> s_launches;
@@ -64,9 +100,7 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
      * arguments (which carry the agents a loader or an auth server adds), environment overrides, and a
      * server or world to join once the game starts.
      */
-    // javaArguments() is extraArguments() plus the flags the launcher always adds (the game language
-    // pin among them), which is what the old path handed to java.
-    options.extraJvmArguments = instance->javaArguments();
+    options.extraJvmArguments = jvmArgumentsFor(instance);
 
     if (instance->settings()->get("OverrideJavaLocation").toBool()) {
         const QString javaPath = instance->settings()->get("JavaPath").toString();

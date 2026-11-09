@@ -1660,22 +1660,29 @@ bool Application::launch(MinecraftInstance* instance,
 {
     if (m_updateRunning) {
         qDebug() << "Cannot launch instances while an update is running. Please try again when updates are completed.";
-    } else if (instance->canLaunch()) {
-        QMutexLocker locker(&m_instanceExtrasMutex);
-        auto& extras = m_instanceExtras[instance->id()];
-        auto* window = extras.window;
-        if (window) {
-            if (!window->saveAll()) {
-                return false;
-            }
+        return false;
+    }
+
+    /*
+     * The core's launch path goes first, and keeps to what the instance's folder and its settings say: it
+     * must not depend on the launcher having resolved the instance's components, because a freshly created
+     * instance has not been through that yet, and waiting for it is how a launch hangs.
+     */
+    if (m_settings->get("UseCoreLauncher").toBool()) {
+        if (instance->isRunning()) {
+            showInstanceWindow(instance, QStringLiteral("console"));
+            return true;
         }
 
-        /*
-         * The core's launch path is the default now, and reaches the old one only when the setting says
-         * so. It fetches what the instance is missing before starting, and reports the game's exit so
-         * the launcher can let go of it the same way the controller does.
-         */
-        if (m_settings->get("UseCoreLauncher").toBool()) {
+        InstanceWindow* window = nullptr;
+        {
+            QMutexLocker locker(&m_instanceExtrasMutex);
+            window = m_instanceExtras[instance->id()].window;
+        }
+        if (window && !window->saveAll())
+            return false;
+
+        {
             auto* parent = window ? static_cast<QWidget*>(window) : static_cast<QWidget*>(m_mainWindow);
             const auto account = accountToUse ? accountToUse : m_accounts->defaultAccount();
             instance->setCrashed(false);
@@ -1740,12 +1747,24 @@ bool Application::launch(MinecraftInstance* instance,
                     if (m_mainWindow)
                         m_mainWindow->statusBar()->showMessage(status, 5000);
                 });
-            if (accepted) {
-                // Running from here on: the launch may still fail while fetching, which undoes this, but
-                // until then the instance cannot be started a second time by another click.
-                instance->setRunning(true);
-                addRunningInstance();
-                return true;
+            if (!accepted)
+                return false;
+
+            // Running from here on: the launch may still fail while fetching, which undoes this, but until
+            // then the instance cannot be started a second time by another click.
+            instance->setRunning(true);
+            addRunningInstance();
+        }
+        return true;
+    }
+
+    if (instance->canLaunch()) {
+        QMutexLocker locker(&m_instanceExtrasMutex);
+        auto& extras = m_instanceExtras[instance->id()];
+        auto* window = extras.window;
+        if (window) {
+            if (!window->saveAll()) {
+                return false;
             }
         }
 
