@@ -99,6 +99,7 @@
 #include <QLibraryInfo>
 #include <QList>
 #include <QNetworkAccessManager>
+#include <QStatusBar>
 #include <QStringList>
 #include <QStringLiteral>
 #include <QStyleFactory>
@@ -1677,23 +1678,33 @@ bool Application::launch(MinecraftInstance* instance,
             auto* parent = window ? static_cast<QWidget*>(window) : static_cast<QWidget*>(m_mainWindow);
             const auto account = accountToUse ? accountToUse : m_accounts->defaultAccount();
             instance->setCrashed(false);
+
+            // The same courtesy the old path pays on a failed launch: the console is where the reason is.
+            const auto showConsoleOnError = [this, instance] {
+                if (instance->settings()->get("ShowConsoleOnError").toBool())
+                    showInstanceWindow(instance, QStringLiteral("console"));
+            };
+
             const bool accepted = Komorebi::Legacy::launchInstance(
                 instance, account,
                 [](const QString&) {
                     // The instance already counts as running from the moment the launcher accepted the
                     // launch, so nothing has to happen when the game finally appears.
                 },
-                [this, parent, instance](const QString& reason) {
+                [this, parent, instance, showConsoleOnError](const QString& reason) {
                     instance->setRunning(false);
                     subRunningInstance();
+                    showConsoleOnError();
                     CustomMessageBox::selectable(parent, QObject::tr("Could not start the instance"), reason, QMessageBox::Warning)
                         ->show();
                 },
                 nullptr,
-                [this, instance](int exitCode) {
+                [this, instance, showConsoleOnError](int exitCode) {
                     instance->setRunning(false);
-                    if (exitCode != 0)
+                    if (exitCode != 0) {
                         instance->setCrashed(true);
+                        showConsoleOnError();
+                    }
                     subRunningInstance();
                     // The old path adds a step for this after the game; the core path has to do it
                     // itself, since there is no step list any more.
@@ -1703,6 +1714,10 @@ bool Application::launch(MinecraftInstance* instance,
                 [this, instance] {
                     instance->setRunning(false);
                     subRunningInstance();
+                },
+                [this](const QString& status) {
+                    if (m_mainWindow)
+                        m_mainWindow->statusBar()->showMessage(status, 5000);
                 });
             if (accepted) {
                 // Running from here on: the launch may still fail while fetching, which undoes this, but

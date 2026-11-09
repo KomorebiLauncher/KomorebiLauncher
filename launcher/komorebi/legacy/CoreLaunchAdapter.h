@@ -31,7 +31,8 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
                     const std::function<void(const QString& logPath)>& onStarted,
                     const std::function<void(const QString& error)>& onFailed, QString* error = nullptr,
                     const std::function<void(int exitCode)>& onFinished = nullptr,
-                    const std::function<void()>& onAborted = nullptr);
+                    const std::function<void()>& onAborted = nullptr,
+                    const std::function<void(const QString& status)>& onStatus = nullptr);
 
 /// Stops the launch, or the game, that was started for this instance. False when it was not started here.
 bool killInstance(const QString& instanceId);

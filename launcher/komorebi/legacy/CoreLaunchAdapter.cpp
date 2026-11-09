@@ -7,6 +7,7 @@
 #include "Application.h"
 #include "QObjectPtr.h"
 #include "launch/LogModel.h"
+#include "minecraft/CrashAnalysis.h"
 #include "logs/LogParser.h"
 #include "BaseInstance.h"
 
@@ -34,7 +35,8 @@ bool killInstance(const QString& instanceId)
 bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& account,
                     const std::function<void(const QString& logPath)>& onStarted,
                     const std::function<void(const QString& error)>& onFailed, QString* error,
-                    const std::function<void(int exitCode)>& onFinished, const std::function<void()>& onAborted)
+                    const std::function<void(int exitCode)>& onFinished, const std::function<void()>& onAborted,
+                    const std::function<void(const QString& status)>& onStatus)
 {
     if (!instance) {
         if (error)
@@ -77,8 +79,10 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
     if (!who.uuid.isEmpty())
         censor.insert(who.uuid, QStringLiteral("<PROFILE ID>"));
 
-    QObject::connect(task, &Services::InstanceLaunch::status, APPLICATION, [model](const QString& text) {
+    QObject::connect(task, &Services::InstanceLaunch::status, APPLICATION, [model, onStatus](const QString& text) {
         model->append(MessageLevel::Launcher, text);
+        if (onStatus)
+            onStatus(text);
     });
     QObject::connect(task, &Services::InstanceLaunch::output, APPLICATION, [model, censor](QString line) {
         for (auto it = censor.begin(); it != censor.end(); ++it)
@@ -107,6 +111,19 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
                      [onFinished, forget, model](int exitCode) {
                          model->append(MessageLevel::Launcher,
                                        QObject::tr("The game exited with code %1.").arg(exitCode));
+
+                         if (exitCode != 0) {
+                             // The same reading the old launch path appends: what the launcher worked out
+                             // has to live in the log, because that is what gets copied and posted.
+                             QStringList lines;
+                             for (int row = 0; row < model->rowCount(); ++row)
+                                 lines << model->data(model->index(row), Qt::DisplayRole).toString();
+                             for (const auto& finding : CrashAnalysis::analyze(lines)) {
+                                 model->append(MessageLevel::Launcher, QObject::tr("Diagnosis: %1").arg(finding.title));
+                                 model->append(MessageLevel::Launcher, QObject::tr("Suggestion: %1").arg(finding.suggestion));
+                             }
+                         }
+
                          forget();
                          if (onFinished)
                              onFinished(exitCode);
