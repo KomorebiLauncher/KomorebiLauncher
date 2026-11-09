@@ -17,6 +17,7 @@
 #include "komorebi/core/version/ComponentSet.h"
 #include "komorebi/core/version/VersionChain.h"
 #include "komorebi/services/download/FileDownloader.h"
+#include "komorebi/services/install/InstanceCreator.h"
 #include "komorebi/services/java/JavaRuntime.h"
 
 namespace Komorebi::App {
@@ -246,9 +247,49 @@ int probeFetch(const QStringList& arguments, QTextStream& out)
     say(out, ok ? QStringLiteral("fetch: ok") : QStringLiteral("fetch: %1").arg(errorText));
     return ok ? 0 : 1;
 }
+int probeCreate(const QStringList& arguments, QTextStream& out)
+{
+    const int at = arguments.indexOf(QStringLiteral("--komorebi-create-instance"));
+    const QString dataRoot = valueOf(arguments, QStringLiteral("--komorebi-data"));
+    if (at < 0 || at + 2 >= arguments.size() || dataRoot.isEmpty()) {
+        say(out, QStringLiteral("probe: --komorebi-create-instance <version> <name> and --komorebi-data are required"));
+        return 2;
+    }
+
+    QNetworkAccessManager network;
+    Services::InstanceCreator creator(&network);
+    QEventLoop loop;
+    bool ok = false;
+    QString text;
+    QObject::connect(&creator, &Services::InstanceCreator::status, &loop, [&out](const QString& message) {
+        say(out, QStringLiteral("create: %1").arg(message));
+    });
+    QObject::connect(&creator, &Services::InstanceCreator::finished, &loop, [&](const QString& directory) {
+        ok = true;
+        text = directory;
+        loop.quit();
+    });
+    QObject::connect(&creator, &Services::InstanceCreator::failed, &loop, [&](const QString& reason) {
+        text = reason;
+        loop.quit();
+    });
+
+    Services::InstanceCreateRequest request;
+    request.dataRoot = dataRoot;
+    request.minecraftVersion = arguments.at(at + 1);
+    request.name = arguments.at(at + 2);
+    request.ensureFiles = !arguments.contains(QStringLiteral("--komorebi-create-skip-files"));
+    creator.start(request);
+    loop.exec();
+
+    say(out, ok ? QStringLiteral("create: made %1").arg(text) : QStringLiteral("create: %1").arg(text));
+    return ok ? 0 : 1;
+}
 int probeLaunch(const QStringList& arguments)
 {
     QTextStream out(stdout);
+    if (arguments.contains(QStringLiteral("--komorebi-create-instance")))
+        return probeCreate(arguments, out);
     if (arguments.contains(QStringLiteral("--komorebi-fetch")))
         return probeFetch(arguments, out);
     if (arguments.contains(QStringLiteral("--komorebi-probe-instance")))

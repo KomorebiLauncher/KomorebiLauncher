@@ -1230,6 +1230,8 @@ SET(LAUNCHER_SOURCES
     komorebi/services/download/AssetFiles.h
     komorebi/services/launch/InstanceLaunch.cpp
     komorebi/services/launch/InstanceLaunch.h
+    komorebi/services/install/InstanceCreator.cpp
+    komorebi/services/install/InstanceCreator.h
     komorebi/legacy/CoreLaunchAdapter.cpp
     komorebi/legacy/CoreLaunchAdapter.h
     komorebi/core/version/VersionChain.cpp

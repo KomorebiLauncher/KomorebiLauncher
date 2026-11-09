@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
      */
     for (int index = 1; index < argc; ++index) {
         if (qstrcmp(argv[index], "--komorebi-probe-launch") != 0 && qstrcmp(argv[index], "--komorebi-probe-instance") != 0
-            && qstrcmp(argv[index], "--komorebi-fetch") != 0)
+            && qstrcmp(argv[index], "--komorebi-fetch") != 0 && qstrcmp(argv[index], "--komorebi-create-instance") != 0)
             continue;
         QCoreApplication probeApp(argc, argv);
         return Komorebi::App::probeLaunch(probeApp.arguments());
