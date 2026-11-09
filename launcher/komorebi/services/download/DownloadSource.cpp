@@ -20,7 +20,6 @@ const QList<MirrorRule>& mirrorRules()
         { QStringLiteral("libraries.minecraft.net"), QStringLiteral("/maven") },
         { QStringLiteral("maven.minecraftforge.net"), QStringLiteral("/maven") },
         { QStringLiteral("maven.fabricmc.net"), QStringLiteral("/maven") },
-        { QStringLiteral("maven.quiltmc.org"), QStringLiteral("/maven") },
         { QStringLiteral("resources.download.minecraft.net"), QStringLiteral("/assets") },
         { QStringLiteral("meta.fabricmc.net"), QStringLiteral("/fabric-meta") },
         { QStringLiteral("piston-meta.mojang.com"), QString() },
