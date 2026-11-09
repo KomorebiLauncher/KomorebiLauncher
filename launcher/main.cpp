@@ -76,6 +76,7 @@ int main(int argc, char* argv[])
     QString developmentInstance;
     int developmentKillAfterMs = 0;
     bool developmentOpenNewInstanceDialog = false;
+    bool developmentOpenSettings = false;
     QList<QByteArray> keptArguments;
     keptArguments.append(QByteArray(argv[0]));
     for (int index = 1; index < argc; ++index) {
@@ -97,6 +98,8 @@ int main(int argc, char* argv[])
             developmentKillAfterMs = value.toInt();
         else if (key == "--komorebi-new-instance-dialog")
             developmentOpenNewInstanceDialog = true;
+        else if (key == "--komorebi-settings")
+            developmentOpenSettings = true;
     }
 
     QList<char*> filteredArgv;
@@ -203,6 +206,16 @@ int main(int argc, char* argv[])
                     if (!window)
                         return;
                     if (auto* action = window->findChild<QAction*>(QStringLiteral("actionAddInstance")))
+                        action->trigger();
+                });
+            }
+
+            if (developmentOpenSettings) {
+                QTimer::singleShot(1200, APPLICATION, [] {
+                    auto* window = APPLICATION->showMainWindow();
+                    if (!window)
+                        return;
+                    if (auto* action = window->findChild<QAction*>(QStringLiteral("actionSettings")))
                         action->trigger();
                 });
             }
