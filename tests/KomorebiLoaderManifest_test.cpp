@@ -46,6 +46,7 @@ class KomorebiLoaderManifestTest : public QObject {
 
    private slots:
     void readsTheLoaderList();
+    void readsTheQuiltLoaderList();
     void convertsAProfileIntoComponentMetadata();
     void refusesAProfileWithoutAMainClass();
 };
@@ -61,10 +62,26 @@ void KomorebiLoaderManifestTest::readsTheLoaderList()
     QVERIFY(!releases->at(1).stable);
 }
 
+void KomorebiLoaderManifestTest::readsTheQuiltLoaderList()
+{
+    const QJsonArray document{
+        QJsonObject{ { QStringLiteral("loader"),
+                       QJsonObject{ { QStringLiteral("version"), QStringLiteral("0.20.0") } } } },
+        QJsonObject{ { QStringLiteral("loader"),
+                       QJsonObject{ { QStringLiteral("version"), QStringLiteral("0.20.0-beta.9") } } } },
+    };
+    QString error;
+    const auto releases = parseQuiltLoaderList(document, &error);
+    QVERIFY2(releases.has_value(), qPrintable(error));
+    QCOMPARE(releases->size(), 2);
+    QVERIFY(releases->first().stable);
+    QVERIFY(!releases->at(1).stable);
+}
 void KomorebiLoaderManifestTest::convertsAProfileIntoComponentMetadata()
 {
     QString error;
-    const auto component = componentFromFabricProfile(fabricProfile(), QStringLiteral("0.15.11"), &error);
+    const auto component = componentFromLoaderProfile(fabricProfile(), QStringLiteral("net.fabricmc.fabric-loader"), QStringLiteral("Fabric Loader"),
+                                                 QStringLiteral("0.15.11"), &error);
     QVERIFY2(component.has_value(), qPrintable(error));
 
     QCOMPARE(component->value(QStringLiteral("uid")).toString(), QStringLiteral("net.fabricmc.fabric-loader"));
@@ -92,7 +109,8 @@ void KomorebiLoaderManifestTest::refusesAProfileWithoutAMainClass()
     auto profile = fabricProfile();
     profile.remove(QStringLiteral("mainClass"));
     QString error;
-    QVERIFY(!componentFromFabricProfile(profile, QStringLiteral("0.15.11"), &error).has_value());
+    QVERIFY(!componentFromLoaderProfile(profile, QStringLiteral("net.fabricmc.fabric-loader"), QStringLiteral("Fabric Loader"),
+                                                 QStringLiteral("0.15.11"), &error).has_value());
     QVERIFY(error.contains(QStringLiteral("main class")));
 }
 

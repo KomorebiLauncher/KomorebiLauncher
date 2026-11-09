@@ -47,6 +47,20 @@ LibraryEntry readLibrary(const QJsonObject& object)
     library.sha1 = artifact.value(QStringLiteral("sha1")).toString();
     library.size = static_cast<qint64>(artifact.value(QStringLiteral("size")).toDouble());
 
+    // Certain component formats keep a library as a maven base plus its coordinate instead of a full
+    // address -- the loader components do. The address is the two put together, and there may be no
+    // checksum to check the download against.
+    if (library.url.isEmpty()) {
+        const QString base = object.value(QStringLiteral("url")).toString();
+        const QString relative = libraryRelativePath(library.name);
+        if (!base.isEmpty() && !relative.isEmpty()) {
+            QString prefix = base;
+            if (!prefix.endsWith(QLatin1Char('/')))
+                prefix += QLatin1Char('/');
+            library.url = prefix + relative;
+        }
+    }
+
     library.rules = readRules(object.value(QStringLiteral("rules")));
     library.natives = object.value(QStringLiteral("natives")).toObject();
     for (const auto& excluded : object.value(QStringLiteral("extract")).toObject().value(QStringLiteral("exclude")).toArray()) {

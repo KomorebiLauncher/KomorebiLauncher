@@ -47,8 +47,30 @@ std::optional<QList<LoaderRelease>> parseFabricLoaderList(const QJsonArray& docu
     return releases;
 }
 
-std::optional<QJsonObject> componentFromFabricProfile(const QJsonObject& profile, const QString& loaderVersion,
-                                                      QString* error)
+std::optional<QList<LoaderRelease>> parseQuiltLoaderList(const QJsonArray& document, QString* error)
+{
+    const auto fail = [error](const QString& reason) -> std::optional<QList<LoaderRelease>> {
+        if (error)
+            *error = reason;
+        return std::nullopt;
+    };
+
+    QList<LoaderRelease> releases;
+    for (const auto& value : document) {
+        const auto loader = value.toObject().value(QStringLiteral("loader")).toObject();
+        LoaderRelease release;
+        release.version = loader.value(QStringLiteral("version")).toString();
+        release.stable = !release.version.contains(QStringLiteral("-"));
+        if (!release.version.isEmpty())
+            releases.append(release);
+    }
+    if (releases.isEmpty())
+        return fail(QStringLiteral("Quilt lists no loader versions for this game version"));
+    return releases;
+}
+
+std::optional<QJsonObject> componentFromLoaderProfile(const QJsonObject& profile, const QString& uid, const QString& name,
+                                                      const QString& loaderVersion, QString* error)
 {
     const auto fail = [error](const QString& reason) -> std::optional<QJsonObject> {
         if (error)
@@ -57,34 +79,34 @@ std::optional<QJsonObject> componentFromFabricProfile(const QJsonObject& profile
     };
 
     if (loaderVersion.isEmpty())
-        return fail(QStringLiteral("no Fabric loader version was given"));
+        return fail(QStringLiteral("no loader version was given"));
     const QString mainClass = profile.value(QStringLiteral("mainClass")).toString();
     if (mainClass.isEmpty())
-        return fail(QStringLiteral("the Fabric profile has no main class"));
+        return fail(QStringLiteral("the loader profile has no main class"));
 
     QJsonArray libraries;
     for (const auto& value : profile.value(QStringLiteral("libraries")).toArray()) {
         const auto library = value.toObject();
-        const QString name = library.value(QStringLiteral("name")).toString();
-        if (name.isEmpty())
+        const QString coordinate = library.value(QStringLiteral("name")).toString();
+        if (coordinate.isEmpty())
             continue;
 
-        const QString url = libraryUrl(library.value(QStringLiteral("url")).toString(), name);
+        const QString url = libraryUrl(library.value(QStringLiteral("url")).toString(), coordinate);
         QJsonObject artifact{ { QStringLiteral("sha1"), library.value(QStringLiteral("sha1")).toString() },
                               { QStringLiteral("size"), library.value(QStringLiteral("size")) } };
         if (!url.isEmpty())
             artifact.insert(QStringLiteral("url"), url);
-        libraries.append(QJsonObject{ { QStringLiteral("name"), name },
+        libraries.append(QJsonObject{ { QStringLiteral("name"), coordinate },
                                       { QStringLiteral("downloads"), QJsonObject{ { QStringLiteral("artifact"), artifact } } } });
     }
     if (libraries.isEmpty())
-        return fail(QStringLiteral("the Fabric profile lists no libraries"));
+        return fail(QStringLiteral("the loader profile lists no libraries"));
 
     QJsonObject component{
         { QStringLiteral("formatVersion"), 1 },
-        { QStringLiteral("uid"), QStringLiteral("net.fabricmc.fabric-loader") },
+        { QStringLiteral("uid"), uid },
         { QStringLiteral("version"), loaderVersion },
-        { QStringLiteral("name"), QStringLiteral("Fabric Loader") },
+        { QStringLiteral("name"), name },
         { QStringLiteral("type"), QStringLiteral("release") },
         { QStringLiteral("order"), 0 },
         { QStringLiteral("mainClass"), mainClass },

@@ -62,6 +62,23 @@ void InstanceCreator::start(const InstanceCreateRequest& request)
     m_reported = false;
     m_instanceDirectory.clear();
     m_assetIndexId.clear();
+    m_loaderMetaBase.clear();
+    m_loaderUid.clear();
+    m_loaderName.clear();
+    if (m_request.loader == QLatin1String("fabric")) {
+        m_loaderMetaBase = m_request.loaderMetaUrl;
+        m_loaderUid = QStringLiteral("net.fabricmc.fabric-loader");
+        m_loaderName = QStringLiteral("Fabric Loader");
+    } else if (m_request.loader == QLatin1String("quilt")) {
+        m_loaderMetaBase = m_request.quiltMetaUrl;
+        m_loaderUid = QStringLiteral("org.quiltmc.quilt-loader");
+        m_loaderName = QStringLiteral("Quilt Loader");
+    } else if (!m_request.loader.isEmpty()) {
+        m_running = false;
+        m_reported = true;
+        emit failed(tr("only the Fabric and Quilt loaders are supported so far, not %1").arg(m_request.loader));
+        return;
+    }
     fetchManifest();
 }
 
@@ -148,8 +165,6 @@ void InstanceCreator::fetchVersion(const QString& url, const QString& sha1)
 
         if (m_request.loader.isEmpty())
             return writeInstance();
-        if (m_request.loader != QLatin1String("fabric"))
-            return fail(tr("only the Fabric loader is supported so far, not %1").arg(m_request.loader));
         fetchLoaderList();
     });
 }
@@ -217,10 +232,11 @@ void InstanceCreator::writeComponent(const QString& uid, const QString& version,
 }
 void InstanceCreator::fetchLoaderList()
 {
-    emit status(tr("Reading the Fabric loader versions"));
+    emit status(tr("Reading the %1 versions").arg(m_loaderName));
 
-    const QString url = QStringLiteral("%1/v2/versions/loader/%2")
-                            .arg(m_request.loaderMetaUrl, m_request.minecraftVersion);
+    const QString apiVersion = m_request.loader == QLatin1String("quilt") ? QStringLiteral("v3") : QStringLiteral("v2");
+    const QString url = QStringLiteral("%1/%2/versions/loader/%3")
+                            .arg(m_loaderMetaBase, apiVersion, m_request.minecraftVersion);
     const QString target = QDir(m_request.dataRoot).filePath(QStringLiteral("tmp/fabric-loader-list.json"));
     fetch(url, target, {}, [this, target] {
         QFile file(target);
@@ -229,7 +245,9 @@ void InstanceCreator::fetchLoaderList()
 
         const auto document = QJsonDocument::fromJson(file.readAll());
         QString error;
-        const auto releases = Core::parseFabricLoaderList(document.array(), &error);
+        const auto releases = m_request.loader == QLatin1String("quilt")
+                                  ? Core::parseQuiltLoaderList(document.array(), &error)
+                                  : Core::parseFabricLoaderList(document.array(), &error);
         if (!releases)
             return fail(error);
 
@@ -257,10 +275,11 @@ void InstanceCreator::fetchLoaderList()
 
 void InstanceCreator::fetchLoaderProfile(const QString& loaderVersion)
 {
-    emit status(tr("Reading the Fabric loader profile"));
+    emit status(tr("Reading the %1 profile").arg(m_loaderName));
 
-    const QString url = QStringLiteral("%1/v2/versions/loader/%2/%3/profile/json")
-                            .arg(m_request.loaderMetaUrl, m_request.minecraftVersion, loaderVersion);
+    const QString apiVersion = m_request.loader == QLatin1String("quilt") ? QStringLiteral("v3") : QStringLiteral("v2");
+    const QString url = QStringLiteral("%1/%2/versions/loader/%3/%4/profile/json")
+                            .arg(m_loaderMetaBase, apiVersion, m_request.minecraftVersion, loaderVersion);
     const QString target = QDir(m_request.dataRoot).filePath(QStringLiteral("tmp/fabric-loader-profile.json"));
     fetch(url, target, {}, [this, target, loaderVersion] {
         QFile file(target);
@@ -269,7 +288,7 @@ void InstanceCreator::fetchLoaderProfile(const QString& loaderVersion)
 
         const auto document = QJsonDocument::fromJson(file.readAll());
         QString error;
-        const auto component = Core::componentFromFabricProfile(document.object(), loaderVersion, &error);
+        const auto component = Core::componentFromLoaderProfile(document.object(), m_loaderUid, m_loaderName, loaderVersion, &error);
         if (!component)
             return fail(error);
         m_loaderComponent = *component;

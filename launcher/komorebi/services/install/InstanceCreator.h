@@ -40,6 +40,8 @@ struct InstanceCreateRequest {
     QString loaderVersion;
     /// Where the loader's metadata comes from; a test points it at itself.
     QString loaderMetaUrl = QStringLiteral("https://meta.fabricmc.net");
+    /// Where Quilt's metadata comes from.
+    QString quiltMetaUrl = QStringLiteral("https://meta.quiltmc.org");
 };
 
 class InstanceCreator : public QObject {
@@ -78,6 +80,9 @@ class InstanceCreator : public QObject {
     QString m_instanceDirectory;
     QString m_assetIndexId;
     QString m_gameReleaseTime;
+    QString m_loaderMetaBase;
+    QString m_loaderUid;
+    QString m_loaderName;
     QJsonObject m_gameComponent;
     QJsonObject m_loaderComponent;
     bool m_running = false;

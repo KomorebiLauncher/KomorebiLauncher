@@ -30,13 +30,18 @@ struct LoaderRelease {
 /// Reads Fabric's loader list for one game version (v2/versions/loader/<mc>).
 std::optional<QList<LoaderRelease>> parseFabricLoaderList(const QJsonArray& document, QString* error = nullptr);
 
+/// Reads Quilt's loader list for one game version (v3/versions/loader/<mc>).
+///
+/// Quilt does not mark releases as stable; a version with a pre-release suffix is taken as unstable.
+std::optional<QList<LoaderRelease>> parseQuiltLoaderList(const QJsonArray& document, QString* error = nullptr);
+
 /**
  * Converts a Fabric loader profile into component metadata.
  *
  * The profile names the main class that starts the game and lists libraries as a maven base plus a
  * coordinate; a component entry wants a full download address, so each library gets one built from the two.
  */
-std::optional<QJsonObject> componentFromFabricProfile(const QJsonObject& profile, const QString& loaderVersion,
-                                                      QString* error = nullptr);
+std::optional<QJsonObject> componentFromLoaderProfile(const QJsonObject& profile, const QString& uid, const QString& name,
+                                                      const QString& loaderVersion, QString* error = nullptr);
 
 }  // namespace Komorebi::Core
