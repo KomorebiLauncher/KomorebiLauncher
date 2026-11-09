@@ -45,6 +45,9 @@ ecm_add_test(KomorebiNatives_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSI
 ecm_add_test(KomorebiAssetFiles_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME KomorebiAssetFiles)
 
+ecm_add_test(KomorebiAssetLayout_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME KomorebiAssetLayout)
+
 ecm_add_test(FlameChunk_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME FlameChunk)
 

@@ -8,6 +8,7 @@
 #include <QProcess>
 
 #include "komorebi/core/instance/InstanceFolder.h"
+#include "komorebi/core/asset/AssetLayout.h"
 #include "komorebi/core/launch/Natives.h"
 #include "komorebi/core/version/ComponentSet.h"
 #include "komorebi/services/download/AssetFiles.h"
@@ -198,7 +199,24 @@ void InstanceLaunch::stepDownloadAssets()
 
     emit status(tr("Checking the assets the game uses"));
     const auto missing = missingAssetObjects(*m_assetIndex, m_options.dataRoot);
-    fetch(missing, [this] { stepExtractNatives(); });
+    fetch(missing, [this] { stepLegacyAssets(); });
+}
+
+void InstanceLaunch::stepLegacyAssets()
+{
+    if (!m_assetIndex)
+        return stepExtractNatives();
+
+    const auto directory = Core::legacyAssetDirectory(*m_assetIndex, m_options.dataRoot, m_options.instanceDirectory);
+    if (directory.isEmpty())
+        return stepExtractNatives();
+
+    emit status(tr("Copying the assets where this version looks for them"));
+    QString error;
+    if (!Core::materialiseLegacyAssets(*m_assetIndex, m_options.dataRoot, m_options.instanceDirectory, &error))
+        return fail(error);
+
+    stepExtractNatives();
 }
 
 void InstanceLaunch::stepExtractNatives()

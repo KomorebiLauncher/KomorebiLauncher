@@ -82,6 +82,7 @@ class InstanceLaunch : public QObject {
     void stepDownloadLibraries();
     void stepAssetIndex();
     void stepDownloadAssets();
+    void stepLegacyAssets();
     void stepExtractNatives();
     void stepLaunch();
 

@@ -1240,6 +1240,8 @@ SET(LAUNCHER_SOURCES
     komorebi/core/version/LibraryFile.h
     komorebi/core/asset/AssetIndex.cpp
     komorebi/core/asset/AssetIndex.h
+    komorebi/core/asset/AssetLayout.cpp
+    komorebi/core/asset/AssetLayout.h
     komorebi/app/LaunchProbe.cpp
     komorebi/app/LaunchProbe.h
     komorebi/core/legacy/LegacyInstanceRepository.cpp
