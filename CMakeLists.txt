@@ -52,10 +52,12 @@ if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
     )
 
     add_link_options(
-        # /LTCG allows for linking wholy optimizated programs
+        # /LTCG allows for linking wholy optimizated programs. Debug is left without it: whole-program
+        # optimization makes every Debug link produce a program database of ~100 MB per target, which
+        # buys nothing a debug build is used for and is what fills a developer's disk.
         # /MANIFEST:NO disables generating a manifest file, we instead provide our own
         # /STACK sets the stack reserve size, ATL's pack list needs 3-4 MiB as of November 2022, provide 8 MiB
-        "$<$<COMPILE_LANGUAGE:C,CXX>:/LTCG;/MANIFEST:NO;/STACK:8388608>"
+        "$<$<COMPILE_LANGUAGE:C,CXX>:$<$<NOT:$<CONFIG:Debug>>:/LTCG>;/MANIFEST:NO;/STACK:8388608>"
     )
 
     # /GL enables whole program optimizations
