@@ -41,7 +41,6 @@
 #include "InstanceList.h"
 #include "minecraft/auth/AccountList.h"
 #include "komorebi/app/LaunchProbe.h"
-#include "komorebi/legacy/CoreLaunchAdapter.h"
 
 #if defined Q_OS_WIN32
 #include "console/WindowsConsole.h"
@@ -99,49 +98,49 @@ int main(int argc, char* argv[])
              * already has signed in. The launcher's classes provide the account and the paths, the
              * core does the rest, and the game's output ends up in the instance's logs.
              */
+            /*
+             * A development hook: start one instance through the launcher's own entry point, which now
+             * goes through the core, and wait for the game so the launcher does not take it down on
+             * exit.
+             */
             const int coreLaunch = app.arguments().indexOf(QStringLiteral("--komorebi-launch-instance"));
             if (coreLaunch >= 0 && coreLaunch + 1 < app.arguments().size()) {
-                auto* instance = APPLICATION->instances()->getInstanceById(app.arguments().at(coreLaunch + 1));
-                QString error;
-                QString failure;
-                bool started = false;
-                QEventLoop loop;
-                const bool accepted =
-                    instance != nullptr
-                    && Komorebi::Legacy::launchInstance(
-                        instance, APPLICATION->accounts()->defaultAccount(),
-                        [&](const QString&) {
-                            started = true;
-                            loop.quit();
-                        },
-                        [&](const QString& reason) {
-                            failure = reason;
-                            loop.quit();
-                        },
-                        &error);
-                if (!accepted) {
-                    qInfo().noquote() << "core launch:" << (instance ? error : QStringLiteral("no such instance"));
-                    return 1;
-                }
-                loop.exec();
-                qInfo().noquote() << "core launch:" << (started ? QStringLiteral("started") : failure);
-                if (!started)
-                    return 1;
-
-                /*
-                 * The game is a child process, and exiting here would destroy its QProcess and with it
-                 * the game. Waiting is what a development hook wants; a windowed launch stays open and
-                 * gets the same effect for free.
-                 */
                 const QString instanceId = app.arguments().at(coreLaunch + 1);
-                for (auto* process : APPLICATION->findChildren<QProcess*>()) {
-                    if (!process->arguments().join(QLatin1Char(' ')).contains(instanceId))
-                        continue;
-                    qInfo().noquote() << "core launch: waiting for the game, pid" << process->processId();
-                    process->waitForFinished(-1);
-                    qInfo().noquote() << "core launch: the game exited with" << process->exitCode();
-                    break;
+                auto* instance = APPLICATION->instances()->getInstanceById(instanceId);
+                if (!instance) {
+                    qInfo().noquote() << "core launch: no such instance" << instanceId;
+                    return 1;
                 }
+
+                if (!APPLICATION->launch(instance)) {
+                    qInfo().noquote() << "core launch: the launcher refused to start" << instanceId;
+                    return 1;
+                }
+                qInfo().noquote() << "core launch: asked the launcher to start" << instanceId;
+
+                // Fetching the files takes a moment, so the game's process appears later; wait for it,
+                // then for the game.
+                QProcess* game = nullptr;
+                QTimer poll;
+                poll.setInterval(500);
+                QEventLoop loop;
+                QObject::connect(&poll, &QTimer::timeout, &loop, [&] {
+                    for (auto* process : APPLICATION->findChildren<QProcess*>()) {
+                        if (!process->arguments().join(QLatin1Char(' ')).contains(instanceId))
+                            continue;
+                        game = process;
+                        break;
+                    }
+                    if (game)
+                        loop.quit();
+                });
+                poll.start();
+                loop.exec();
+                poll.stop();
+
+                qInfo().noquote() << "core launch: waiting for the game, pid" << game->processId();
+                game->waitForFinished(-1);
+                qInfo().noquote() << "core launch: the game exited with" << game->exitCode();
                 return 0;
             }
 

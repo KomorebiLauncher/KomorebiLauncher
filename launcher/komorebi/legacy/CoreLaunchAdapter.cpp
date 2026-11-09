@@ -11,7 +11,8 @@ namespace Komorebi::Legacy {
 
 bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& account,
                     const std::function<void(const QString& logPath)>& onStarted,
-                    const std::function<void(const QString& error)>& onFailed, QString* error)
+                    const std::function<void(const QString& error)>& onFailed, QString* error,
+                    const std::function<void(int exitCode)>& onFinished)
 {
     if (!instance) {
         if (error)
@@ -44,6 +45,10 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
     QObject::connect(task, &Services::InstanceLaunch::failed, APPLICATION, [onFailed](const QString& reason) {
         if (onFailed)
             onFailed(reason);
+    });
+    QObject::connect(task, &Services::InstanceLaunch::gameFinished, APPLICATION, [onFinished](int exitCode) {
+        if (onFinished)
+            onFinished(exitCode);
     });
     task->start(options, who);
     return true;

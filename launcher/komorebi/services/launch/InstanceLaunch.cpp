@@ -254,7 +254,10 @@ void InstanceLaunch::stepLaunch()
     // MergedChannels already sends stderr to the same place; setting both channels to a file is what
     // Qt warns about with "Inconsistent stderr channel configuration".
     game->setStandardOutputFile(logPath, QIODevice::Append);
-    connect(game, &QProcess::finished, game, &QObject::deleteLater);
+    connect(game, &QProcess::finished, this, [this, game](int exitCode, QProcess::ExitStatus) {
+        game->deleteLater();
+        emit gameFinished(exitCode);
+    });
     connect(game, &QProcess::errorOccurred, game, [this, game](QProcess::ProcessError processError) {
         if (processError == QProcess::FailedToStart)
             fail(tr("java did not start: %1").arg(game->errorString()));

@@ -41,6 +41,7 @@
  */
 
 #include "Application.h"
+#include "komorebi/legacy/CoreLaunchAdapter.h"
 #include "BuildConfig.h"
 
 #include "DataMigrationTask.h"
@@ -757,6 +758,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
 
         // Where downloads come from: "official" or a mirror's id (see Komorebi::Services::downloadSources).
         m_settings->registerSetting("DownloadSource", "official");
+        // Whether starting an instance goes through the new core; the old controller stays reachable
+        // by turning this off.
+        m_settings->registerSetting("UseCoreLauncher", true);
 
         // Console
         m_settings->registerSetting("ShowConsole", false);
@@ -1662,6 +1666,33 @@ bool Application::launch(MinecraftInstance* instance,
                 return false;
             }
         }
+
+        /*
+         * The core's launch path is the default now, and reaches the old one only when the setting says
+         * so. It fetches what the instance is missing before starting, and reports the game's exit so
+         * the launcher can let go of it the same way the controller does.
+         */
+        if (m_settings->get("UseCoreLauncher").toBool()) {
+            auto* parent = window ? static_cast<QWidget*>(window) : static_cast<QWidget*>(m_mainWindow);
+            const auto account = accountToUse ? accountToUse : m_accounts->defaultAccount();
+            const bool accepted = Komorebi::Legacy::launchInstance(
+                instance, account,
+                [this, instance](const QString&) {
+                    instance->setRunning(true);
+                    addRunningInstance();
+                },
+                [parent](const QString& reason) {
+                    CustomMessageBox::selectable(parent, QObject::tr("Could not start the instance"), reason, QMessageBox::Warning)
+                        ->show();
+                },
+                nullptr, [this, instance](int) {
+                    instance->setRunning(false);
+                    subRunningInstance();
+                });
+            if (accepted)
+                return true;
+        }
+
         auto& controller = extras.controller;
         controller = std::make_unique<LaunchController>();
         controller->setInstance(instance);

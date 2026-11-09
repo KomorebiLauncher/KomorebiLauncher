@@ -75,6 +75,7 @@ class InstanceLaunch : public QObject {
     void status(const QString& message);
     void progress(int done, int total);
     void started(const QString& logPath);
+    void gameFinished(int exitCode);
     void failed(const QString& error);
 
    private:
