@@ -423,6 +423,17 @@ void InstanceCreator::writeComponent(const QString& uid, const QString& version,
                              { QStringLiteral("uid"), uid } };
     }
 
+    // A version the launcher already knows keeps its entry. Its index records a checksum for the file it
+    // remembers, and rewriting the entry over a file this launcher wrote is what made it fetch its own
+    // copy before the instance could be opened.
+    for (const auto& value : index.value(QStringLiteral("versions")).toArray()) {
+        if (value.toObject().value(QStringLiteral("version")).toString() == version) {
+            QFile existing(indexPath);
+            if (existing.exists())
+                return;
+        }
+    }
+
     QJsonArray versions;
     for (const auto& value : index.value(QStringLiteral("versions")).toArray()) {
         if (value.toObject().value(QStringLiteral("version")).toString() != version)

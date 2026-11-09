@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "komorebi/services/download/DownloadQueue.h"
 
+#include <QDebug>
 #include <QNetworkAccessManager>
 
 namespace Komorebi::Services {
@@ -14,6 +15,7 @@ void DownloadQueue::start(const QList<FileDownload>& files, DownloadSource sourc
     m_files = files;
     m_source = source;
     m_parallel = parallel > 0 ? parallel : 1;
+    qDebug().noquote() << "core files: fetching" << m_files.size() << "files with" << m_parallel << "at once";
     m_next = 0;
     m_active.clear();
     m_failures.clear();
@@ -79,6 +81,8 @@ void DownloadQueue::fileFinished(FileDownloader* downloader, bool ok, const QStr
 {
     if (!m_running)
         return;
+    if (!ok)
+        qWarning().noquote() << "core files: failed:" << error;
 
     m_active.removeAll(downloader);
     downloader->deleteLater();
