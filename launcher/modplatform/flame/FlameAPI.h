@@ -8,6 +8,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QList>
+#include <QStringList>
 #include "Version.h"
 #include "modplatform/ModIndex.h"
 #include "modplatform/ResourceAPI.h"
@@ -32,6 +33,10 @@ class FlameAPI final : public ResourceAPI {
 
     std::pair<Task::Ptr, QByteArray*> getProjects(QStringList addonIds) const override;
     static std::pair<Task::Ptr, QByteArray*> matchFingerprints(const QList<uint>& fingerprints);
+    /// How many file ids one request may carry; a longer list is split into several requests.
+    static constexpr int kFilesPerRequest = 100;
+    /// Splits ids into request-sized batches, keeping their order.
+    static QList<QStringList> chunkFileIds(const QStringList& fileIds, int batchSize = kFilesPerRequest);
     static std::pair<Task::Ptr, QByteArray*> getFiles(const QStringList& fileIds);
     static std::pair<Task::Ptr, QByteArray*> getFile(const QString& addonId, const QString& fileId);
 

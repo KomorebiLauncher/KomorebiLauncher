@@ -87,29 +87,58 @@ std::pair<Task::Ptr, QByteArray*> FlameAPI::getProjects(QStringList addonIds) co
     return { netJob, response };
 }
 
+QList<QStringList> FlameAPI::chunkFileIds(const QStringList& fileIds, int batchSize)
+{
+    QList<QStringList> batches;
+    const int size = batchSize > 0 ? batchSize : 1;
+    for (int start = 0; start < fileIds.size(); start += size)
+        batches.append(fileIds.mid(start, size));
+    return batches;
+}
+
 std::pair<Task::Ptr, QByteArray*> FlameAPI::getFiles(const QStringList& fileIds)
 {
     auto netJob = makeShared<NetJob>(QString("Flame::GetFiles"), APPLICATION->network());
 
-    QJsonObject bodyObj;
-    QJsonArray filesArr;
-    for (const auto& fileId : fileIds) {
-        filesArr.append(fileId);
+    // A pack can list hundreds of files and one request should not have to carry all of them: they go
+    // in batches, and the answers are stitched back into the one document the callers expect.
+    auto collected = std::make_shared<QJsonArray>();
+    auto merged = std::make_shared<QByteArray>();
+    for (const auto& batch : chunkFileIds(fileIds)) {
+        QJsonObject bodyObj;
+        bodyObj["fileIds"] = QJsonArray::fromStringList(batch);
+
+        QJsonDocument body(bodyObj);
+        auto bodyRaw = body.toJson();
+        auto [action, response] = Net::ApiRequest::makeByteArray(QString(BuildConfig.FLAME_BASE_URL + "/mods/files"), bodyRaw);
+
+        // The per-batch handler has to run before NetJob notices the last task finished, so it is
+        // connected before the action is handed over.
+        QObject::connect(action.get(), &Task::succeeded, netJob.get(), [collected, response] {
+            const auto document = QJsonDocument::fromJson(*response);
+            if (!document.isObject())
+                return;
+            for (const auto& value : document.object().value("data").toArray())
+                collected->append(value);
+        });
+        netJob->addNetAction(action);
     }
 
-    bodyObj["fileIds"] = filesArr;
+    // The buffer belongs to the job: the callers hold the pointer only while the job is alive.
+    QObject::connect(netJob.get(), &Task::succeeded, netJob.get(), [merged, collected, count = fileIds.size()] {
+        // One file id used to come back as an object rather than a one-element list, and one caller
+        // still reads it that way; the shape is kept so that path does not change.
+        if (count == 1 && collected->size() == 1)
+            *merged = QJsonDocument(QJsonObject{ { QStringLiteral("data"), collected->at(0) } }).toJson();
+        else
+            *merged = QJsonDocument(QJsonObject{ { QStringLiteral("data"), *collected } }).toJson();
+    });
+    QObject::connect(netJob.get(), &NetJob::failed, netJob.get(), [fileIds] {
+        qDebug() << "Flame::GetFiles failed for" << fileIds.size() << "file ids";
+    });
 
-    QJsonDocument body(bodyObj);
-    auto bodyRaw = body.toJson();
-
-    auto [action, response] = Net::ApiRequest::makeByteArray(QString(BuildConfig.FLAME_BASE_URL + "/mods/files"), bodyRaw);
-    netJob->addNetAction(action);
-
-    QObject::connect(netJob.get(), &NetJob::failed, netJob.get(), [bodyRaw] { qDebug() << bodyRaw; });
-
-    return { netJob, response };
+    return { netJob, merged.get() };
 }
-
 std::pair<Task::Ptr, QByteArray*> FlameAPI::getFile(const QString& addonId, const QString& fileId)
 {
     auto netJob = makeShared<NetJob>(QString("Flame::GetFile"), APPLICATION->network());
