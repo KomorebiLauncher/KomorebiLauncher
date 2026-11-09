@@ -13,12 +13,22 @@
 
 #include <QString>
 
+#include <functional>
+
 #include "minecraft/MinecraftInstance.h"
 #include "minecraft/auth/MinecraftAccount.h"
 
 namespace Komorebi::Legacy {
 
-/// Starts the instance through the core with the given account. Returns false and fills `error`.
-bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& account, QString* error = nullptr);
+/**
+ * Starts the instance through the core.
+ *
+ * Returns false and fills `error` when the launch cannot even begin; once it is running, the game
+ * appears asynchronously and either callback is called exactly once. `onStarted` receives the path of
+ * the log the game writes to.
+ */
+bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& account,
+                    const std::function<void(const QString& logPath)>& onStarted,
+                    const std::function<void(const QString& error)>& onFailed, QString* error = nullptr);
 
 }  // namespace Komorebi::Legacy

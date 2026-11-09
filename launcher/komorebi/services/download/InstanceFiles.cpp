@@ -9,7 +9,7 @@
 #include "komorebi/core/instance/InstanceFolder.h"
 #include "komorebi/core/launch/LaunchPlan.h"
 #include "komorebi/core/version/ComponentSet.h"
-#include "komorebi/core/version/VersionJson.h"
+#include "komorebi/core/version/LibraryFile.h"
 
 namespace Komorebi::Services {
 
@@ -73,11 +73,12 @@ QList<FileDownload> missingInstanceFiles(const QString& dataRoot, const QString&
     for (const auto& library : manifest->libraries) {
         if (!library.appliesTo(platform))
             continue;
-        const QString relative = Core::libraryPath(library);
-        if (relative.isEmpty() || library.url.isEmpty())
+        if (library.url.isEmpty())
             continue;
 
-        const QString target = libraries.filePath(relative);
+        const QString target = Core::libraryFilePath(library, libraries.path());
+        if (target.isEmpty())
+            continue;
         const QByteArray sha1 = library.sha1.isEmpty() ? QByteArray() : QByteArray::fromHex(library.sha1.toLatin1());
         const qint64 size = library.size > 0 ? library.size : -1;
         if (fileIsGood(target, sha1, size))

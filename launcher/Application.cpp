@@ -755,6 +755,9 @@ Application::Application(int& argc, char** argv) : QApplication(argc, argv)
         m_settings->registerSetting("Language", QString());
         m_settings->registerSetting("UseSystemLocale", false);
 
+        // Where downloads come from: "official" or a mirror's id (see Komorebi::Services::downloadSources).
+        m_settings->registerSetting("DownloadSource", "official");
+
         // Console
         m_settings->registerSetting("ShowConsole", false);
         m_settings->registerSetting("AutoCloseConsole", false);

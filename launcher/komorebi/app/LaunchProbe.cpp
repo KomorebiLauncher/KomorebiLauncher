@@ -4,6 +4,8 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QElapsedTimer>
+#include <QEventLoop>
+#include <QNetworkAccessManager>
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonParseError>
@@ -14,6 +16,7 @@
 #include "komorebi/core/launch/LaunchPlan.h"
 #include "komorebi/core/version/ComponentSet.h"
 #include "komorebi/core/version/VersionChain.h"
+#include "komorebi/services/download/FileDownloader.h"
 #include "komorebi/services/java/JavaRuntime.h"
 
 namespace Komorebi::App {
@@ -220,9 +223,34 @@ int probeInstance(const QStringList& arguments, QTextStream& out)
 
 }  // namespace
 
+int probeFetch(const QStringList& arguments, QTextStream& out)
+{
+    const int at = arguments.indexOf(QStringLiteral("--komorebi-fetch"));
+    if (at < 0 || at + 2 >= arguments.size()) {
+        say(out, QStringLiteral("probe: --komorebi-fetch <url> <path> is required"));
+        return 2;
+    }
+
+    QNetworkAccessManager network;
+    Services::FileDownloader downloader(&network);
+    QEventLoop loop;
+    bool ok = false;
+    QString errorText;
+    QObject::connect(&downloader, &Services::FileDownloader::finished, &loop, [&](bool result, const QString& reason) {
+        ok = result;
+        errorText = reason;
+        loop.quit();
+    });
+    downloader.start(Services::FileDownload{ QUrl(arguments.at(at + 1)), arguments.at(at + 2), {}, -1 });
+    loop.exec();
+    say(out, ok ? QStringLiteral("fetch: ok") : QStringLiteral("fetch: %1").arg(errorText));
+    return ok ? 0 : 1;
+}
 int probeLaunch(const QStringList& arguments)
 {
     QTextStream out(stdout);
+    if (arguments.contains(QStringLiteral("--komorebi-fetch")))
+        return probeFetch(arguments, out);
     if (arguments.contains(QStringLiteral("--komorebi-probe-instance")))
         return probeInstance(arguments, out);
     return probeVersion(arguments, out);

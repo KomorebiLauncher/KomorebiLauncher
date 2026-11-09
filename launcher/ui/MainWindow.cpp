@@ -671,9 +671,16 @@ QList<QAction*> MainWindow::instanceMenuActions()
             if (!m_selectedInstance)
                 return;
             QString error;
-            if (Komorebi::Legacy::launchInstance(m_selectedInstance, APPLICATION->accounts()->defaultAccount(), &error))
-                statusBar()->showMessage(tr("Started with the new core; its output is in the instance's logs."), 8000);
-            else
+            const bool started = Komorebi::Legacy::launchInstance(
+                m_selectedInstance, APPLICATION->accounts()->defaultAccount(),
+                [this](const QString&) {
+                    statusBar()->showMessage(tr("Started with the new core; its output is in the instance's logs."), 8000);
+                },
+                [this](const QString& reason) {
+                    CustomMessageBox::selectable(this, tr("Launch with the new core"), reason, QMessageBox::Warning)->show();
+                },
+                &error);
+            if (!started)
                 CustomMessageBox::selectable(this, tr("Launch with the new core"), error, QMessageBox::Warning)->show();
         });
         actions.append(coreLaunch);

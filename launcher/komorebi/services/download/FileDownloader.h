@@ -63,6 +63,8 @@ class FileDownloader : public QObject {
     QString m_partPath;
     qint64 m_received = 0;
     qint64 m_total = -1;
+    qint64 m_attemptResumeFrom = 0;
+    bool m_restartedThisAttempt = false;
     int m_attempt = 0;
     bool m_cancelled = false;
     bool m_reported = false;

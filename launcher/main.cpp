@@ -60,7 +60,8 @@ int main(int argc, char* argv[])
      * QCoreApplication is enough for it -- it starts a process and reads what it says.
      */
     for (int index = 1; index < argc; ++index) {
-        if (qstrcmp(argv[index], "--komorebi-probe-launch") != 0 && qstrcmp(argv[index], "--komorebi-probe-instance") != 0)
+        if (qstrcmp(argv[index], "--komorebi-probe-launch") != 0 && qstrcmp(argv[index], "--komorebi-probe-instance") != 0
+            && qstrcmp(argv[index], "--komorebi-fetch") != 0)
             continue;
         QCoreApplication probeApp(argc, argv);
         return Komorebi::App::probeLaunch(probeApp.arguments());
@@ -102,10 +103,46 @@ int main(int argc, char* argv[])
             if (coreLaunch >= 0 && coreLaunch + 1 < app.arguments().size()) {
                 auto* instance = APPLICATION->instances()->getInstanceById(app.arguments().at(coreLaunch + 1));
                 QString error;
-                const bool started = instance != nullptr
-                                     && Komorebi::Legacy::launchInstance(instance, APPLICATION->accounts()->defaultAccount(), &error);
-                qInfo().noquote() << "core launch:" << (started ? QStringLiteral("started") : error);
-                return started ? 0 : 1;
+                QString failure;
+                bool started = false;
+                QEventLoop loop;
+                const bool accepted =
+                    instance != nullptr
+                    && Komorebi::Legacy::launchInstance(
+                        instance, APPLICATION->accounts()->defaultAccount(),
+                        [&](const QString&) {
+                            started = true;
+                            loop.quit();
+                        },
+                        [&](const QString& reason) {
+                            failure = reason;
+                            loop.quit();
+                        },
+                        &error);
+                if (!accepted) {
+                    qInfo().noquote() << "core launch:" << (instance ? error : QStringLiteral("no such instance"));
+                    return 1;
+                }
+                loop.exec();
+                qInfo().noquote() << "core launch:" << (started ? QStringLiteral("started") : failure);
+                if (!started)
+                    return 1;
+
+                /*
+                 * The game is a child process, and exiting here would destroy its QProcess and with it
+                 * the game. Waiting is what a development hook wants; a windowed launch stays open and
+                 * gets the same effect for free.
+                 */
+                const QString instanceId = app.arguments().at(coreLaunch + 1);
+                for (auto* process : APPLICATION->findChildren<QProcess*>()) {
+                    if (!process->arguments().join(QLatin1Char(' ')).contains(instanceId))
+                        continue;
+                    qInfo().noquote() << "core launch: waiting for the game, pid" << process->processId();
+                    process->waitForFinished(-1);
+                    qInfo().noquote() << "core launch: the game exited with" << process->exitCode();
+                    break;
+                }
+                return 0;
             }
 
             return app.exec();

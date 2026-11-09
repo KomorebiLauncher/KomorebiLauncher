@@ -12,7 +12,7 @@
 #include <QJsonObject>
 #include <QUrl>
 
-#include "komorebi/core/version/VersionJson.h"
+#include "komorebi/core/version/LibraryFile.h"
 
 namespace Komorebi::Core {
 
@@ -28,27 +28,6 @@ QString nativesToken(const Platform& platform)
     if (platform.os == QLatin1String("osx"))
         return QStringLiteral("natives-osx");
     return QStringLiteral("natives-linux");
-}
-
-/// The file under libraries/ a library entry names, from its path or from the URL that names it.
-QString libraryFile(const LibraryEntry& entry, const QString& librariesDirectory)
-{
-    if (!entry.path.isEmpty())
-        return QDir(librariesDirectory).filePath(entry.path);
-
-    if (!entry.url.isEmpty()) {
-        const QUrl url(entry.url);
-        QString path = url.path();
-        const int maven = path.indexOf(QStringLiteral("/maven/"));
-        if (maven >= 0)
-            path = path.mid(maven + 7);
-        else if (path.startsWith(QLatin1Char('/')))
-            path = path.mid(1);
-        if (path.endsWith(QLatin1String(".jar")))
-            return QDir(librariesDirectory).filePath(path);
-    }
-
-    return QDir(librariesDirectory).filePath(libraryRelativePath(entry.name));
 }
 
 /// Whether the artifact name says this jar holds natives for the platform, and no other architecture.
@@ -169,7 +148,7 @@ QList<NativeJar> nativeJars(const VersionJson& merged, const QString& librariesD
             continue;
 
         NativeJar jar;
-        jar.path = libraryFile(library, librariesDirectory);
+        jar.path = libraryFilePath(library, librariesDirectory);
         jar.exclude = library.extractExclude;
         jars.append(jar);
     }

@@ -136,6 +136,8 @@ void FileDownloader::beginAttempt()
         return;
     }
     m_received = alreadyThere;
+    m_attemptResumeFrom = alreadyThere;
+    m_restartedThisAttempt = false;
 
     QNetworkRequest request(m_download.url);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
@@ -157,7 +159,11 @@ void FileDownloader::handleReadyRead()
         return;
 
     const int status = m_reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
-    if (status == 200 && m_received > 0) {
+    // Only a request that actually asked for a range can be answered with the whole file instead; a
+    // normal download also reports 200 on every read, and treating that as "start over" truncated the
+    // file at every chunk.
+    if (status == 200 && m_attemptResumeFrom > 0 && !m_restartedThisAttempt) {
+        m_restartedThisAttempt = true;
         // The server ignored the range and is sending the whole file; keeping the part would write it
         // twice, so start over.
         m_file->close();
@@ -203,6 +209,13 @@ void FileDownloader::handleReplyFinished()
     reply->deleteLater();
 
     if (m_file) {
+        // Qt can deliver the last bytes without a further readyRead; taking them here is what keeps a
+        // downloaded file from being a few kilobytes short of the one whose hash the manifest names.
+        const auto tail = reply->readAll();
+        if (!tail.isEmpty()) {
+            m_file->write(tail);
+            m_received += tail.size();
+        }
         m_file->flush();
         m_file->close();
         delete m_file;
@@ -234,8 +247,10 @@ bool FileDownloader::finishFile()
         const QByteArray actual = hashFile(m_partPath);
         if (actual != m_download.sha1) {
             QFile::remove(m_partPath);
-            fail(tr("the file's SHA-1 is %1, not the %2 the manifest asked for")
-                     .arg(QString::fromLatin1(actual.toHex()), QString::fromLatin1(m_download.sha1.toHex())));
+            fail(tr("the file's SHA-1 is %1, not the %2 the manifest asked for (from %3, %4 bytes)")
+                     .arg(QString::fromLatin1(actual.toHex()), QString::fromLatin1(m_download.sha1.toHex()),
+                          m_download.url.toString())
+                     .arg(part.size()));
             return false;
         }
     } else if (m_download.expectedSize >= 0 && part.size() != m_download.expectedSize) {
@@ -264,7 +279,9 @@ void FileDownloader::fail(const QString& error)
     if (m_reported)
         return;
     m_reported = true;
-    emit finished(false, error);
+    // The queue collects failures and reports them together; without the file name the message says
+    // what went wrong but not to which of fifty files.
+    emit finished(false, m_download.targetPath.isEmpty() ? error : QStringLiteral("%1: %2").arg(m_download.targetPath, error));
 }
 
 QByteArray FileDownloader::fileHash(const QString& path)

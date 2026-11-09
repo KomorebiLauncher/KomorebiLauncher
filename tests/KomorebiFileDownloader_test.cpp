@@ -96,6 +96,7 @@ class KomorebiFileDownloaderTest : public QObject {
     void restartsWhenTheServerIgnoresRange();
     void skipsAFileThatIsAlreadyRight();
     void retriesAfterADroppedConnection();
+    void writesAFileLargeEnoughForSeveralReads();
 
    private:
     static QUrl urlFor(const TinyFileServer& server);
@@ -223,6 +224,27 @@ void KomorebiFileDownloaderTest::skipsAFileThatIsAlreadyRight()
     QCOMPARE(server.requests, 0);
 }
 
+void KomorebiFileDownloaderTest::writesAFileLargeEnoughForSeveralReads()
+{
+    // A download that arrives in several chunks used to be truncated at every chunk: the "server
+    // ignored the range, start over" branch fired on every read because a normal answer is also 200.
+    QTemporaryDir temp;
+    QVERIFY(temp.isValid());
+    TinyFileServer server;
+    QVERIFY(server.listen(QHostAddress::LocalHost));
+    server.body = QByteArray(512 * 1024, 'z');
+
+    QNetworkAccessManager network;
+    FileDownloader downloader(&network);
+    QSignalSpy spy(&downloader, &FileDownloader::finished);
+    const QString target = temp.filePath(QStringLiteral("big.bin"));
+    downloader.start(FileDownload{ urlFor(server), target, sha1Of(server.body), server.body.size() });
+
+    QTRY_COMPARE_WITH_TIMEOUT(spy.count(), 1, 20000);
+    QVERIFY2(spy.first().at(0).toBool(), qPrintable(spy.first().at(1).toString()));
+    QCOMPARE(readAll(target).size(), server.body.size());
+    QCOMPARE(readAll(target), server.body);
+}
 void KomorebiFileDownloaderTest::retriesAfterADroppedConnection()
 {
     QTemporaryDir temp;

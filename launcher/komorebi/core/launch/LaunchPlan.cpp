@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "komorebi/core/launch/LaunchPlan.h"
+#include "komorebi/core/version/LibraryFile.h"
 
 #include <QDir>
 #include <QHash>
@@ -64,10 +65,10 @@ QStringList classpathEntries(const VersionJson& merged, const LaunchOptions& opt
     for (const auto& library : merged.libraries) {
         if (!library.appliesTo(platform))
             continue;
-        const QString path = libraryPath(library);
+        const QString path = libraryFilePath(library, options.librariesDirectory);
         if (path.isEmpty())
             continue;
-        entries.append(QDir(options.librariesDirectory).filePath(path));
+        entries.append(path);
     }
     if (!options.clientJarPath.isEmpty())
         entries.append(options.clientJarPath);
