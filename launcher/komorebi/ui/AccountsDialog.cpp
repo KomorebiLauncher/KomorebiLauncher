@@ -16,6 +16,7 @@
 #include "komorebi/ui/DeviceCodeDialog.h"
 
 using AccountStore = Komorebi::Services::AccountStore;
+using AuthError = Komorebi::Services::AuthError;
 
 KomorebiAccountsDialog::KomorebiAccountsDialog(QWidget* parent) : QDialog(parent)
 {
@@ -81,7 +82,7 @@ QString KomorebiAccountsDialog::storePath() const
 void KomorebiAccountsDialog::reload()
 {
     const AccountStore store = AccountStore::forDataRoot(APPLICATION->dataRoot());
-    QString error;
+    AuthError error = AuthError::None;
     m_accounts = store.accounts(&error);
 
     const QString defaultAccount = APPLICATION->settings()->get("CoreAccount").toString();
@@ -106,14 +107,14 @@ void KomorebiAccountsDialog::reload()
     m_list->setVisible(hasAccounts);
 
     // The button says why it is blocked instead of leaving the reason to a failed attempt.
-    QString why;
-    const bool offlineAllowed = store.canAddOffline(&why);
+    const bool offlineAllowed = store.canAddOffline();
     m_addOffline->setEnabled(offlineAllowed);
-    m_addOffline->setToolTip(offlineAllowed ? tr("Play under a name that never signs in.")
-                                            : tr("Sign in with Microsoft first: %1.").arg(why));
+    m_addOffline->setToolTip(offlineAllowed
+                                 ? tr("Play under a name that never signs in.")
+                                 : tr("Sign in with Microsoft first: an offline name needs a Microsoft account beside it."));
 
-    if (!error.isEmpty())
-        m_status->setText(tr("The account file could not be read: %1").arg(error));
+    if (error != AuthError::None)
+        m_status->setText(tr("The accounts file at %1 could not be read.").arg(storePath()));
     else if (!hasAccounts)
         m_status->setText(tr("No Komorebi accounts yet. Sign in with Microsoft to add one."));
     else
@@ -135,9 +136,11 @@ void KomorebiAccountsDialog::signIn()
     if (!session.isValid())
         return;
 
-    QString error;
+    AuthError error = AuthError::None;
     if (!AccountStore::forDataRoot(APPLICATION->dataRoot()).addMicrosoft(session, &error)) {
-        m_status->setText(tr("The account could not be saved: %1").arg(error));
+        m_status->setText(error == AuthError::VaultSealFailed
+                              ? tr("The sign-in could not be kept safely on this computer.")
+                              : tr("The account could not be saved at %1.").arg(storePath()));
         return;
     }
 
@@ -156,10 +159,20 @@ void KomorebiAccountsDialog::addOffline()
     if (!accepted || name.isEmpty())
         return;
 
-    QString error;
+    AuthError error = AuthError::None;
     Komorebi::Services::AuthSession added;
     if (!AccountStore::forDataRoot(APPLICATION->dataRoot()).addOffline(name, &added, &error)) {
-        m_status->setText(tr("The offline account could not be added: %1").arg(error));
+        switch (error) {
+            case AuthError::OfflineNameMissing:
+                m_status->setText(tr("An offline account needs a name."));
+                break;
+            case AuthError::OfflineNeedsMicrosoft:
+                m_status->setText(tr("Sign in with Microsoft first: an offline name needs a Microsoft account beside it."));
+                break;
+            default:
+                m_status->setText(tr("The offline account could not be saved at %1.").arg(storePath()));
+                break;
+        }
         reload();
         return;
     }
@@ -193,9 +206,19 @@ void KomorebiAccountsDialog::removeSelected()
         != QMessageBox::Yes)
         return;
 
-    QString error;
+    AuthError error = AuthError::None;
     if (!AccountStore::forDataRoot(APPLICATION->dataRoot()).remove(account.uuid, &error)) {
-        m_status->setText(tr("The account could not be removed: %1").arg(error));
+        switch (error) {
+            case AuthError::LastMicrosoftBesideOffline:
+                m_status->setText(tr("Remove the offline accounts first: they need a Microsoft account to stand beside."));
+                break;
+            case AuthError::NoSuchAccount:
+                m_status->setText(tr("That account is not stored any more."));
+                break;
+            default:
+                m_status->setText(tr("The account could not be removed from %1.").arg(storePath()));
+                break;
+        }
         return;
     }
 

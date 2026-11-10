@@ -286,7 +286,7 @@ int probeAuth(const QStringList& arguments, QTextStream& out)
         }
         const Services::TokenVault vault =
             storePath.isEmpty() ? Services::TokenVault::forDataRoot(dataRoot) : Services::TokenVault(storePath);
-        QString error;
+        Services::AuthError error = Services::AuthError::None;
         const QList<Services::AuthSession> accounts = vault.load(&error);
         say(out, QStringLiteral("auth: %1 account(s) in %2").arg(accounts.size()).arg(vault.path()));
         for (const auto& account : accounts) {
@@ -294,8 +294,8 @@ int probeAuth(const QStringList& arguments, QTextStream& out)
                          .arg(account.username, account.uuid)
                          .arg(account.refreshToken.size()));
         }
-        if (!error.isEmpty()) {
-            say(out, QStringLiteral("auth: %1").arg(error));
+        if (error != Services::AuthError::None) {
+            say(out, QStringLiteral("auth: %1").arg(Services::authErrorText(error)));
             return 1;
         }
         return accounts.isEmpty() ? 1 : 0;
@@ -349,11 +349,11 @@ int probeAuth(const QStringList& arguments, QTextStream& out)
             say(out, QStringLiteral("auth: signed in as %1 (%2)").arg(session.username, session.uuid));
             if (!dataRoot.isEmpty()) {
                 const Services::TokenVault vault = Services::TokenVault::forDataRoot(dataRoot);
-                QString error;
+                Services::AuthError error = Services::AuthError::None;
                 if (vault.upsert(session, &error))
                     say(out, QStringLiteral("auth: saved into %1").arg(vault.path()));
                 else
-                    say(out, QStringLiteral("auth: could not save the account: %1").arg(error));
+                    say(out, QStringLiteral("auth: could not save the account: %1").arg(Services::authErrorText(error)));
             }
             loop.quit();
         });
@@ -366,11 +366,12 @@ int probeAuth(const QStringList& arguments, QTextStream& out)
         }
         const Services::TokenVault vault =
             storePath.isEmpty() ? Services::TokenVault::forDataRoot(dataRoot) : Services::TokenVault(storePath);
-        QString error;
+        Services::AuthError error = Services::AuthError::None;
         const QList<Services::AuthSession> accounts = vault.load(&error);
         if (accounts.isEmpty()) {
+            const QString reason = Services::authErrorText(error);
             say(out, QStringLiteral("auth: no accounts in %1%2")
-                         .arg(vault.path(), error.isEmpty() ? QString() : QStringLiteral(": %1").arg(error)));
+                         .arg(vault.path(), reason.isEmpty() ? QString() : QStringLiteral(": %1").arg(reason)));
             return 1;
         }
 

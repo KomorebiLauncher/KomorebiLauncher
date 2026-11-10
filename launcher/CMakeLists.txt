@@ -1242,6 +1242,7 @@ SET(LAUNCHER_SOURCES
     komorebi/services/install/InstanceCreator.h
     komorebi/services/auth/AccountStore.cpp
     komorebi/services/auth/AccountStore.h
+    komorebi/services/auth/AuthError.h
     komorebi/services/auth/AuthSession.cpp
     komorebi/services/auth/AuthSession.h
     komorebi/services/auth/MicrosoftAuth.cpp

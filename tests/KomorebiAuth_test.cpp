@@ -282,8 +282,8 @@ void KomorebiAuthTest::vaultRoundTripsTokens()
     account.xuid = QStringLiteral("12345");
     account.refreshToken = QStringLiteral("a-refresh-token-that-must-not-be-readable");
 
-    QString error;
-    QVERIFY2(vault.save({ account }, &error), qPrintable(error));
+    AuthError error = AuthError::None;
+    QVERIFY2(vault.save({ account }, &error), "the vault takes the account");
 
     QFile file(vault.path());
     QVERIFY(file.open(QIODevice::ReadOnly));
@@ -300,11 +300,11 @@ void KomorebiAuthTest::vaultRoundTripsTokens()
 
     // A second sign-in of the same account replaces the entry instead of adding another.
     account.refreshToken = QStringLiteral("the-newer-token");
-    QVERIFY2(vault.upsert(account, &error), qPrintable(error));
+    QVERIFY2(vault.upsert(account, &error), "the renewed token is stored");
     QCOMPARE(vault.load().size(), 1);
     QCOMPARE(vault.load().first().refreshToken, QStringLiteral("the-newer-token"));
 
-    QVERIFY2(vault.remove(account.uuid, &error), qPrintable(error));
+    QVERIFY2(vault.remove(account.uuid, &error), "the account is removed");
     QVERIFY(vault.load().isEmpty());
 }
 
@@ -319,9 +319,9 @@ void KomorebiAuthTest::vaultRejectsAnUnreadableFile()
     file.write("this is not json");
     file.close();
 
-    QString error;
+    AuthError error = AuthError::None;
     QVERIFY(vault.load(&error).isEmpty());
-    QVERIFY(!error.isEmpty());
+    QVERIFY(error == AuthError::VaultUnreadable);
 }
 
 void KomorebiAuthTest::expiredSessionsSaySo()

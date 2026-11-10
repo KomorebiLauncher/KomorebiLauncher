@@ -77,10 +77,10 @@ void AccountStoreTest::anEmptyVaultIsNotABrokenOne()
     QTemporaryDir directory;
     QVERIFY(directory.isValid());
 
-    QString error;
+    AuthError error = AuthError::None;
     const AccountStore store = AccountStore::forDataRoot(directory.path());
     QVERIFY(store.accounts(&error).isEmpty());
-    QVERIFY2(error.isEmpty(), qPrintable(error));
+    QVERIFY(error == AuthError::None);
 }
 
 void AccountStoreTest::offlineNeedsAMicrosoftAccount()
@@ -89,17 +89,18 @@ void AccountStoreTest::offlineNeedsAMicrosoftAccount()
     QVERIFY(directory.isValid());
 
     const AccountStore store = AccountStore::forDataRoot(directory.path());
-    QString why;
+    AuthError why = AuthError::None;
     QVERIFY(!store.canAddOffline(&why));
-    QVERIFY(!why.isEmpty());
+    QVERIFY(why == AuthError::OfflineNeedsMicrosoft);
 
-    QString error;
+    AuthError error = AuthError::None;
     QVERIFY(!store.addOffline(QStringLiteral("Steve"), nullptr, &error));
-    QVERIFY(!error.isEmpty());
+    QVERIFY(error == AuthError::OfflineNeedsMicrosoft);
     QVERIFY(store.accounts().isEmpty());
 
     // The same rule applies from the other direction: an offline name is not a Microsoft sign-in.
     QVERIFY(!store.addMicrosoft(offlineSession(QStringLiteral("Steve")), &error));
+    QVERIFY(error == AuthError::OfflineIsNotASignIn);
 }
 
 void AccountStoreTest::offlineStandsBesideAMicrosoftAccount()
@@ -112,8 +113,8 @@ void AccountStoreTest::offlineStandsBesideAMicrosoftAccount()
     QVERIFY(store.canAddOffline());
 
     AuthSession added;
-    QString error;
-    QVERIFY2(store.addOffline(QStringLiteral("Steve"), &added, &error), qPrintable(error));
+    AuthError error = AuthError::None;
+    QVERIFY2(store.addOffline(QStringLiteral("Steve"), &added, &error), "an offline name stands beside a Microsoft account");
     QVERIFY(added.offline);
     QCOMPARE(added.username, QStringLiteral("Steve"));
     QCOMPARE(added.accessToken, QStringLiteral("0"));
@@ -127,11 +128,11 @@ void AccountStoreTest::offlineSessionSurvivesARoundTrip()
     QTemporaryDir directory;
     QVERIFY(directory.isValid());
 
-    QString error;
+    AuthError error = AuthError::None;
     {
         const AccountStore store = AccountStore::forDataRoot(directory.path());
         QVERIFY(store.addMicrosoft(microsoftSession(), &error));
-        QVERIFY2(store.addOffline(QStringLiteral("Steve"), nullptr, &error), qPrintable(error));
+        QVERIFY2(store.addOffline(QStringLiteral("Steve"), nullptr, &error), "the offline name is stored");
     }
 
     // A different store over the same directory: what the next launch of the launcher sees.
@@ -164,14 +165,14 @@ void AccountStoreTest::theLastMicrosoftAccountCannotBeRemovedWhileAnOfflineOneRe
     QVERIFY(store.addOffline(QStringLiteral("Steve"), &offline));
 
     // Removing the Microsoft account first would leave the offline name with nothing to stand beside.
-    QString error;
+    AuthError error = AuthError::None;
     QVERIFY(!store.remove(microsoft.uuid, &error));
-    QVERIFY(error.contains(QStringLiteral("offline")));
+    QVERIFY(error == AuthError::LastMicrosoftBesideOffline);
     QCOMPARE(store.accounts().size(), 2);
 
     // Removing the offline one first is allowed, and then so is the Microsoft one.
-    QVERIFY2(store.remove(offline.uuid, &error), qPrintable(error));
-    QVERIFY2(store.remove(microsoft.uuid, &error), qPrintable(error));
+    QVERIFY2(store.remove(offline.uuid, &error), "the offline name can go first");
+    QVERIFY2(store.remove(microsoft.uuid, &error), "the Microsoft account can go once no offline name remains");
     QVERIFY(store.accounts().isEmpty());
 }
 

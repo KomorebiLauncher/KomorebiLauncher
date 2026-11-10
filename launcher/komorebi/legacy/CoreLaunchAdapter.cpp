@@ -280,7 +280,7 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
 
     QObject::connect(auth, &Services::MicrosoftAuth::signedIn, APPLICATION, [=] {
         const Services::AuthSession renewed = auth->session();
-        QString ignored;
+        Services::AuthError ignored = Services::AuthError::None;
         Services::TokenVault::forDataRoot(APPLICATION->dataRoot()).upsert(renewed, &ignored);
         auth->deleteLater();
         qInfo().noquote() << "core launch: the Komorebi account was renewed as" << renewed.username;

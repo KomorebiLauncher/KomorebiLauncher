@@ -74,7 +74,7 @@ TokenVault TokenVault::forDataRoot(const QString& dataRoot)
     return TokenVault(QDir(dataRoot).filePath(QStringLiteral("komorebi-accounts.json")));
 }
 
-QList<AuthSession> TokenVault::load(QString* error) const
+QList<AuthSession> TokenVault::load(AuthError* error) const
 {
     QList<AuthSession> accounts;
 
@@ -85,14 +85,14 @@ QList<AuthSession> TokenVault::load(QString* error) const
     QFile file(m_path);
     if (!file.open(QIODevice::ReadOnly)) {
         if (error)
-            *error = QStringLiteral("could not open %1").arg(m_path);
+            *error = AuthError::VaultUnreadable;
         return accounts;
     }
 
     const QJsonDocument document = QJsonDocument::fromJson(file.readAll());
     if (!document.isObject()) {
         if (error)
-            *error = QStringLiteral("%1 is not a readable accounts file").arg(m_path);
+            *error = AuthError::VaultUnreadable;
         return accounts;
     }
 
@@ -117,14 +117,14 @@ QList<AuthSession> TokenVault::load(QString* error) const
     return accounts;
 }
 
-bool TokenVault::save(const QList<AuthSession>& accounts, QString* error) const
+bool TokenVault::save(const QList<AuthSession>& accounts, AuthError* error) const
 {
     QJsonArray list;
     for (const auto& account : accounts) {
         const QString sealed = seal(account.refreshToken);
         if (!account.refreshToken.isEmpty() && sealed.isEmpty()) {
             if (error)
-                *error = QStringLiteral("the refresh token of %1 could not be sealed").arg(account.username);
+                *error = AuthError::VaultSealFailed;
             return false;
         }
 
@@ -145,19 +145,19 @@ bool TokenVault::save(const QList<AuthSession>& accounts, QString* error) const
     QSaveFile file(m_path);
     if (!file.open(QIODevice::WriteOnly)) {
         if (error)
-            *error = QStringLiteral("could not write %1").arg(m_path);
+            *error = AuthError::VaultUnwritable;
         return false;
     }
     file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
     if (!file.commit()) {
         if (error)
-            *error = QStringLiteral("could not finish writing %1").arg(m_path);
+            *error = AuthError::VaultUnwritable;
         return false;
     }
     return true;
 }
 
-bool TokenVault::upsert(const AuthSession& account, QString* error) const
+bool TokenVault::upsert(const AuthSession& account, AuthError* error) const
 {
     QList<AuthSession> accounts = load();
     for (auto& existing : accounts) {
@@ -170,7 +170,7 @@ bool TokenVault::upsert(const AuthSession& account, QString* error) const
     return save(accounts, error);
 }
 
-bool TokenVault::remove(const QString& uuid, QString* error) const
+bool TokenVault::remove(const QString& uuid, AuthError* error) const
 {
     QList<AuthSession> accounts = load();
     for (int index = accounts.size() - 1; index >= 0; --index) {

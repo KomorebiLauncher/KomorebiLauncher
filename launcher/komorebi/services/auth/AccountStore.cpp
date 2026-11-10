@@ -27,31 +27,31 @@ AccountStore AccountStore::forDataRoot(const QString& dataRoot)
     return AccountStore(TokenVault::forDataRoot(dataRoot));
 }
 
-QList<AuthSession> AccountStore::accounts(QString* error) const
+QList<AuthSession> AccountStore::accounts(AuthError* error) const
 {
     return m_vault.load(error);
 }
 
-bool AccountStore::canAddOffline(QString* error) const
+bool AccountStore::canAddOffline(AuthError* error) const
 {
     if (hasMicrosoft(m_vault.load()))
         return true;
     if (error)
-        *error = QStringLiteral("an offline account is only allowed beside a Microsoft account");
+        *error = AuthError::OfflineNeedsMicrosoft;
     return false;
 }
 
-bool AccountStore::addMicrosoft(const AuthSession& session, QString* error) const
+bool AccountStore::addMicrosoft(const AuthSession& session, AuthError* error) const
 {
     if (session.offline) {
         if (error)
-            *error = QStringLiteral("an offline name has to be added as an offline account");
+            *error = AuthError::OfflineIsNotASignIn;
         return false;
     }
     return m_vault.upsert(session, error);
 }
 
-bool AccountStore::addOffline(const QString& username, AuthSession* added, QString* error) const
+bool AccountStore::addOffline(const QString& username, AuthSession* added, AuthError* error) const
 {
     if (!canAddOffline(error))
         return false;
@@ -59,7 +59,7 @@ bool AccountStore::addOffline(const QString& username, AuthSession* added, QStri
     const AuthSession session = offlineSession(username);
     if (!session.isValid()) {
         if (error)
-            *error = QStringLiteral("an offline account needs a name");
+            *error = AuthError::OfflineNameMissing;
         return false;
     }
     if (!m_vault.upsert(session, error))
@@ -70,7 +70,7 @@ bool AccountStore::addOffline(const QString& username, AuthSession* added, QStri
     return true;
 }
 
-bool AccountStore::remove(const QString& uuid, QString* error) const
+bool AccountStore::remove(const QString& uuid, AuthError* error) const
 {
     const QList<AuthSession> accounts = m_vault.load();
 
@@ -91,14 +91,14 @@ bool AccountStore::remove(const QString& uuid, QString* error) const
 
     if (!found) {
         if (error)
-            *error = QStringLiteral("no such account is stored");
+            *error = AuthError::NoSuchAccount;
         return false;
     }
 
     // Removing the last Microsoft account would leave the offline ones with nothing to stand beside.
     if (removingMicrosoft && microsoftCount == 0 && offlineRemains) {
         if (error)
-            *error = QStringLiteral("remove the offline accounts first: they need a Microsoft account to stand beside");
+            *error = AuthError::LastMicrosoftBesideOffline;
         return false;
     }
 

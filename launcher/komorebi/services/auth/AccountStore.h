@@ -15,6 +15,7 @@
 #include <QList>
 #include <QString>
 
+#include "komorebi/services/auth/AuthError.h"
 #include "komorebi/services/auth/AuthSession.h"
 #include "komorebi/services/auth/TokenVault.h"
 
@@ -30,19 +31,19 @@ class AccountStore {
     QString path() const { return m_vault.path(); }
 
     /// Every stored account. Microsoft ones come back without an access token until they are renewed.
-    QList<AuthSession> accounts(QString* error = nullptr) const;
+    QList<AuthSession> accounts(AuthError* error = nullptr) const;
 
     /// True when there is a Microsoft account for an offline one to stand beside.
-    bool canAddOffline(QString* error = nullptr) const;
+    bool canAddOffline(AuthError* error = nullptr) const;
 
     /// Stores a Microsoft sign-in (or a renewed copy of one).
-    bool addMicrosoft(const AuthSession& session, QString* error = nullptr) const;
+    bool addMicrosoft(const AuthSession& session, AuthError* error = nullptr) const;
 
     /// Adds a name as an offline account, if canAddOffline(). The name is trimmed.
-    bool addOffline(const QString& username, AuthSession* added = nullptr, QString* error = nullptr) const;
+    bool addOffline(const QString& username, AuthSession* added = nullptr, AuthError* error = nullptr) const;
 
     /// Removes one account, refusing to leave an offline account without a Microsoft one.
-    bool remove(const QString& uuid, QString* error = nullptr) const;
+    bool remove(const QString& uuid, AuthError* error = nullptr) const;
 
    private:
     TokenVault m_vault;

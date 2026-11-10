@@ -16,6 +16,7 @@
 #include <QList>
 #include <QString>
 
+#include "komorebi/services/auth/AuthError.h"
 #include "komorebi/services/auth/AuthSession.h"
 
 namespace Komorebi::Services {
@@ -30,14 +31,14 @@ class TokenVault {
     QString path() const { return m_path; }
 
     /// Every stored account. Sessions come back without an access token; they are refreshed to get one.
-    QList<AuthSession> load(QString* error = nullptr) const;
+    QList<AuthSession> load(AuthError* error = nullptr) const;
 
-    bool save(const QList<AuthSession>& accounts, QString* error = nullptr) const;
+    bool save(const QList<AuthSession>& accounts, AuthError* error = nullptr) const;
 
     /// Adds the account, or replaces the entry with the same uuid.
-    bool upsert(const AuthSession& account, QString* error = nullptr) const;
+    bool upsert(const AuthSession& account, AuthError* error = nullptr) const;
 
-    bool remove(const QString& uuid, QString* error = nullptr) const;
+    bool remove(const QString& uuid, AuthError* error = nullptr) const;
 
    private:
     QString m_path;
