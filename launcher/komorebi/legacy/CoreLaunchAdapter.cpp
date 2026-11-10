@@ -287,16 +287,11 @@ bool launchInstance(MinecraftInstance* instance, const MinecraftAccountPtr& acco
     QObject::connect(auth, &Services::MicrosoftAuth::failed, APPLICATION, [=](const QString& reason) {
         auth->deleteLater();
         qWarning().noquote() << "core launch: the Komorebi account could not be renewed:" << reason;
-        // A broken stored sign-in should not make the launcher stop working: the account the launcher
-        // already has is still there, and the player can fix the Komorebi one from its dialog.
-        if (!account) {
-            if (onFailed)
-                onFailed(reason);
-            return;
-        }
-        if (onStatus)
-            onStatus(QObject::tr("The Komorebi account could not be renewed (%1); starting with the launcher's own account.").arg(reason));
-        beginLaunch(instance, accountFromPrism(account), onStarted, onFailed, onFinished, onAborted, onStatus);
+        // The account the launcher's own list keeps is not a stand-in for this one: the player signed
+        // in to the Komorebi account, and quietly starting the game as somebody else would be worse
+        // than asking them to sign in again.
+        if (onFailed)
+            onFailed(QObject::tr("The Komorebi account's sign-in has expired (%1); sign in again from the accounts menu.").arg(reason));
     });
 
     auth->refresh(coreAccount.refreshToken);
