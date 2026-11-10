@@ -117,6 +117,7 @@
 #include "komorebi/ui/InstanceListPage.h"
 #include "komorebi/ui/NewInstanceDialog.h"
 #include "komorebi/ui/AccountsDialog.h"
+#include "komorebi/services/auth/TokenVault.h"
 #include "ui/widgets/LauncherBackground.h"
 #include "ui/window/MainContentPanel.h"
 #include "ui/window/RailShell.h"
@@ -570,11 +571,7 @@ void MainWindow::retranslateUi()
 
     ui->retranslateUi(this);
 
-    MinecraftAccountPtr defaultAccount = APPLICATION->accounts()->defaultAccount();
-    if (defaultAccount) {
-        auto profileLabel = profileInUseFilter(defaultAccount->displayName(), defaultAccount->isInUse());
-        ui->actionAccountsButton->setText(profileLabel);
-    }
+    updateCoreAccountButton();
 
     changeIconButton->setToolTip(ui->actionChangeInstIcon->toolTip());
 
@@ -785,80 +782,60 @@ void MainWindow::repopulateAccountsMenu()
         ui->actionAccountsButton->setMenu(accountsButtonMenu);
     }
 
-    auto accounts = APPLICATION->accounts();
-    MinecraftAccountPtr defaultAccount = accounts->defaultAccount();
+    // Accounts come from the core's own store: the launcher signs in to Microsoft itself now. The
+    // launcher's original accounts still exist underneath for the old launch path, but they are not
+    // something the window offers any more.
+    const auto accounts = Komorebi::Services::TokenVault::forDataRoot(APPLICATION->dataRoot()).load();
+    const QString defaultId = APPLICATION->settings()->get("CoreAccount").toString();
 
-    bool canChangeSkin = defaultAccount && (defaultAccount->accountType() == AccountType::MSA) && !defaultAccount->isActive();
-    ui->actionManageSkins->setEnabled(canChangeSkin);
-
-    QString active_profileId = "";
-    if (defaultAccount) {
-        // this can be called before accountMenuButton exists
-        if (ui->actionAccountsButton) {
-            auto profileLabel = profileInUseFilter(defaultAccount->displayName(), defaultAccount->isInUse());
-            ui->actionAccountsButton->setText(profileLabel);
-        }
+    auto* accountsGroup = new QActionGroup(this);
+    for (const auto& account : accounts) {
+        auto* action = new QAction(account.username, this);
+        action->setData(account.uuid);
+        action->setCheckable(true);
+        action->setActionGroup(accountsGroup);
+        action->setChecked(account.uuid == defaultId);
+        connect(action, &QAction::triggered, this, &MainWindow::changeActiveAccount);
+        ui->accountsMenu->addAction(action);
     }
 
-    QActionGroup* accountsGroup = new QActionGroup(this);
-
-    if (accounts->count() <= 0) {
-        ui->actionNoAccountsAdded->setEnabled(false);
-        ui->accountsMenu->addAction(ui->actionNoAccountsAdded);
-    } else {
-        // TODO: Nicer way to iterate?
-        for (int i = 0; i < accounts->count(); i++) {
-            MinecraftAccountPtr account = accounts->at(i);
-            auto profileLabel = profileInUseFilter(account->displayName(), account->isInUse());
-            QAction* action = new QAction(profileLabel, this);
-            action->setData(i);
-            action->setCheckable(true);
-            action->setActionGroup(accountsGroup);
-            if (defaultAccount == account) {
-                action->setChecked(true);
-            }
-
-            auto face = account->getFace();
-            if (!face.isNull()) {
-                action->setIcon(face);
-            } else {
-                action->setIcon(QIcon::fromTheme("noaccount"));
-            }
-
-            const int highestNumberKey = 9;
-            if (i < highestNumberKey) {
-                action->setShortcut(QKeySequence(tr("Ctrl+%1").arg(i + 1)));
-            }
-
-            ui->accountsMenu->addAction(action);
-            connect(action, &QAction::triggered, this, &MainWindow::changeActiveAccount);
-        }
-    }
+    auto* noAccount = new QAction(tr("No account"), this);
+    noAccount->setData(QString());
+    noAccount->setCheckable(true);
+    noAccount->setActionGroup(accountsGroup);
+    noAccount->setChecked(defaultId.isEmpty());
+    connect(noAccount, &QAction::triggered, this, &MainWindow::changeActiveAccount);
+    ui->accountsMenu->addAction(noAccount);
 
     ui->accountsMenu->addSeparator();
 
-    ui->actionNoDefaultAccount->setData(-1);
-    ui->actionNoDefaultAccount->setChecked(!defaultAccount);
-    ui->actionNoDefaultAccount->setActionGroup(accountsGroup);
-
-    ui->accountsMenu->addAction(ui->actionNoDefaultAccount);
-
-    connect(ui->actionNoDefaultAccount, &QAction::triggered, this, &MainWindow::changeActiveAccount);
-
-    ui->accountsMenu->addSeparator();
-    ui->accountsMenu->addAction(ui->actionManageSkins);
-    ui->accountsMenu->addAction(ui->actionManageAccounts);
-
-    // The core's accounts live beside the launcher's own while the account side is migrated; this is
-    // where a player signs in with one and says which account launching should use.
-    auto* coreAccounts = new QAction(tr("Komorebi accounts…"), this);
-    connect(coreAccounts, &QAction::triggered, this, [this] {
+    auto* manageAccounts = new QAction(tr("Komorebi accounts…"), this);
+    connect(manageAccounts, &QAction::triggered, this, [this] {
         KomorebiAccountsDialog dialog(this);
         dialog.exec();
+        repopulateAccountsMenu();
     });
-    ui->accountsMenu->addAction(coreAccounts);
+    ui->accountsMenu->addAction(manageAccounts);
 
+    updateCoreAccountButton();
     accountsButtonMenu->addActions(ui->accountsMenu->actions());
+}
+
+void MainWindow::updateCoreAccountButton()
+{
+    const QString defaultId = APPLICATION->settings()->get("CoreAccount").toString();
+    QString name;
+    if (!defaultId.isEmpty()) {
+        for (const auto& account : Komorebi::Services::TokenVault::forDataRoot(APPLICATION->dataRoot()).load()) {
+            if (account.uuid == defaultId) {
+                name = account.username;
+                break;
+            }
+        }
+    }
+
+    ui->actionAccountsButton->setText(name.isEmpty() ? tr("Accounts") : name);
+    ui->actionAccountsButton->setIcon(QIcon::fromTheme(QStringLiteral("noaccount")));
 }
 
 void MainWindow::updatesAllowedChanged(bool allowed)
@@ -874,45 +851,17 @@ void MainWindow::updatesAllowedChanged(bool allowed)
  */
 void MainWindow::changeActiveAccount()
 {
-    QAction* sAction = (QAction*)sender();
-
-    // Profile's associated Mojang username
-    if (sAction->data().typeId() != QMetaType::Int)
+    auto* action = qobject_cast<QAction*>(sender());
+    if (!action)
         return;
 
-    QVariant action_data = sAction->data();
-    bool valid = false;
-    int index = action_data.toInt(&valid);
-    if (!valid) {
-        index = -1;
-    }
-    auto accounts = APPLICATION->accounts();
-    accounts->setDefaultAccount(index == -1 ? nullptr : accounts->at(index));
+    APPLICATION->settings()->set("CoreAccount", action->data().toString());
     defaultAccountChanged();
 }
 
 void MainWindow::defaultAccountChanged()
 {
     repopulateAccountsMenu();
-
-    MinecraftAccountPtr account = APPLICATION->accounts()->defaultAccount();
-
-    // FIXME: this needs adjustment for MSA
-    if (account && account->profileName() != "") {
-        auto profileLabel = profileInUseFilter(account->displayName(), account->isInUse());
-        ui->actionAccountsButton->setText(profileLabel);
-        auto face = account->getFace();
-        if (face.isNull()) {
-            ui->actionAccountsButton->setIcon(QIcon::fromTheme("noaccount"));
-        } else {
-            ui->actionAccountsButton->setIcon(face);
-        }
-        return;
-    }
-
-    // Set the icon to the "no account" icon.
-    ui->actionAccountsButton->setIcon(QIcon::fromTheme("noaccount"));
-    ui->actionAccountsButton->setText(tr("Accounts"));
 }
 
 bool MainWindow::eventFilter(QObject* obj, QEvent* ev)
@@ -1596,7 +1545,9 @@ void MainWindow::on_actionManageSkins_triggered()
 
 void MainWindow::on_actionManageAccounts_triggered()
 {
-    APPLICATION->ShowGlobalSettings(this, "accounts");
+    KomorebiAccountsDialog dialog(this);
+    dialog.exec();
+    repopulateAccountsMenu();
 }
 
 void MainWindow::on_actionReportBug_triggered()

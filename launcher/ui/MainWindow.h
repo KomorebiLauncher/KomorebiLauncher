@@ -222,6 +222,8 @@ class MainWindow : public QMainWindow {
 
     void repopulateAccountsMenu();
 
+    void updateCoreAccountButton();
+
     void updateNewsLabel();
 
     void konamiTriggered();
