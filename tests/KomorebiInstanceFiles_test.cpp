@@ -8,6 +8,7 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include "komorebi/core/version/VersionJson.h"
 #include "komorebi/services/download/InstanceFiles.h"
 
 using namespace Komorebi::Services;
@@ -155,28 +156,35 @@ void KomorebiInstanceFilesTest::asksForNativeClassifiers()
     const QByteArray nativeBytes = QByteArrayLiteral("the graphics library natives");
     const QByteArray derivedBytes = QByteArrayLiteral("a natives jar named after its classifier");
 
-    // A 1.8-era library keeps its natives in a classifier rather than in an artifact of its own; the
-    // two shapes below are the two the manifests use: one names the file, one only names the classifier.
+    // The missing-file list asks for the files this machine would run, so the fixture names the
+    // platform it is being read on: CI builds Linux and macOS as well, and a manifest that only
+    // spelled out "windows" would ask for nothing there.
+    const auto platform = Komorebi::Core::Platform::current();
+    const QString bits = platform.arch == QLatin1String("x86") ? QStringLiteral("32") : QStringLiteral("64");
+    const QString classifierName = QStringLiteral("natives-%1").arg(bits);
+    const QJsonObject natives{ { platform.os, QStringLiteral("natives-${arch}") } };
+
+    // The two shapes the manifests use: one names the file, one only names the classifier.
+    const QString withPathRelative =
+        QStringLiteral("org/lwjgl/lwjgl/lwjgl-platform/2.9.4/lwjgl-platform-2.9.4-%1.jar").arg(classifierName);
     const QJsonObject withPathLibrary{
         { QStringLiteral("name"), QStringLiteral("org.lwjgl.lwjgl:lwjgl-platform:2.9.4") },
-        { QStringLiteral("natives"), QJsonObject{ { QStringLiteral("windows"), QStringLiteral("natives-windows-${arch}") } } },
+        { QStringLiteral("natives"), natives },
         { QStringLiteral("downloads"),
           QJsonObject{ { QStringLiteral("classifiers"),
                          QJsonObject{
-                             { QStringLiteral("natives-windows-64"),
-                               QJsonObject{ { QStringLiteral("path"),
-                                              QStringLiteral("org/lwjgl/lwjgl/lwjgl-platform/2.9.4/"
-                                                             "lwjgl-platform-2.9.4-natives-windows.jar") },
+                             { classifierName,
+                               QJsonObject{ { QStringLiteral("path"), withPathRelative },
                                             { QStringLiteral("sha1"), sha1Hex(nativeBytes) },
                                             { QStringLiteral("size"), nativeBytes.size() } } } } } } }
     };
     const QJsonObject derivedLibrary{
         { QStringLiteral("name"), QStringLiteral("com.example:derived:1.0") },
-        { QStringLiteral("natives"), QJsonObject{ { QStringLiteral("windows"), QStringLiteral("natives-windows-${arch}") } } },
+        { QStringLiteral("natives"), natives },
         { QStringLiteral("downloads"),
           QJsonObject{ { QStringLiteral("classifiers"),
                          QJsonObject{
-                             { QStringLiteral("natives-windows-64"),
+                             { classifierName,
                                QJsonObject{ { QStringLiteral("url"),
                                               QStringLiteral("https://example.invalid/derived-natives.jar") },
                                             { QStringLiteral("sha1"), sha1Hex(derivedBytes) },
@@ -203,10 +211,9 @@ void KomorebiInstanceFilesTest::asksForNativeClassifiers()
     const auto missing = missingInstanceFiles(data.path(), instance.path(), &error);
     QVERIFY2(error.isEmpty(), qPrintable(error));
 
-    const QString withPath = data.filePath(
-        QStringLiteral("libraries/org/lwjgl/lwjgl/lwjgl-platform/2.9.4/lwjgl-platform-2.9.4-natives-windows.jar"));
+    const QString withPath = data.filePath(QStringLiteral("libraries/") + withPathRelative);
     const QString derived =
-        data.filePath(QStringLiteral("libraries/com/example/derived/1.0/derived-1.0-natives-windows-64.jar"));
+        data.filePath(QStringLiteral("libraries/com/example/derived/1.0/derived-1.0-%1.jar").arg(classifierName));
 
     QStringList targets;
     for (const auto& request : missing)
@@ -217,9 +224,7 @@ void KomorebiInstanceFilesTest::asksForNativeClassifiers()
     for (const auto& request : missing) {
         if (request.targetPath == withPath) {
             // The classifier carries no address, so the file is the one the vanilla host keeps under its path.
-            QCOMPARE(request.url.toString(),
-                     QStringLiteral("https://libraries.minecraft.net/org/lwjgl/lwjgl/lwjgl-platform/2.9.4/"
-                                    "lwjgl-platform-2.9.4-natives-windows.jar"));
+            QCOMPARE(request.url.toString(), QStringLiteral("https://libraries.minecraft.net/") + withPathRelative);
             QCOMPARE(request.sha1, QByteArray::fromHex(sha1Hex(nativeBytes).toLatin1()));
         } else if (request.targetPath == derived) {
             QCOMPARE(request.url.toString(), QStringLiteral("https://example.invalid/derived-natives.jar"));
