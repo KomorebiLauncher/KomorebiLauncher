@@ -482,9 +482,19 @@ bool TranslationsModel::selectLanguage(QString key) const
 
     // otherwise install new translations
     bool successful = false;
-    // FIXME: this is likely never present. FIX IT.
+    // Qt ships its catalogue under the locale name (qtbase_zh_CN), not under the bare language
+    // code this asked for (qt_zh), so the standard buttons -- Close, OK, Cancel -- stayed English.
     d->m_qtTranslator = std::make_unique<QTranslator>();
-    if (d->m_qtTranslator->load("qt_" + langCode, QLibraryInfo::path(QLibraryInfo::TranslationsPath))) {
+    const QStringList qtCatalogues = { "qt_" + langCode, "qtbase_" + langCode, "qt_" + QLocale(langCode).name(),
+                                       "qtbase_" + QLocale(langCode).name() };
+    bool qtLoaded = false;
+    for (const auto& catalogue : qtCatalogues) {
+        if (d->m_qtTranslator->load(catalogue, QLibraryInfo::path(QLibraryInfo::TranslationsPath))) {
+            qtLoaded = true;
+            break;
+        }
+    }
+    if (qtLoaded) {
         qDebug() << "Loading Qt Language File for" << langCode.toLocal8Bit().constData() << "...";
         if (!QCoreApplication::installTranslator(d->m_qtTranslator.get())) {
             qCritical() << "Loading Qt Language File failed.";

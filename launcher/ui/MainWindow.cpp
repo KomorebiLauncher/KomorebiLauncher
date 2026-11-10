@@ -560,6 +560,10 @@ void MainWindow::retranslateUi()
 
     ui->retranslateUi(this);
 
+    // The playtime label is filled by updateStatusCenter, not by the ui file, so it has to be
+    // refilled here; otherwise it keeps whichever language it was built in until playtime changes.
+    updateStatusCenter();
+
     updateCoreAccountButton();
 
     changeIconButton->setToolTip(ui->actionChangeInstIcon->toolTip());
