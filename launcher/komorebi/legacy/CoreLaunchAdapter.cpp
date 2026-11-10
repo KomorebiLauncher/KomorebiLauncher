@@ -218,6 +218,12 @@ bool beginLaunch(MinecraftInstance* instance, const Services::LaunchAccount& who
                          if (onFinished)
                              onFinished(exitCode);
                      });
+    // The launch holds the process and the callbacks above; once it has ended nothing else refers to
+    // it, and a launcher that starts the game several times in one session would keep every one of
+    // them alive until it exits. Deferred, because these signals are emitted from inside it.
+    QObject::connect(task, &Services::InstanceLaunch::failed, task, &QObject::deleteLater);
+    QObject::connect(task, &Services::InstanceLaunch::aborted, task, &QObject::deleteLater);
+    QObject::connect(task, &Services::InstanceLaunch::gameFinished, task, &QObject::deleteLater);
     task->start(options, who);
     return true;
 }
