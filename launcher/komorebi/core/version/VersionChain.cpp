@@ -7,6 +7,8 @@
 #include <QJsonParseError>
 #include <QSet>
 
+#include "komorebi/core/Support/ContainedPath.h"
+
 namespace Komorebi::Core {
 
 namespace {
@@ -60,6 +62,13 @@ std::optional<QList<VersionJson>> loadVersionChain(const QString& versionsRoot, 
     QString current = versionId;
 
     while (!current.isEmpty()) {
+        // The id names a directory below versions/, and every link after the first comes out of a
+        // manifest that a loader or a pack may have written.
+        if (!isPlainFileName(current)) {
+            if (error)
+                *error = QStringLiteral("%1 is not a version id").arg(current);
+            return std::nullopt;
+        }
         if (seen.contains(current)) {
             if (error)
                 *error = QStringLiteral("%1 inherits from itself, directly or through a loop").arg(current);

@@ -23,6 +23,8 @@ class TinyFileServer : public QTcpServer {
     int dropFirstRequests = 0;
     bool stall = false;
     bool notFound = false;
+    int errorStatus = 0;         ///< when set, answer with this status and `errorBody` instead of `body`
+    QByteArray errorBody;
     QByteArray lastRange;
 
     using QTcpServer::QTcpServer;
@@ -43,6 +45,14 @@ class TinyFileServer : public QTcpServer {
             lastRange.clear();
             if (stall)
                 return;
+            if (errorStatus != 0) {
+                socket->write("HTTP/1.1 " + QByteArray::number(errorStatus) + " Error\r\nContent-Length: "
+                              + QByteArray::number(errorBody.size()) + "\r\nConnection: close\r\n\r\n");
+                socket->write(errorBody);
+                socket->flush();
+                socket->disconnectFromHost();
+                return;
+            }
             if (notFound) {
                 socket->write("HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
                 socket->disconnectFromHost();
@@ -108,6 +118,8 @@ class KomorebiFileDownloaderTest : public QObject {
     void writesAFileLargeEnoughForSeveralReads();
     void reportsAStalledConnection();
     void triesTheFallbackAddress();
+    void doesNotKeepAnErrorPageAsTheFile();
+    void refreshesAFileItCannotCheck();
 
    private:
     static QUrl urlFor(const TinyFileServer& server);
@@ -325,6 +337,59 @@ void KomorebiFileDownloaderTest::retriesAfterADroppedConnection()
     QVERIFY2(spy.first().at(0).toBool(), qPrintable(spy.first().at(1).toString()));
     QCOMPARE(readAll(target), server.body);
     QVERIFY(server.requests >= 2);
+}
+
+void KomorebiFileDownloaderTest::doesNotKeepAnErrorPageAsTheFile()
+{
+    // A mirror under load answers an error page with a 200-looking body; writing it into the part file
+    // left a "finished" download whose content was a web page, and a resume that continued inside it.
+    QTemporaryDir temp;
+    QVERIFY(temp.isValid());
+    TinyFileServer server;
+    QVERIFY(server.listen(QHostAddress::LocalHost));
+    server.errorStatus = 500;
+    server.errorBody = QByteArrayLiteral("<html><body>the mirror is down</body></html>");
+
+    QNetworkAccessManager network;
+    FileDownloader downloader(&network);
+    QSignalSpy spy(&downloader, &FileDownloader::finished);
+    const QString target = temp.filePath(QStringLiteral("file.bin"));
+    downloader.start(FileDownload{ urlFor(server), target, {}, -1 });
+
+    QTRY_COMPARE_WITH_TIMEOUT(spy.count(), 1, 15000);
+    QVERIFY(!spy.first().at(0).toBool());
+    QVERIFY(!QFile::exists(target));
+    QVERIFY(!QFile::exists(target + QStringLiteral(".part")));
+}
+
+void KomorebiFileDownloaderTest::refreshesAFileItCannotCheck()
+{
+    // A version list or a loader's index has no hash to compare against, so the only safe reading of
+    // "fetch it again" is to fetch it again: keeping yesterday's copy hides everything published since.
+    QTemporaryDir temp;
+    QVERIFY(temp.isValid());
+    TinyFileServer server;
+    QVERIFY(server.listen(QHostAddress::LocalHost));
+    server.body = QByteArrayLiteral("this week's list");
+
+    const QString target = temp.filePath(QStringLiteral("list.json"));
+    {
+        QFile file(target);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(QByteArrayLiteral("last week's list"));
+    }
+
+    QNetworkAccessManager network;
+    FileDownloader downloader(&network);
+    QSignalSpy spy(&downloader, &FileDownloader::finished);
+    FileDownload file{ urlFor(server), target, {}, -1 };
+    file.refresh = true;
+    downloader.start(file);
+
+    QTRY_COMPARE_WITH_TIMEOUT(spy.count(), 1, 15000);
+    QVERIFY2(spy.first().at(0).toBool(), qPrintable(spy.first().at(1).toString()));
+    QCOMPARE(server.requests, 1);
+    QCOMPARE(readAll(target), server.body);
 }
 
 QTEST_GUILESS_MAIN(KomorebiFileDownloaderTest)

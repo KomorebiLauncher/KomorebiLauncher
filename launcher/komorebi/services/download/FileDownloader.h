@@ -31,6 +31,10 @@ struct FileDownload {
     QByteArray sha1;          ///< empty when the manifest gives no hash
     qint64 expectedSize = -1;  ///< negative when the manifest gives no size
     QUrl fallbackUrl;          ///< the manifest's own address, tried when the source cannot serve the file
+    /// Fetch the file again even when a plausible one is already there. What the launcher keeps in
+    /// tmp/ comes from the network and carries nothing to check it against -- a version list read
+    /// yesterday is not today's list -- so those downloads are told not to trust the cache.
+    bool refresh = false;
 };
 
 class FileDownloader : public QObject {

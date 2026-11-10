@@ -40,6 +40,7 @@ class KomorebiInstanceFilesTest : public QObject {
    private slots:
     void listsWhatIsMissingAndSkipsWhatIsRight();
     void reportsAnInstanceWithoutManifests();
+    void asksForNativeClassifiers();
 };
 
 void KomorebiInstanceFilesTest::listsWhatIsMissingAndSkipsWhatIsRight()
@@ -143,6 +144,87 @@ void KomorebiInstanceFilesTest::reportsAnInstanceWithoutManifests()
     QString error;
     QVERIFY(missingInstanceFiles(temp.path(), temp.filePath(QStringLiteral("instances/none")), &error).isEmpty());
     QVERIFY(!error.isEmpty());
+}
+
+void KomorebiInstanceFilesTest::asksForNativeClassifiers()
+{
+    QTemporaryDir temp;
+    QVERIFY(temp.isValid());
+    const QDir data(temp.path());
+
+    const QByteArray nativeBytes = QByteArrayLiteral("the graphics library natives");
+    const QByteArray derivedBytes = QByteArrayLiteral("a natives jar named after its classifier");
+
+    // A 1.8-era library keeps its natives in a classifier rather than in an artifact of its own; the
+    // two shapes below are the two the manifests use: one names the file, one only names the classifier.
+    const QJsonObject withPathLibrary{
+        { QStringLiteral("name"), QStringLiteral("org.lwjgl.lwjgl:lwjgl-platform:2.9.4") },
+        { QStringLiteral("natives"), QJsonObject{ { QStringLiteral("windows"), QStringLiteral("natives-windows-${arch}") } } },
+        { QStringLiteral("downloads"),
+          QJsonObject{ { QStringLiteral("classifiers"),
+                         QJsonObject{
+                             { QStringLiteral("natives-windows-64"),
+                               QJsonObject{ { QStringLiteral("path"),
+                                              QStringLiteral("org/lwjgl/lwjgl/lwjgl-platform/2.9.4/"
+                                                             "lwjgl-platform-2.9.4-natives-windows.jar") },
+                                            { QStringLiteral("sha1"), sha1Hex(nativeBytes) },
+                                            { QStringLiteral("size"), nativeBytes.size() } } } } } } }
+    };
+    const QJsonObject derivedLibrary{
+        { QStringLiteral("name"), QStringLiteral("com.example:derived:1.0") },
+        { QStringLiteral("natives"), QJsonObject{ { QStringLiteral("windows"), QStringLiteral("natives-windows-${arch}") } } },
+        { QStringLiteral("downloads"),
+          QJsonObject{ { QStringLiteral("classifiers"),
+                         QJsonObject{
+                             { QStringLiteral("natives-windows-64"),
+                               QJsonObject{ { QStringLiteral("url"),
+                                              QStringLiteral("https://example.invalid/derived-natives.jar") },
+                                            { QStringLiteral("sha1"), sha1Hex(derivedBytes) },
+                                            { QStringLiteral("size"), derivedBytes.size() } } } } } } }
+    };
+
+    writeJson(data.filePath(QStringLiteral("meta/net.minecraft/1.8.9.json")),
+              QJsonObject{ { QStringLiteral("uid"), QStringLiteral("net.minecraft") },
+                           { QStringLiteral("version"), QStringLiteral("1.8.9") },
+                           { QStringLiteral("mainClass"), QStringLiteral("net.minecraft.client.main.Main") },
+                           { QStringLiteral("libraries"), QJsonArray{ withPathLibrary, derivedLibrary } } });
+
+    const QDir instance(data.filePath(QStringLiteral("instances/test")));
+    QVERIFY(QDir().mkpath(instance.path()));
+    writeFile(instance.filePath(QStringLiteral("mmc-pack.json")),
+              QJsonDocument(QJsonObject{
+                                { QStringLiteral("components"),
+                                  QJsonArray{ QJsonObject{ { QStringLiteral("uid"), QStringLiteral("net.minecraft") },
+                                                           { QStringLiteral("version"), QStringLiteral("1.8.9") } } } } })
+                  .toJson());
+    writeFile(instance.filePath(QStringLiteral("instance.cfg")), QByteArrayLiteral("[General]\nname=Test\n"));
+
+    QString error;
+    const auto missing = missingInstanceFiles(data.path(), instance.path(), &error);
+    QVERIFY2(error.isEmpty(), qPrintable(error));
+
+    const QString withPath = data.filePath(
+        QStringLiteral("libraries/org/lwjgl/lwjgl/lwjgl-platform/2.9.4/lwjgl-platform-2.9.4-natives-windows.jar"));
+    const QString derived =
+        data.filePath(QStringLiteral("libraries/com/example/derived/1.0/derived-1.0-natives-windows-64.jar"));
+
+    QStringList targets;
+    for (const auto& request : missing)
+        targets.append(request.targetPath);
+    QVERIFY2(targets.contains(withPath), qPrintable(targets.join(QStringLiteral(" | "))));
+    QVERIFY2(targets.contains(derived), qPrintable(targets.join(QStringLiteral(" | "))));
+
+    for (const auto& request : missing) {
+        if (request.targetPath == withPath) {
+            // The classifier carries no address, so the file is the one the vanilla host keeps under its path.
+            QCOMPARE(request.url.toString(),
+                     QStringLiteral("https://libraries.minecraft.net/org/lwjgl/lwjgl/lwjgl-platform/2.9.4/"
+                                    "lwjgl-platform-2.9.4-natives-windows.jar"));
+            QCOMPARE(request.sha1, QByteArray::fromHex(sha1Hex(nativeBytes).toLatin1()));
+        } else if (request.targetPath == derived) {
+            QCOMPARE(request.url.toString(), QStringLiteral("https://example.invalid/derived-natives.jar"));
+        }
+    }
 }
 
 QTEST_GUILESS_MAIN(KomorebiInstanceFilesTest)

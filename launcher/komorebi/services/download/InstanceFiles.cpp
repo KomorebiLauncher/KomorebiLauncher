@@ -8,8 +8,11 @@
 
 #include "komorebi/core/instance/InstanceFolder.h"
 #include "komorebi/core/launch/LaunchPlan.h"
+#include "komorebi/core/Support/ContainedPath.h"
 #include "komorebi/core/version/ComponentSet.h"
 #include "komorebi/core/version/LibraryFile.h"
+
+#include "BuildConfig.h"
 
 namespace Komorebi::Services {
 
@@ -47,7 +50,7 @@ QString clientJarFor(const Core::VersionJson& manifest, const QString& dataRoot)
     const auto relative = Core::libraryRelativePath(manifest.mainJarName);
     if (relative.isEmpty())
         return {};
-    return QDir(dataRoot).filePath(QStringLiteral("libraries/") + relative);
+    return Core::containedPath(QDir(dataRoot).filePath(QStringLiteral("libraries")), relative);
 }
 
 }  // namespace
@@ -84,6 +87,34 @@ QList<FileDownload> missingInstanceFiles(const QString& dataRoot, const QString&
         if (fileIsGood(target, sha1, size))
             continue;
         missing.append(FileDownload{ QUrl(library.url), target, sha1, size });
+    }
+
+    // A natives jar is a classifier of the library it belongs to, not an artifact of its own: without
+    // it the launch has nothing to unpack into the instance's natives/, and the game stops at the
+    // first call into a graphics or sound library.
+    for (const auto& library : manifest->libraries) {
+        if (!library.appliesTo(platform))
+            continue;
+        const auto* classifier = Core::classifierFile(library, platform);
+        if (!classifier)
+            continue;
+
+        const QString target = Core::nativeLibraryPath(library, platform, libraries.path());
+        if (target.isEmpty())
+            continue;
+        const QByteArray sha1 = classifier->sha1.isEmpty() ? QByteArray() : QByteArray::fromHex(classifier->sha1.toLatin1());
+        const qint64 size = classifier->size > 0 ? classifier->size : -1;
+        if (fileIsGood(target, sha1, size))
+            continue;
+
+        // The format normally gives the classifier its own address; when it does not, the file is the
+        // one the vanilla library host keeps under the path its own name spells out.
+        QUrl url(classifier->url);
+        if (!url.isValid())
+            url = QUrl(BuildConfig.LIBRARY_BASE + libraries.relativeFilePath(target));
+        if (!url.isValid())
+            continue;
+        missing.append(FileDownload{ url, target, sha1, size });
     }
 
     // Maven files are the installer and tools a wrapper-style loader reads from disk; they are named

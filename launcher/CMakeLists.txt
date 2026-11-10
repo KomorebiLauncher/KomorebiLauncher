@@ -1261,6 +1261,7 @@ SET(LAUNCHER_SOURCES
     komorebi/core/asset/AssetIndex.h
     komorebi/core/asset/AssetLayout.cpp
     komorebi/core/asset/AssetLayout.h
+    komorebi/core/Support/ContainedPath.h
     komorebi/app/LaunchProbe.cpp
     komorebi/app/LaunchProbe.h
     komorebi/core/legacy/LegacyInstanceRepository.cpp

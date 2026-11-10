@@ -7,6 +7,10 @@
 #include <QJsonObject>
 #include <QJsonParseError>
 
+#include <algorithm>
+
+#include "komorebi/core/Support/ContainedPath.h"
+
 namespace Komorebi::Core {
 
 std::optional<AssetIndex> parseAssetIndex(const QJsonObject& document, const QString& id, QString* error)
@@ -16,6 +20,11 @@ std::optional<AssetIndex> parseAssetIndex(const QJsonObject& document, const QSt
             *error = reason;
         return std::nullopt;
     };
+
+    // The id ends up in a directory name (assets/virtual/<id>, assets/indexes/<id>.json), so it has to
+    // be one name and not a path.
+    if (!isPlainFileName(id))
+        return fail(QStringLiteral("%1 is not an asset index name").arg(id));
 
     const auto objectsValue = document.value(QStringLiteral("objects"));
     if (!objectsValue.isObject())
@@ -34,6 +43,17 @@ std::optional<AssetIndex> parseAssetIndex(const QJsonObject& document, const QSt
         asset.size = static_cast<qint64>(object.value(QStringLiteral("size")).toDouble());
         if (asset.hash.isEmpty())
             continue;
+        // The hash names the file inside assets/objects, two characters of it naming the folder: it is
+        // forty hexadecimal digits or the index is not one this launcher can read.
+        const bool hex = asset.hash.size() == 40
+                         && std::all_of(asset.hash.cbegin(), asset.hash.cend(), [](QChar character) {
+                                // The ASCII range only: the hash is also a path, and a digit from another
+                                // script is not one of the characters the format writes.
+                                return (character >= QLatin1Char('0') && character <= QLatin1Char('9'))
+                                       || (character >= QLatin1Char('a') && character <= QLatin1Char('f'));
+                            });
+        if (!hex)
+            continue;
         index.objects.insert(it.key(), asset);
     }
 
@@ -44,6 +64,11 @@ std::optional<AssetIndex> parseAssetIndex(const QJsonObject& document, const QSt
 
 std::optional<AssetIndex> loadAssetIndex(const QString& dataRoot, const QString& id, QString* error)
 {
+    if (!isPlainFileName(id)) {
+        if (error)
+            *error = QStringLiteral("%1 is not an asset index name").arg(id);
+        return std::nullopt;
+    }
     const QString path = QDir(dataRoot).filePath(QStringLiteral("assets/indexes/") + id + QStringLiteral(".json"));
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) {

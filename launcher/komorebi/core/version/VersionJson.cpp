@@ -63,6 +63,20 @@ LibraryEntry readLibrary(const QJsonObject& object)
 
     library.rules = readRules(object.value(QStringLiteral("rules")));
     library.natives = object.value(QStringLiteral("natives")).toObject();
+    // A natives jar is not the entry's artifact: the format lists it under classifiers, one per
+    // platform, and the launcher has to unpack that file rather than the one the entry points at.
+    const auto classifiers = object.value(QStringLiteral("downloads")).toObject().value(QStringLiteral("classifiers")).toObject();
+    for (auto it = classifiers.begin(); it != classifiers.end(); ++it) {
+        const auto file = it.value().toObject();
+        ClassifierFile classifier;
+        classifier.path = file.value(QStringLiteral("path")).toString();
+        classifier.url = file.value(QStringLiteral("url")).toString();
+        classifier.sha1 = file.value(QStringLiteral("sha1")).toString();
+        classifier.size = static_cast<qint64>(file.value(QStringLiteral("size")).toDouble());
+        if (classifier.path.isEmpty() && classifier.url.isEmpty())
+            continue;
+        library.classifiers.insert(it.key(), classifier);
+    }
     for (const auto& excluded : object.value(QStringLiteral("extract")).toObject().value(QStringLiteral("exclude")).toArray()) {
         if (excluded.isString())
             library.extractExclude.append(excluded.toString());
@@ -137,9 +151,14 @@ QString LibraryEntry::nativesClassifier(const Platform& platform) const
     QString classifier = natives.value(platform.os).toString();
     if (classifier.isEmpty())
         return {};
-    // The classifier may still name the architecture, e.g. "natives-windows-${arch}".
-    return classifier.replace(QLatin1String("${arch}"), platform.arch == QLatin1String("x86_64") ? QStringLiteral("64")
-                                                                                                  : platform.arch);
+    // The old format names one entry for both word sizes, e.g. "natives-windows-${arch}", and the
+    // classifiers it refers to are "natives-windows-32" and "natives-windows-64". The launcher runs a
+    // 64-bit Java everywhere but on a 32-bit x86 system, so that is the bit of the name to ask for.
+    if (classifier.contains(QLatin1String("${arch}"))) {
+        const auto bits = platform.arch == QLatin1String("x86") ? QStringLiteral("32") : QStringLiteral("64");
+        classifier.replace(QLatin1String("${arch}"), bits);
+    }
+    return classifier;
 }
 
 std::optional<VersionJson> VersionJson::parse(const QJsonObject& object, QString* error)

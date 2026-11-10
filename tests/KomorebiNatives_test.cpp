@@ -142,6 +142,7 @@ class KomorebiNativesTest : public QObject {
     void findsTheJarsForThePlatform();
     void unpacksThemWithoutTheirMetadata();
     void leavesTheDirectoryAloneTheSecondTime();
+    void removesWhatAnOlderJarLeftBehind();
 };
 
 void KomorebiNativesTest::findsTheJarsForThePlatform()
@@ -203,6 +204,32 @@ void KomorebiNativesTest::leavesTheDirectoryAloneTheSecondTime()
     QVERIFY(QFile::remove(QDir(natives).filePath(QStringLiteral("lwjgl.dll"))));
     QVERIFY(extractNatives(jars, natives));
     QVERIFY(!QFile::exists(QDir(natives).filePath(QStringLiteral("lwjgl.dll"))));
+}
+
+void KomorebiNativesTest::removesWhatAnOlderJarLeftBehind()
+{
+    QTemporaryDir temp;
+    QVERIFY(temp.isValid());
+    const QDir libraries(temp.path());
+    const QString jarPath = libraries.filePath(QStringLiteral("org/lwjgl/lwjgl/3.3.1/lwjgl-3.3.1-natives-windows.jar"));
+
+    // The first extraction unpacks a file the current jar does not have; a jar rebuilt without it must
+    // not leave the old copy in natives/, where the game would load it in preference to nothing.
+    writeFile(jarPath, buildZip({ { QStringLiteral("lwjgl.dll"), QByteArrayLiteral("the dll") },
+                                  { QStringLiteral("old.dll"), QByteArrayLiteral("a file the next jar drops") } }));
+    const auto manifest = VersionJson::parse(nativesManifest());
+    QVERIFY(manifest.has_value());
+    const auto jars = nativeJars(*manifest, libraries.path(), Platform{ QStringLiteral("windows"), QStringLiteral("x86_64") });
+
+    const QString natives = temp.filePath(QStringLiteral("natives"));
+    QVERIFY(extractNatives(jars, natives));
+    QVERIFY(QFile::exists(QDir(natives).filePath(QStringLiteral("old.dll"))));
+
+    writeFile(jarPath, buildZip({ { QStringLiteral("lwjgl.dll"), QByteArrayLiteral("the dll") } }));
+    QVERIFY(extractNatives(jars, natives));
+    QVERIFY(!QFile::exists(QDir(natives).filePath(QStringLiteral("old.dll"))));
+    QVERIFY(QFile::exists(QDir(natives).filePath(QStringLiteral("lwjgl.dll"))));
+    QVERIFY(QFile::exists(QDir(natives).filePath(QStringLiteral(".komorebi-natives.json"))));
 }
 
 QTEST_GUILESS_MAIN(KomorebiNativesTest)

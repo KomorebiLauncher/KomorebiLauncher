@@ -19,6 +19,13 @@ QHash<QString, QString> placeholders(const LaunchOptions& options, const QString
     values.insert(QStringLiteral("game_directory"), options.gameDirectory);
     values.insert(QStringLiteral("assets_root"), options.assetsDirectory);
     values.insert(QStringLiteral("assets_index_name"), assetIndexName);
+    // Versions before the object store was introduced read their files from a real folder, and the
+    // game arguments of those versions name it. It is the folder the index's files were copied into,
+    // not the assets directory itself.
+    values.insert(QStringLiteral("game_assets"),
+                  options.gameAssetsDirectory.isEmpty() ? options.assetsDirectory : options.gameAssetsDirectory);
+    // The launcher keeps no per-account properties, which is what an empty map says.
+    values.insert(QStringLiteral("user_properties"), QStringLiteral("{}"));
     values.insert(QStringLiteral("auth_uuid"), options.uuid);
     values.insert(QStringLiteral("auth_access_token"), options.accessToken);
     values.insert(QStringLiteral("auth_session"), options.accessToken);
@@ -28,7 +35,7 @@ QHash<QString, QString> placeholders(const LaunchOptions& options, const QString
     values.insert(QStringLiteral("auth_xuid"), options.xuid);
     values.insert(QStringLiteral("natives_directory"), options.nativesDirectory);
     values.insert(QStringLiteral("classpath"), classpath);
-    values.insert(QStringLiteral("classpath_separator"), QStringLiteral(";"));
+    values.insert(QStringLiteral("classpath_separator"), QString(QDir::listSeparator()));
     values.insert(QStringLiteral("library_directory"), options.librariesDirectory);
     values.insert(QStringLiteral("launcher_name"), QStringLiteral("Komorebi"));
     values.insert(QStringLiteral("launcher_version"), QStringLiteral("0.1"));
@@ -90,7 +97,10 @@ LaunchPlan buildLaunchPlan(const VersionJson& merged, const LaunchOptions& optio
     auto classpathList = classpathEntries(merged, options, platform);
     // Maven files are not put on the classpath: they are the installer and tools a wrapper locates by
     // itself. Adding them made the wrapper see several copies of the same libraries and refuse to start.
-    const auto classpath = classpathList.join(QLatin1Char(';'));
+    // The separator is what Java on this platform expects between class path entries, and the one a
+    // manifest asks for with ${classpath_separator}: a jar list joined with ';' on Linux (or with ':' on
+    // Windows) is one long bogus path, and the game cannot find its own classes.
+    const auto classpath = classpathList.join(QDir::listSeparator());
     const QString assetIndexName = options.assetIndexName.isEmpty()
                                        ? (merged.assetIndexId.isEmpty() ? merged.assets : merged.assetIndexId)
                                        : options.assetIndexName;

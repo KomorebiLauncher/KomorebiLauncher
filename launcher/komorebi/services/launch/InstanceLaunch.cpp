@@ -11,6 +11,7 @@
 #include "komorebi/core/instance/InstanceFolder.h"
 #include "komorebi/core/asset/AssetLayout.h"
 #include "komorebi/core/launch/Natives.h"
+#include "komorebi/core/Support/ContainedPath.h"
 #include "komorebi/core/version/ComponentSet.h"
 #include "komorebi/services/download/AssetFiles.h"
 #include "komorebi/services/download/DownloadQueue.h"
@@ -29,13 +30,15 @@ QString clientJarFor(const Core::VersionJson& manifest, const QString& dataRoot)
     const auto relative = Core::libraryRelativePath(manifest.mainJarName);
     if (relative.isEmpty())
         return {};
-    return QDir(dataRoot).filePath(QStringLiteral("libraries/") + relative);
+    // mainJarName comes from the manifest: the jar is below libraries/ or the manifest is wrong.
+    return Core::containedPath(QDir(dataRoot).filePath(QStringLiteral("libraries")), relative);
 }
 
 }  // namespace
 
 std::optional<Core::LaunchPlan> buildPlan(const Core::VersionJson& manifest, const InstanceLaunchOptions& options,
-                                          const LaunchAccount& account, QString* error)
+                                          const LaunchAccount& account, const Core::AssetIndex* assetIndex,
+                                          QString* error)
 {
     const int required = manifest.javaMajor > 0 ? manifest.javaMajor : 8;
     QString javaPath = options.javaPathOverride;
@@ -68,6 +71,10 @@ std::optional<Core::LaunchPlan> buildPlan(const Core::VersionJson& manifest, con
     launch.clientJarPath = clientJarFor(manifest, options.dataRoot);
     launch.versionName = manifest.id;
     launch.assetIndexName = manifest.assetIndexId.isEmpty() ? manifest.assets : manifest.assetIndexId;
+    // Only an index that predates the object store has a folder of its own, and the versions that name
+    // it in their arguments are exactly the ones carrying such an index.
+    if (assetIndex)
+        launch.gameAssetsDirectory = Core::legacyAssetDirectory(*assetIndex, options.dataRoot, options.instanceDirectory);
     launch.username = account.username;
     launch.uuid = account.uuid;
     launch.accessToken = account.accessToken;
@@ -105,7 +112,7 @@ std::optional<Core::LaunchPlan> planInstance(const InstanceLaunchOptions& option
     if (!manifest)
         return std::nullopt;
 
-    return buildPlan(*manifest, options, account, error);
+    return buildPlan(*manifest, options, account, nullptr, error);
 }
 
 InstanceLaunch::InstanceLaunch(QNetworkAccessManager* network, QObject* parent) : QObject(parent), m_network(network) {}
@@ -271,7 +278,7 @@ void InstanceLaunch::stepLaunch()
     emit status(tr("Starting the game"));
 
     QString error;
-    const auto plan = buildPlan(*m_manifest, m_options, m_account, &error);
+    const auto plan = buildPlan(*m_manifest, m_options, m_account, m_assetIndex ? &*m_assetIndex : nullptr, &error);
     if (!plan)
         return fail(error);
 
@@ -361,8 +368,15 @@ void InstanceLaunch::finish(const QString& logPath)
 void InstanceLaunch::fetch(const QList<FileDownload>& files, const std::function<void()>& next)
 {
     if (files.isEmpty()) {
+        // Nothing to download, so there is no queue to wait for: the next step is queued instead. The
+        // launcher may have been cancelled while this was in flight, and a cancelled launch must not
+        // go on to start the game.
         QMetaObject::invokeMethod(
-            this, [next] { next(); }, Qt::QueuedConnection);
+            this, [this, next] {
+                if (m_running)
+                    next();
+            },
+            Qt::QueuedConnection);
         return;
     }
 

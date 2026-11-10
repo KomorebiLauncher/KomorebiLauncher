@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
+#include <QDir>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QTest>
@@ -18,6 +19,7 @@ class KomorebiLaunchPlanTest : public QObject {
     void missingPiecesAreReported();
     void joinsAServerTheQuickPlayWay();
     void joinsAServerTheOldWay();
+    void legacyPlaceholdersAreFilled();
 };
 
 namespace {
@@ -78,9 +80,10 @@ void KomorebiLaunchPlanTest::modernVersionGetsItsArgumentsSubstituted()
     QVERIFY(plan.arguments.contains(QStringLiteral("-Xmx2048m")));
     QVERIFY(plan.arguments.contains(QStringLiteral("-Djava.library.path=C:/instances/test/natives")));
 
-    const QString classpath = QStringLiteral("C:/libs/org/example/one/1.0/one-1.0.jar;"
-                                             "C:/libs/org/example/windows/1.0/windows-1.0.jar;"
-                                             "C:/instances/test/1.20.1.jar");
+    const QString classpath = QStringList{ QStringLiteral("C:/libs/org/example/one/1.0/one-1.0.jar"),
+                                           QStringLiteral("C:/libs/org/example/windows/1.0/windows-1.0.jar"),
+                                           QStringLiteral("C:/instances/test/1.20.1.jar") }
+                                  .join(QDir::listSeparator());
     QVERIFY(plan.arguments.contains(classpath));
 
     // The main class comes after the JVM arguments and before the game's own.
@@ -110,7 +113,9 @@ void KomorebiLaunchPlanTest::oldVersionGetsTheClassPathToldToIt()
     QVERIFY2(plan.ok(), qPrintable(plan.problems.join(QStringLiteral("; "))));
 
     QVERIFY(plan.arguments.contains(QStringLiteral("-Djava.library.path=C:/instances/test/natives")));
-    QVERIFY(plan.arguments.contains(QStringLiteral("C:/libs/org/example/one/1.0/one-1.0.jar;C:/instances/test/1.20.1.jar")));
+    QVERIFY(plan.arguments.contains(QStringList{ QStringLiteral("C:/libs/org/example/one/1.0/one-1.0.jar"),
+                                                 QStringLiteral("C:/instances/test/1.20.1.jar") }
+                                        .join(QDir::listSeparator())));
 
     const int gameDir = plan.arguments.indexOf(QStringLiteral("--gameDir"));
     QVERIFY(gameDir > 0);
@@ -121,7 +126,7 @@ void KomorebiLaunchPlanTest::classPathSkipsLibrariesForOtherPlatforms()
 {
     const auto entries = classpathEntries(modernManifest(), optionsFor(), kWindows);
     QCOMPARE(entries.size(), 3);
-    QVERIFY(!entries.join(QChar(';')).contains(QStringLiteral("linux-1.0.jar")));
+    QVERIFY(!entries.join(QDir::listSeparator()).contains(QStringLiteral("linux-1.0.jar")));
     QCOMPARE(entries.last(), QStringLiteral("C:/instances/test/1.20.1.jar"));
 }
 
@@ -171,6 +176,36 @@ void KomorebiLaunchPlanTest::missingPiecesAreReported()
     plan = buildLaunchPlan(manifest, optionsFor(), kWindows);
     QVERIFY(!plan.ok());
     QVERIFY(plan.problems.join(QLatin1Char(' ')).contains(QStringLiteral("class")));
+}
+
+void KomorebiLaunchPlanTest::legacyPlaceholdersAreFilled()
+{
+    // A 1.6-era manifest names the folder its assets were copied into, the separator Java expects and
+    // the account properties; leaving any of them as a literal ${...} made the game read the wrong path.
+    const auto manifest = *VersionJson::parse(QJsonDocument::fromJson(R"({
+        "id": "1.6.4",
+        "mainClass": "net.minecraft.client.main.Main",
+        "libraries": [ { "name": "org.example:one:1.0",
+                         "downloads": { "artifact": { "path": "org/example/one/1.0/one-1.0.jar" } } } ],
+        "minecraftArguments": "--gameDir ${game_directory} --assetsDir ${game_assets} --userProperties ${user_properties}"
+    })")
+                                                       .object());
+    auto options = optionsFor();
+    options.gameAssetsDirectory = QStringLiteral("C:/assets/virtual/legacy");
+
+    const auto plan = buildLaunchPlan(manifest, options, kWindows);
+    QVERIFY2(plan.ok(), qPrintable(plan.problems.join(QStringLiteral("; "))));
+
+    const int assetsDir = plan.arguments.indexOf(QStringLiteral("--assetsDir"));
+    QVERIFY(assetsDir > 0);
+    QCOMPARE(plan.arguments.at(assetsDir + 1), QStringLiteral("C:/assets/virtual/legacy"));
+
+    const int properties = plan.arguments.indexOf(QStringLiteral("--userProperties"));
+    QVERIFY(properties > 0);
+    QCOMPARE(plan.arguments.at(properties + 1), QStringLiteral("{}"));
+
+    for (const auto& argument : plan.arguments)
+        QVERIFY2(!argument.contains(QStringLiteral("${")), qPrintable(argument));
 }
 
 QTEST_GUILESS_MAIN(KomorebiLaunchPlanTest)

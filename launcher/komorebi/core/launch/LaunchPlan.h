@@ -28,6 +28,7 @@ struct LaunchOptions {
     QString clientJarPath;      ///< the version's own jar, last on the class path
     QString versionName;        ///< what the game is told its version is
     QString assetIndexName;     ///< overrides the manifest's asset index when set
+    QString gameAssetsDirectory;  ///< the folder a pre-object-store index was copied into
 
     QString username;
     QString uuid;

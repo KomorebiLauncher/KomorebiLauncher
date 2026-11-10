@@ -17,6 +17,7 @@
 
 #include "FileSystem.h"
 #include "komorebi/core/asset/AssetIndex.h"
+#include "komorebi/core/Support/ContainedPath.h"
 #include "komorebi/core/version/LoaderManifest.h"
 #include "komorebi/core/version/VersionManifest.h"
 #include "komorebi/services/download/AssetFiles.h"
@@ -114,8 +115,12 @@ void InstanceCreator::finish()
     emit finished(m_instanceDirectory);
 }
 
-void InstanceCreator::fetch(const QString& url, const QString& target, const QString& sha1, const std::function<void()>& next)
+void InstanceCreator::fetch(const QString& url, const QString& target, const QString& sha1, const std::function<void()>& next,
+                            bool refresh)
 {
+    if (target.isEmpty() || !QUrl(url).isValid())
+        return fail(tr("there is no address for %1").arg(target));
+
     auto* downloader = new FileDownloader(m_network, this);
     const QByteArray expected = sha1.isEmpty() ? QByteArray() : QByteArray::fromHex(sha1.toLatin1());
     QObject::connect(downloader, &FileDownloader::finished, this, [this, downloader, next](bool ok, const QString& error) {
@@ -126,7 +131,12 @@ void InstanceCreator::fetch(const QString& url, const QString& target, const QSt
             return fail(error);
         next();
     });
-    downloader->start(FileDownload{ sourceUrl(QUrl(url), m_request.source), target, expected, -1 });
+    FileDownload download;
+    download.url = sourceUrl(QUrl(url), m_request.source);
+    download.targetPath = target;
+    download.sha1 = expected;
+    download.refresh = refresh;
+    downloader->start(download);
 }
 
 void InstanceCreator::fetchManifest()
@@ -156,7 +166,7 @@ void InstanceCreator::fetchManifest()
             }
         }
         fail(tr("%1 is not in the version list").arg(m_request.minecraftVersion));
-    });
+    }, true);
 }
 
 void InstanceCreator::fetchVersion(const QString& url, const QString& sha1)
@@ -184,7 +194,7 @@ void InstanceCreator::fetchVersion(const QString& url, const QString& sha1)
         if (m_request.loader == QLatin1String("neoforge"))
             return fetchNeoForgeIndex();
         fetchLoaderList();
-    });
+    }, true);
 }
 
 void InstanceCreator::fetchNeoForgeIndex()
@@ -234,7 +244,7 @@ void InstanceCreator::fetchNeoForgeIndex()
             return fail(tr("%1 has no release for Minecraft %2").arg(m_loaderName, m_request.minecraftVersion));
 
         fetchNeoForgeComponent(chosen);
-    });
+    }, true);
 }
 
 void InstanceCreator::fetchNeoForgeComponent(const QString& version)
@@ -257,7 +267,7 @@ void InstanceCreator::fetchNeoForgeComponent(const QString& version)
         m_loaderComponent = document;
         m_loaderComponent.insert(QStringLiteral("version"), version + QStringLiteral("-komorebi"));
         writeInstance();
-    });
+    }, true);
 }
 
 void InstanceCreator::installForge()
@@ -390,6 +400,13 @@ void InstanceCreator::readForgeInstall(const QString& installRoot)
 void InstanceCreator::writeComponent(const QString& uid, const QString& version, const QJsonObject& component,
                                      const QString& releaseTime, const QString& type, bool replaceExisting)
 {
+    // Both names become part of a path under meta/, and both are read back from the loader's own
+    // metadata: a value carrying a separator would write the component outside the folder it belongs in.
+    if (!Core::isPlainFileName(uid) || !Core::isPlainFileName(version)) {
+        fail(tr("%1 %2 is not a component name").arg(uid, version));
+        return;
+    }
+
     const QString directory = QDir(m_versionsRoot).filePath(uid);
     if (!QDir().mkpath(directory)) {
         fail(tr("could not create %1").arg(directory));
@@ -503,7 +520,7 @@ void InstanceCreator::fetchLoaderList()
                                 .arg(chosen, m_request.minecraftVersion));
         }
         fetchLoaderProfile(chosen);
-    });
+    }, true);
 }
 
 void InstanceCreator::fetchLoaderProfile(const QString& loaderVersion)
@@ -526,7 +543,7 @@ void InstanceCreator::fetchLoaderProfile(const QString& loaderVersion)
             return fail(error);
         m_loaderComponent = *component;
         writeInstance();
-    });
+    }, true);
 }
 void InstanceCreator::writeInstance()
 {

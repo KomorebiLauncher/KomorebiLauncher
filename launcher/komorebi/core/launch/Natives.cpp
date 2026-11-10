@@ -10,6 +10,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSet>
 #include <QUrl>
 
 #include "komorebi/core/version/LibraryFile.h"
@@ -75,7 +76,7 @@ bool entryIsExcluded(const QString& name, const QStringList& excludes)
     return false;
 }
 
-bool unpackArchive(const NativeJar& jar, const QString& nativesDirectory, QString* error)
+bool unpackArchive(const NativeJar& jar, const QString& nativesDirectory, QString* error, QSet<QString>* written)
 {
     struct archive* archive = archive_read_new();
     archive_read_support_filter_all(archive);
@@ -109,6 +110,9 @@ bool unpackArchive(const NativeJar& jar, const QString& nativesDirectory, QStrin
             ok = false;
             break;
         }
+
+        if (written)
+            written->insert(name);
 
         QFile file(target);
         if (!file.open(QIODevice::WriteOnly)) {
@@ -144,11 +148,23 @@ QList<NativeJar> nativeJars(const VersionJson& merged, const QString& librariesD
 {
     QList<NativeJar> jars;
     for (const auto& library : merged.libraries) {
-        if (!library.appliesTo(platform) || !namesNativesFor(library, platform))
+        if (!library.appliesTo(platform))
+            continue;
+
+        // The manifest names the natives file through `natives` and the classifiers map, which is the
+        // same address the download writes to; a jar that only says so in its artifact name is the
+        // fallback for the manifests that predate the classifiers map.
+        QString path = nativeLibraryPath(library, platform, librariesDirectory);
+        // Deriving the name is a guess the launcher only gets to act on when nothing would download it:
+        // without a classifier entry the file is not in the download plan, and unpacking a jar that was
+        // never fetched would fail a launch the older manifest used to get through.
+        if (path.isEmpty() || (!classifierFile(library, platform) && !QFileInfo::exists(path)))
+            path = namesNativesFor(library, platform) ? libraryFilePath(library, librariesDirectory) : QString();
+        if (path.isEmpty())
             continue;
 
         NativeJar jar;
-        jar.path = libraryFilePath(library, librariesDirectory);
+        jar.path = path;
         jar.exclude = library.extractExclude;
         jars.append(jar);
     }
@@ -169,17 +185,31 @@ bool extractNatives(const QList<NativeJar>& jars, const QString& nativesDirector
 
     const QByteArray marker = markerFor(jars);
     QFile markerFile(natives.filePath(kMarkerName));
-    if (markerFile.open(QIODevice::ReadOnly) && markerFile.readAll() == marker)
+    const bool upToDate = markerFile.open(QIODevice::ReadOnly) && markerFile.readAll() == marker;
+    // The handle is closed before the file is opened for writing below: a second QFile on the same path
+    // cannot truncate a file this process still holds open.
+    markerFile.close();
+    if (upToDate)
         return true;
 
+    QSet<QString> written;
     for (const auto& jar : jars) {
         if (!QFileInfo::exists(jar.path)) {
             if (error)
                 *error = QObject::tr("the natives jar %1 is missing").arg(jar.path);
             return false;
         }
-        if (!unpackArchive(jar, nativesDirectory, error))
+        if (!unpackArchive(jar, nativesDirectory, error, &written))
             return false;
+    }
+
+    // The directory belongs to this launcher and holds the natives of one version. A library left over
+    // from the set an earlier version needed is one the game may load instead of the one that belongs
+    // to this one, which is how a downgrade or a loader change ends up with a crashed game.
+    for (const auto& name : natives.entryList(QDir::Files)) {
+        if (name == kMarkerName || written.contains(name))
+            continue;
+        QFile::remove(natives.filePath(name));
     }
 
     if (markerFile.open(QIODevice::WriteOnly | QIODevice::Truncate))

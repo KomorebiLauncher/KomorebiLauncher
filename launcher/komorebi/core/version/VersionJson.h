@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QList>
@@ -38,6 +39,14 @@ struct Rule {
     QString osArch;  ///< empty when the rule does not care
 };
 
+/// One file a library names outside its main artifact, from `downloads.classifiers`.
+struct ClassifierFile {
+    QString path;  ///< relative path under libraries/
+    QString url;
+    QString sha1;
+    qint64 size = 0;
+};
+
 /// One library entry, as the manifest lists it.
 struct LibraryEntry {
     QString name;  ///< group:artifact:version[:classifier]
@@ -48,6 +57,7 @@ struct LibraryEntry {
 
     QList<Rule> rules;
     QJsonObject natives;        ///< platform name to classifier, e.g. windows: natives-windows
+    QHash<QString, ClassifierFile> classifiers;  ///< classifier name to the file it names, when it names one
     QStringList extractExclude;  ///< entries the natives unpacker has to leave out
 
     /**

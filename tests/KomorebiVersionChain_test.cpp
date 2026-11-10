@@ -17,6 +17,7 @@ class KomorebiVersionChainTest : public QObject {
     void reportsAMissingVersion();
     void reportsAMissingParent();
     void reportsALoop();
+    void refusesAParentThatIsAPath();
     void reportsAManifestThatIsNotOne();
 };
 
@@ -102,6 +103,20 @@ void KomorebiVersionChainTest::reportsALoop()
     QString error;
     QVERIFY(!loadVersionChain(temp.path(), QStringLiteral("a"), &error).has_value());
     QVERIFY(error.contains(QStringLiteral("inherits")));
+}
+
+void KomorebiVersionChainTest::refusesAParentThatIsAPath()
+{
+    // inheritsFrom names a directory below versions/, and an inherited id comes out of a manifest a
+    // loader or a pack wrote; "../../" there would read a file outside the launcher's versions folder.
+    QTemporaryDir temp;
+    QVERIFY(temp.isValid());
+    writeManifest(temp.path(), QStringLiteral("child"),
+                  QStringLiteral(R"({ "id": "child", "inheritsFrom": "../../../secret" })"));
+
+    QString error;
+    QVERIFY(!loadVersionChain(temp.path(), QStringLiteral("child"), &error).has_value());
+    QVERIFY(error.contains(QStringLiteral("version id")));
 }
 
 void KomorebiVersionChainTest::reportsAManifestThatIsNotOne()

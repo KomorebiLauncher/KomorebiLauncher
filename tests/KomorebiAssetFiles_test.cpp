@@ -64,6 +64,8 @@ class KomorebiAssetFilesTest : public QObject {
     void parsesTheObjectList();
     void asksForTheIndexItDoesNotHave();
     void asksForTheObjectsThatAreMissing();
+    void refusesAnIndexNameThatIsAPath();
+    void dropsObjectsWhoseHashIsNotAHash();
 
    private:
     static const QString kPresentHash;
@@ -123,6 +125,42 @@ void KomorebiAssetFilesTest::asksForTheObjectsThatAreMissing()
              QDir(temp.path()).filePath(QStringLiteral("assets/objects/") + kAbsentHash.left(2) + QLatin1Char('/') + kAbsentHash));
     QCOMPARE(missing.first().url.toString(),
              QStringLiteral("https://resources.download.minecraft.net/") + kAbsentHash.left(2) + QLatin1Char('/') + kAbsentHash);
+}
+
+void KomorebiAssetFilesTest::refusesAnIndexNameThatIsAPath()
+{
+    QTemporaryDir temp;
+    QVERIFY(temp.isValid());
+
+    // The id comes out of a manifest and names a file below assets/indexes; a value that walks up from
+    // there is not an index the launcher has or should write to.
+    const auto manifest = VersionJson::parse(manifestWithIndex(QStringLiteral("../../../evil"), {}));
+    QVERIFY(manifest.has_value());
+    QVERIFY(missingAssetIndexFile(*manifest, temp.path()).isEmpty());
+
+    QString error;
+    QVERIFY(!loadAssetIndex(temp.path(), QStringLiteral("../5"), &error).has_value());
+    QVERIFY(!error.isEmpty());
+}
+
+void KomorebiAssetFilesTest::dropsObjectsWhoseHashIsNotAHash()
+{
+    // The hash names two path segments below assets/objects, and an index may come from a server that is
+    // not Mojang's: ".." there would let an index decide where the launcher writes.
+    QString error;
+    const auto index = parseAssetIndex(QJsonObject{ { QStringLiteral("objects"),
+                                                     QJsonObject{
+                                                         { QStringLiteral("../evil.ogg"),
+                                                           QJsonObject{ { QStringLiteral("hash"), QStringLiteral("../../evil") },
+                                                                        { QStringLiteral("size"), 1 } } },
+                                                         { QStringLiteral("minecraft/sounds/present.ogg"),
+                                                           QJsonObject{ { QStringLiteral("hash"), kPresentHash },
+                                                                        { QStringLiteral("size"), 10 } } },
+                                                     } } },
+                                       QStringLiteral("5"), &error);
+    QVERIFY2(index.has_value(), qPrintable(error));
+    QCOMPARE(index->objects.size(), 1);
+    QVERIFY(index->objects.contains(QStringLiteral("minecraft/sounds/present.ogg")));
 }
 
 QTEST_GUILESS_MAIN(KomorebiAssetFilesTest)

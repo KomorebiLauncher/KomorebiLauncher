@@ -81,7 +81,8 @@ class InstanceCreator : public QObject {
     void fetchNeoForgeComponent(const QString& version);
     void readForgeInstall(const QString& installRoot);
     void copyInstallerLibraries(const QString& installRoot);
-    void fetch(const QString& url, const QString& target, const QString& sha1, const std::function<void()>& next);
+    void fetch(const QString& url, const QString& target, const QString& sha1, const std::function<void()>& next,
+               bool refresh = false);
     void fail(const QString& reason);
     void finish();
 

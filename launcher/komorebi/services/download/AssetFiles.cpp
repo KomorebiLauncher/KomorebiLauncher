@@ -6,6 +6,8 @@
 #include <QFile>
 #include <QFileInfo>
 
+#include "komorebi/core/Support/ContainedPath.h"
+
 namespace Komorebi::Services {
 
 namespace {
@@ -13,6 +15,10 @@ namespace {
 /// Where the launcher keeps one asset object: assets/objects/<first two hex digits>/<hash>.
 QString objectPath(const QString& dataRoot, const QString& hash)
 {
+    // The hash becomes two path segments, and it is read from an index that may have come from a server
+    // that is not Mojang's; a value that is not a plain relative path is not a hash.
+    if (!Core::isContainedRelativePath(hash) || hash.size() < 2)
+        return {};
     return QDir(dataRoot).filePath(QStringLiteral("assets/objects/") + hash.left(2) + QLatin1Char('/') + hash);
 }
 
@@ -38,7 +44,9 @@ bool fileMatches(const QString& path, const QByteArray& sha1, qint64 expectedSiz
 QList<FileDownload> missingAssetIndexFile(const Core::VersionJson& manifest, const QString& dataRoot)
 {
     const QString id = manifest.assetIndexId;
-    if (id.isEmpty())
+    // The id names the file the index is written to, and it comes from the manifest: a value that is not
+    // a plain file name would put it outside the indexes folder.
+    if (id.isEmpty() || !Core::isPlainFileName(id))
         return {};
 
     const QString target = QDir(dataRoot).filePath(QStringLiteral("assets/indexes/") + id + QStringLiteral(".json"));
@@ -63,6 +71,8 @@ QList<FileDownload> missingAssetObjects(const Core::AssetIndex& index, const QSt
             continue;
 
         const QString target = objectPath(dataRoot, asset.hash);
+        if (target.isEmpty())
+            continue;
         const QByteArray sha1 = QByteArray::fromHex(asset.hash.toLatin1());
         if (fileMatches(target, sha1, asset.size))
             continue;

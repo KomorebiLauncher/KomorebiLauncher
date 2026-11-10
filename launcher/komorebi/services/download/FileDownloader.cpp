@@ -81,7 +81,11 @@ void FileDownloader::start(const FileDownload& download)
     m_triedFallback = false;
     m_partPath = download.targetPath + QStringLiteral(".part");
 
-    if (existingFileIsGood()) {
+    if (download.refresh) {
+        // The caller has nothing to check the file on disk against, and a part file from an earlier
+        // attempt would be resumed into without a way to tell whether it belongs to the same document.
+        QFile::remove(m_partPath);
+    } else if (existingFileIsGood()) {
         m_reported = true;
         QMetaObject::invokeMethod(
             this,
@@ -233,20 +237,33 @@ void FileDownloader::handleReplyFinished()
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
     const bool httpOk = status == 0 || (status >= 200 && status < 300);
     const QString networkError = reply->error() == QNetworkReply::NoError ? QString() : reply->errorString();
+    // Qt can deliver the last bytes without a further readyRead; taking them here is what keeps a
+    // downloaded file from being a few kilobytes short of the one whose hash the manifest names.
+    const auto tail = reply->readAll();
     reply->deleteLater();
 
-    if (m_file) {
-        // Qt can deliver the last bytes without a further readyRead; taking them here is what keeps a
-        // downloaded file from being a few kilobytes short of the one whose hash the manifest names.
-        const auto tail = reply->readAll();
-        if (!tail.isEmpty()) {
-            m_file->write(tail);
-            m_received += tail.size();
-        }
+    const auto closeFile = [this] {
+        if (!m_file)
+            return;
         m_file->flush();
         m_file->close();
         delete m_file;
         m_file = nullptr;
+    };
+
+    if (!httpOk) {
+        // What came back is a page explaining the error, not the file. Writing it into the part file
+        // used to leave a download that "finished", and a resume that continued inside an error page;
+        // both are worse than a download that simply failed.
+        closeFile();
+        QFile::remove(m_partPath);
+        m_received = 0;
+    } else {
+        if (m_file && !tail.isEmpty()) {
+            m_file->write(tail);
+            m_received += tail.size();
+        }
+        closeFile();
     }
 
     if (!httpOk || !networkError.isEmpty()) {

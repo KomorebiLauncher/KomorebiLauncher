@@ -7,6 +7,8 @@
 #include <QJsonParseError>
 #include <QJsonObject>
 
+#include "komorebi/core/Support/ContainedPath.h"
+
 namespace Komorebi::Core {
 
 namespace {
@@ -35,6 +37,10 @@ std::optional<QList<LoadedComponent>> loadComponents(const QString& metaRoot, co
 
     QList<LoadedComponent> loaded;
     for (const auto& ref : components) {
+        // Both halves of the reference name directories and files below meta/, and both are read from
+        // the instance's mmc-pack.json.
+        if (!isPlainFileName(ref.uid) || !isPlainFileName(ref.version))
+            return fail(QStringLiteral("%1 %2 is not a component reference").arg(ref.uid, ref.version));
         const QString path = QDir(metaRoot).filePath(ref.uid + QLatin1Char('/') + ref.version + QStringLiteral(".json"));
         QFile file(path);
         if (!file.open(QIODevice::ReadOnly))
