@@ -5,6 +5,9 @@
  *  The accounts the core signs in with. They live beside the launcher's original ones rather than
  *  replacing them: a player who has been using the launcher keeps the account they already have, and
  *  signing in here is what starts a game through the new launch path with a core account.
+ *
+ *  An offline name can be added too, but only once a Microsoft account is here: the rule lives in
+ *  Komorebi::Services::AccountStore, and this window only reflects it.
  */
 
 #pragma once
@@ -27,6 +30,7 @@ class KomorebiAccountsDialog : public QDialog {
    private:
     void reload();
     void signIn();
+    void addOffline();
     void useSelected();
     void removeSelected();
     int selectedRow() const;
@@ -38,6 +42,7 @@ class KomorebiAccountsDialog : public QDialog {
     QLabel* m_hint = nullptr;
     QLabel* m_status = nullptr;
     QPushButton* m_signIn = nullptr;
+    QPushButton* m_addOffline = nullptr;
     QPushButton* m_use = nullptr;
     QPushButton* m_remove = nullptr;
 };

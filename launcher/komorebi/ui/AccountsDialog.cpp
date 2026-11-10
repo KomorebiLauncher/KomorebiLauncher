@@ -2,8 +2,8 @@
 #include "komorebi/ui/AccountsDialog.h"
 
 #include <QDialogButtonBox>
-#include <QDir>
 #include <QHBoxLayout>
+#include <QInputDialog>
 #include <QLabel>
 #include <QListWidget>
 #include <QMessageBox>
@@ -12,10 +12,10 @@
 
 #include "Application.h"
 #include "settings/SettingsObject.h"
-#include "komorebi/services/auth/TokenVault.h"
+#include "komorebi/services/auth/AccountStore.h"
 #include "komorebi/ui/DeviceCodeDialog.h"
 
-using TokenVault = Komorebi::Services::TokenVault;
+using AccountStore = Komorebi::Services::AccountStore;
 
 KomorebiAccountsDialog::KomorebiAccountsDialog(QWidget* parent) : QDialog(parent)
 {
@@ -28,7 +28,8 @@ KomorebiAccountsDialog::KomorebiAccountsDialog(QWidget* parent) : QDialog(parent
     m_hint = new QLabel(this);
     m_hint->setWordWrap(true);
     m_hint->setText(tr("Games started with the new launch path use the account marked as default. The "
-                       "launcher's original accounts keep working alongside these."));
+                       "launcher's original accounts keep working alongside these. An offline account can "
+                       "be added once a Microsoft account is here."));
     layout->addWidget(m_hint);
 
     m_list = new QListWidget(this);
@@ -40,9 +41,11 @@ KomorebiAccountsDialog::KomorebiAccountsDialog(QWidget* parent) : QDialog(parent
 
     auto* actions = new QHBoxLayout();
     m_signIn = new QPushButton(tr("Sign in with Microsoft"), this);
+    m_addOffline = new QPushButton(tr("Add offline account"), this);
     m_use = new QPushButton(tr("Use this account"), this);
     m_remove = new QPushButton(tr("Remove"), this);
     actions->addWidget(m_signIn);
+    actions->addWidget(m_addOffline);
     actions->addStretch(1);
     actions->addWidget(m_use);
     actions->addWidget(m_remove);
@@ -57,6 +60,7 @@ KomorebiAccountsDialog::KomorebiAccountsDialog(QWidget* parent) : QDialog(parent
 
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     connect(m_signIn, &QPushButton::clicked, this, &KomorebiAccountsDialog::signIn);
+    connect(m_addOffline, &QPushButton::clicked, this, &KomorebiAccountsDialog::addOffline);
     connect(m_use, &QPushButton::clicked, this, &KomorebiAccountsDialog::useSelected);
     connect(m_remove, &QPushButton::clicked, this, &KomorebiAccountsDialog::removeSelected);
     connect(m_list, &QListWidget::itemSelectionChanged, this, [this] {
@@ -71,20 +75,24 @@ KomorebiAccountsDialog::KomorebiAccountsDialog(QWidget* parent) : QDialog(parent
 
 QString KomorebiAccountsDialog::storePath() const
 {
-    return TokenVault::forDataRoot(APPLICATION->dataRoot()).path();
+    return AccountStore::forDataRoot(APPLICATION->dataRoot()).path();
 }
 
 void KomorebiAccountsDialog::reload()
 {
+    const AccountStore store = AccountStore::forDataRoot(APPLICATION->dataRoot());
     QString error;
-    m_accounts = TokenVault::forDataRoot(APPLICATION->dataRoot()).load(&error);
+    m_accounts = store.accounts(&error);
 
     const QString defaultAccount = APPLICATION->settings()->get("CoreAccount").toString();
 
     m_list->clear();
     for (const auto& account : m_accounts) {
         const bool isDefault = !defaultAccount.isEmpty() && account.uuid == defaultAccount;
-        auto* item = new QListWidgetItem(isDefault ? tr("%1  (default)").arg(account.username) : account.username);
+        QString label = account.offline ? tr("%1  (offline)").arg(account.username) : account.username;
+        if (isDefault)
+            label += tr("  (default)");
+        auto* item = new QListWidgetItem(label);
         item->setData(Qt::UserRole, account.uuid);
         item->setToolTip(account.uuid);
         m_list->addItem(item);
@@ -96,6 +104,13 @@ void KomorebiAccountsDialog::reload()
     m_use->setEnabled(hasAccounts && selectedRow() >= 0);
     m_remove->setEnabled(hasAccounts && selectedRow() >= 0);
     m_list->setVisible(hasAccounts);
+
+    // The button says why it is blocked instead of leaving the reason to a failed attempt.
+    QString why;
+    const bool offlineAllowed = store.canAddOffline(&why);
+    m_addOffline->setEnabled(offlineAllowed);
+    m_addOffline->setToolTip(offlineAllowed ? tr("Play under a name that never signs in.")
+                                            : tr("Sign in with Microsoft first: %1.").arg(why));
 
     if (!error.isEmpty())
         m_status->setText(tr("The account file could not be read: %1").arg(error));
@@ -121,7 +136,7 @@ void KomorebiAccountsDialog::signIn()
         return;
 
     QString error;
-    if (!TokenVault::forDataRoot(APPLICATION->dataRoot()).upsert(session, &error)) {
+    if (!AccountStore::forDataRoot(APPLICATION->dataRoot()).addMicrosoft(session, &error)) {
         m_status->setText(tr("The account could not be saved: %1").arg(error));
         return;
     }
@@ -130,6 +145,28 @@ void KomorebiAccountsDialog::signIn()
     APPLICATION->settings()->set("CoreAccount", session.uuid);
     reload();
     m_status->setText(tr("Signed in as %1. It is now the account used for launching.").arg(session.username));
+}
+
+void KomorebiAccountsDialog::addOffline()
+{
+    bool accepted = false;
+    const QString name = QInputDialog::getText(this, tr("Add offline account"), tr("Name to play as:"),
+                                               QLineEdit::Normal, QString(), &accepted)
+                             .trimmed();
+    if (!accepted || name.isEmpty())
+        return;
+
+    QString error;
+    Komorebi::Services::AuthSession added;
+    if (!AccountStore::forDataRoot(APPLICATION->dataRoot()).addOffline(name, &added, &error)) {
+        m_status->setText(tr("The offline account could not be added: %1").arg(error));
+        reload();
+        return;
+    }
+
+    APPLICATION->settings()->set("CoreAccount", added.uuid);
+    reload();
+    m_status->setText(tr("%1 will be used for launching.").arg(added.username));
 }
 
 void KomorebiAccountsDialog::useSelected()
@@ -157,7 +194,7 @@ void KomorebiAccountsDialog::removeSelected()
         return;
 
     QString error;
-    if (!TokenVault::forDataRoot(APPLICATION->dataRoot()).remove(account.uuid, &error)) {
+    if (!AccountStore::forDataRoot(APPLICATION->dataRoot()).remove(account.uuid, &error)) {
         m_status->setText(tr("The account could not be removed: %1").arg(error));
         return;
     }

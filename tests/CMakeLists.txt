@@ -57,6 +57,9 @@ ecm_add_test(KomorebiInstanceCreator_test.cpp LINK_LIBRARIES Launcher_logic Qt${
 ecm_add_test(KomorebiAuth_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test Qt${QT_VERSION_MAJOR}::Network
     TEST_NAME KomorebiAuth)
 
+ecm_add_test(KomorebiAccountStore_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
+    TEST_NAME KomorebiAccountStore)
+
 ecm_add_test(KomorebiLoaderManifest_test.cpp LINK_LIBRARIES Launcher_logic Qt${QT_VERSION_MAJOR}::Test
     TEST_NAME KomorebiLoaderManifest)
 

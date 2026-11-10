@@ -78,6 +78,10 @@ QList<AuthSession> TokenVault::load(QString* error) const
 {
     QList<AuthSession> accounts;
 
+    // Nothing has been saved yet: an empty vault, not a broken one. A fresh data root has no file.
+    if (!QFile::exists(m_path))
+        return accounts;
+
     QFile file(m_path);
     if (!file.open(QIODevice::ReadOnly)) {
         if (error)
@@ -98,7 +102,14 @@ QList<AuthSession> TokenVault::load(QString* error) const
         account.username = object.value(QStringLiteral("name")).toString();
         account.uuid = object.value(QStringLiteral("uuid")).toString();
         account.xuid = object.value(QStringLiteral("xuid")).toString();
+        account.offline = object.value(QStringLiteral("offline")).toBool();
         account.refreshToken = unseal(object.value(QStringLiteral("refreshToken")).toString());
+        if (account.offline) {
+            // An offline account has nothing secret to keep: its uuid and token both follow from the name.
+            const AuthSession derived = offlineSession(account.username);
+            account.uuid = derived.uuid;
+            account.accessToken = derived.accessToken;
+        }
         if (account.uuid.isEmpty())
             continue;
         accounts.append(account);
@@ -122,6 +133,8 @@ bool TokenVault::save(const QList<AuthSession>& accounts, QString* error) const
         object.insert(QStringLiteral("uuid"), account.uuid);
         object.insert(QStringLiteral("xuid"), account.xuid);
         object.insert(QStringLiteral("refreshToken"), sealed);
+        if (account.offline)
+            object.insert(QStringLiteral("offline"), true);
         list.append(object);
     }
 

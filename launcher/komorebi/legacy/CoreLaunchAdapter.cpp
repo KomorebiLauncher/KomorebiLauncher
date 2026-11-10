@@ -84,6 +84,8 @@ Services::LaunchAccount accountFromCore(const Services::AuthSession& session)
     who.username = session.username;
     who.uuid = session.uuid;
     who.accessToken = session.accessToken;
+    // An offline name is what the game's own argument calls it; anything signed in is a Microsoft one.
+    who.userType = session.offline ? QStringLiteral("offline") : QStringLiteral("msa");
     return who;
 }
 

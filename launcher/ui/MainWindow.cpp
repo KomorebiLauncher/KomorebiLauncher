@@ -779,7 +779,9 @@ void MainWindow::repopulateAccountsMenu()
 
     auto* accountsGroup = new QActionGroup(this);
     for (const auto& account : accounts) {
-        auto* action = new QAction(account.username, this);
+        // Two accounts can share a name (a Microsoft one and an offline one), so the entry says which is which.
+        const QString label = account.offline ? tr("%1 (offline)").arg(account.username) : account.username;
+        auto* action = new QAction(label, this);
         action->setData(account.uuid);
         action->setCheckable(true);
         action->setActionGroup(accountsGroup);
@@ -814,16 +816,18 @@ void MainWindow::updateCoreAccountButton()
 {
     const QString defaultId = APPLICATION->settings()->get("CoreAccount").toString();
     QString name;
+    bool offline = false;
     if (!defaultId.isEmpty()) {
         for (const auto& account : Komorebi::Services::TokenVault::forDataRoot(APPLICATION->dataRoot()).load()) {
             if (account.uuid == defaultId) {
                 name = account.username;
+                offline = account.offline;
                 break;
             }
         }
     }
 
-    ui->actionAccountsButton->setText(name.isEmpty() ? tr("Accounts") : name);
+    ui->actionAccountsButton->setText(name.isEmpty() ? tr("Accounts") : (offline ? tr("%1 (offline)").arg(name) : name));
     ui->actionAccountsButton->setIcon(QIcon::fromTheme(QStringLiteral("noaccount")));
 }
 
